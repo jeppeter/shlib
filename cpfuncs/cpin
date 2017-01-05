@@ -1,0 +1,127 @@
+#!/bin/sh
+
+script_file=`which $0`
+if [  -z "$script_file"  ]
+then
+        script_file=`readlink -f $0`
+fi
+script_dir=`dirname $script_file`
+
+. "$script_dir/cpfuncs"
+
+DEF_MNTDIR=$(GetSmbMountDir)
+gitbase_dir=$(GetGitDir)
+DEF_BASEDIR=`basename $gitbase_dir`
+
+mntdir=$DEF_MNTDIR
+basedir=$DEF_BASEDIR
+
+Usage()
+{
+        _ec=$1
+        _fmt=$2
+        _fp=/proc/$/fd/2
+
+        if [ $_ec -eq 0 ]
+                then
+                _fp=/proc/self/fd/1
+        fi
+
+        if [ -n "$_fmt" ]
+        then
+                ${ECHO} "$_fmt" >$_fp
+        fi
+
+        ${ECHO} "$0 [OPTIONS] directorys..." >$_fp
+        ${ECHO} "  -h|--help              to display this help information" >$_fp
+        ${ECHO} "  -m|--mntdir <dir>      to specify mount dir default($DEF_MNTDIR)" >$_fp
+        ${ECHO} "  -b|--basedir <dir>     to specify basedir default($DEF_BASEDIR)" >$_fp
+        ${ECHO} "  srcdir                 ($DEF_MNTDIR/$DEF_BASEDIR)" >$_fp
+        ${ECHO} "  directorys...          from current directory" >$_fp
+
+        exit $_ec
+}
+
+
+
+CopyFrom()
+{
+        _todir="$1"
+        _frombase="$2"
+        _basedir="$3"
+
+        if [ -d "$_frombase/$_todir" ]
+        then
+                _bname=`dirname "$_basedir/$_todir"`
+                if [ ! -d "$_bname" ]
+                        then
+                        ${MKDIR} "$_bname"
+                fi
+                ${CP}  -r -f "$_frombase/$_todir"  "$_bname"
+                ${FIND} "$_basedir/$_todir" -type f | ${XARGS} -I {} ${FILE} {}  | ${GREP} -e 'ASCII text' | ${AWK} -F: '{print $1}' | ${XARGS} -I {} ${SED} -i 's/\r//g' {}
+        else
+                _bname=`dirname $_basedir/$_todir`
+                if [ ! -d "$_bname" ]
+                        then
+                        ${MKDIR} "$_bname"
+                fi
+                ${CP} -f "$_frombase/$_todir" "$_basedir/$_todir"
+                ${FIND} "$_basedir/$_todir" -type f | ${XARGS} -I {} ${FILE} {}  | ${GREP} -e 'ASCII text' | ${AWK} -F: '{print $1}' | ${XARGS} -I {} ${SED} -i 's/\r//g' {}
+        fi
+}
+
+while [ $# -gt 0 ]
+do
+        breakone=0
+        case "$1" in
+                -h|--help)
+                        Usage 0 ""
+                        ;;
+                -m|--mntdir)
+                        if [ $# -gt 1 ]
+                        then
+                                mntdir="$2"
+                                shift
+                        else
+                                Usage 3 "$1 need arg"
+                        fi
+                        ;;
+                -b|--basedir)
+                        if [ $# -gt 1 ]
+                        then
+                                basedir="$2"
+                                shift
+                        else
+                                Usage 3 "$1 need arg"
+                        fi
+                        ;;
+                *)
+                        breakone=1
+                        ;;                        
+        esac
+        if [ $breakone -gt 0 ]
+                then
+                break
+        fi
+        shift
+done
+
+if [ -z "$mntdir" ]
+        then
+        Usage 4 "please specify mountdir by -m|--mntdir or mount them or export CP_SMB_DIR environment value"
+fi
+
+
+for item in $@
+do
+        _absitem=`${READLINK} -f $item`
+        _issubdir=$(IsSub "$gitbase_dir" "$_absitem")
+        if [ $_issubdir -gt 0 ]
+                then
+                curitem=$(GetSubDir "$gitbase_dir" "$_absitem")                
+                CopyFrom "$curitem" "$mntdir/$basedir" "$gitbase_dir"
+        else
+                ${ECHO} "item($item) not sub ($gitbase_dir)" >&2
+        fi
+done
+
