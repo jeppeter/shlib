@@ -1,0 +1,183 @@
+#! /bin/bash
+
+DEF_VERBOSE=0
+verbose=$DEF_VERBOSE
+ECHO=`/usr/bin/which echo`
+DEF_DIRECTORY="/mnt/zdisk"
+AWK=`/usr/bin/which awk`
+mntdir=$DEF_DIRECTORY
+MKDIR=`/usr/bin/which mkdir`
+MOUNT=`/usr/bin/which mount`
+read -r -d '' SPLITAWK_STR<<EOFMM
+%SPLITAWK_STR%
+EOFMM
+SPLITAWK_STR='{curidx=1;curitem="";printout=0;curcon=$0;n=split($0,a);for(i=1;i<=NF;i++){spaces="";idx=index(curcon,a[i]);if(idx>1){spaces=substr(curcon,1,idx-1);curcon=substr(curcon,length(spaces)+1);}curcon=substr(curcon,length(a[i])+1);if(length(a[i])==0){if(length(curitem)>0){curitem=sprintf("%s%s",curitem,spaces);}continue;}if(a[i]==splitchar){if(curidx==searchidx){printf("%s\n",curitem);printout=1;break;}curitem="";curidx+=1;continue;}if(length(curitem)>0){curitem=sprintf("%s%s%s",curitem,spaces,a[i]);}else{curitem=$i;}}if(printout==0&&curidx==searchidx){printf("%s\n",curitem);printout=1;}}'
+
+EQUALAWK_STR='{if($0==searchvar){print $0;}}'
+GREP=`/usr/bin/which grep`
+SUDO_PREFIX=`/usr/bin/which sudo`
+
+DEF_SMBDIR=""
+if [ ! -z "$SSH_CLIENT" ]
+	then
+	_ip=`${ECHO} $SSH_CLIENT | ${AWK} '{print $1}'`
+	DEF_SMBDIR="//$_ip/zdisk"
+fi
+smbdir=$DEF_SMBDIR
+
+DEF_USER=$USER
+DEF_PASS=""
+
+username=$DEF_USER
+password=$DEF_PASS
+
+Debug()
+{
+	_fmt=$1
+	${ECHO} "$_fmt"
+}
+
+ErrorExit()
+{
+	_ec=$1
+	_fmt=$2
+
+	${ECHO} "$_fmt" >2
+	exit $_ec
+}
+
+
+MakeDirNotExist()
+{
+	_dir=$1
+	if [ ! -d "$_dir" ]
+		then
+		if [ ! -e "$_dir" ]
+			then
+			${MKDIR} -p "$_dir"
+			_res=$?
+		else
+			ErrorExit 3 "$_dir exists but not directory"
+		fi
+
+		if [ $_res -ne 0 ]
+			then
+			ErrorExit $_res "mkdir $_dir error($_res)"
+		fi
+	fi
+}
+
+CheckMountSmb()
+{
+	_smbdir=$1
+	_mntdir=$2
+	_mounted=0
+
+	_hasmounted=`${MOUNT} | ${AWK} -v splitchar=on -v searchidx=1 "$SPLITAWK_STR"  | ${AWK} -v searchvar="$_smbdir" "$EQUALAWK_STR"`
+	if [ ! -z "$_hasmounted" ]
+	then
+		_mountpoint=`${MOUNT} | ${GREP} "$_smbdir" | ${AWK} -v splitchar=on -v searchidx=2 "$SPLITAWK_STR" | ${AWK} -v splitchar=type -v searchidx=1 "$SPLITAWK_STR" | ${AWK} -v searchvar="$_mntdir" "$EQUALAWK_STR"`
+		if [ ! -z "$_mountpoint" ]
+		then
+			_mounted=1
+		fi
+	fi
+	${ECHO} "$_mounted"
+}
+
+MountSmb()
+{
+	local _smbdir=$1
+	local _mntdir=$2
+	local _user=$3
+	local _pass=$4
+
+	#Debug "call [${SUDO_PREFIX} ${MOUNT} \"$_smbdir\" \"$_mntdir\" -o username=$_user,password=$_pass]"
+	${SUDO_PREFIX} ${MOUNT} "$_smbdir" "$_mntdir" -o username=$_user,password=$_pass
+	_res=$?
+	if [  $_res -ne 0 ]
+		then
+		ErrorExit $_res "mount $_smbdir $_mntdir error($_res)"
+	fi
+}
+
+
+Usage()
+{
+	_ec=$1
+	_fmt=$2
+	_fp=/dev/stderr
+
+	if [ $_ec -eq 0 ]
+		then
+		_fp=/dev/stdout
+	fi
+
+	${ECHO} "$0 [OPTIONS] [password] [username]" >$_fp
+	${ECHO} "  -h|--help                     to display this help information" >$_fp
+	${ECHO} "  -d|--directory dir            to specify directory to mount default($DEF_DIRECTORY)" >$_fp
+	${ECHO} "  -v|--verbose                  to specify verbose mode default($DEF_VERBOSE)" >$_fp 
+	${ECHO} "  -r|--remote remotedir         to specify remote dir default($DEF_SMBDIR)" >$_fp
+	${ECHO} "  [username]                    to specify username default($DEF_USER)" >$_fp
+	${ECHO} "  [password]                    to specify password default($DEF_PASS)" >$_fp
+
+	exit $_ec
+}
+
+
+while [ $# -gt 0 ]
+do
+	breakone=0
+	case "$1" in
+		-h|--help)
+			Usage 0 ""
+			;;
+		-d|--directory)
+			if [ $# -gt 1 ]
+				then
+				mntdir="$2"
+				shift
+			else
+				Usage 3 "$1 need directory"
+			fi
+			;;
+		-v|--verbose)
+			verbose=`expr $verbose + 1`
+			;;
+		-r|--remote)
+			if [ $# -gt 1 ]
+				then
+				smbdir="$2"
+				shift
+			else
+				Usage 3 "$1 need smbdir"
+			fi
+			;;
+		*)
+			breakone=1
+			;;
+	esac
+	if [ $breakone -ne 0 ]
+		then
+		break
+	fi
+	shift
+done
+
+if [ $# -gt 0 ]
+	then
+	password="$1"
+	shift
+fi
+
+if [ $# -gt 0 ]
+	then
+	username="$1"
+	shift
+fi
+
+mounted=$(CheckMountSmb "$smbdir"  "$mntdir" )
+if [ $mounted -eq 0 ]
+	then
+	MountSmb "$smbdir" "$mntdir" "$username" "$password"
+fi

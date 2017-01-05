@@ -1,0 +1,101 @@
+#! /bin/bash
+
+source extargsparse4sh
+
+function clear_temp {
+	if [ -n "$_tempfile" ] && [ -f "$_tempfile" ]
+		then
+		rm -f "$_tempfile"
+	fi
+	return	
+}
+
+
+function finish_proc {
+	clear_temp
+	exit $exitcode
+}
+
+
+function unexpected_finish_proc {
+	echo "error $1 has _tempfile [$_tempfile]" >&2
+	exit 3
+}
+
+function ErrorExit {
+	local _error=$1
+	local _msg=$2
+
+	exitcode=$_error
+	echo "$_msg" >&2
+	exit $exitcode
+}
+
+function Debug {
+	local _fmt="$1"
+	if [ $verbose -gt 3 ]
+		then
+		echo "$_fmt" >&2
+	fi
+}
+
+
+read -r -d '' OPTIONS<<EOFCODE
+	{
+		"verbose|v" : "+",
+		"input|i" : null,
+		"output|o" : null,
+		"patternfile|P" : null,
+		"replacepattern|p" : "%REPLACE_PATTERN%",
+		"\$<VARARGS>" : 0
+	}
+EOFCODE
+
+read -r -d '' AWK_REPL_STR<<EOFCC
+{
+	mexpr=sprintf(".*%s.*",replacekey);
+	if (match(\$0,mexpr)) {
+		gsub(replacekey,replacevalue);
+		printf("%s\n",\$0);
+	} else {
+		printf("%s\n",\$0);
+	}
+}
+EOFCC
+
+
+parse_command_line "$OPTIONS" "$@"
+
+exitcode=0
+_tempfile=`mktemp --tmpdir=/tmp immediaXXXXXX`
+
+
+
+trap 'unexpected_finish_proc $LINENO' ERR
+trap finish_proc EXIT
+
+
+if [ -z "$patternfile" ]
+	then
+	ErrorExit 3 "please specify patternfile by (-P|--patternfile)"
+fi
+
+
+if [ -z "$input" ]
+	then
+	input=/dev/stdin
+fi
+
+Debug "output [$output]"
+
+if [ -z "$output" ]
+	then
+	output=/dev/stdout
+fi
+
+cat "$input"  | sed 's/\&/%anddollar%/g'  | sed 's/\$/%dollar%/g' | sed 's/\\/%backslash%/g' > $_tempfile
+replaceval=$(cat "$_tempfile" )
+#Debug "replaceval ($replaceval)"
+awk -v replacekey="$replacepattern" -v replacevalue="$replaceval" "$AWK_REPL_STR" $patternfile  | sed 's/%backslash%/\\\\/g' | sed 's/%dollar%/\\\$/g'  | sed 's/%anddollar%/\&/g' >$output
+rm -f "$_tempfile"
+exit 0
