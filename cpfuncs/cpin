@@ -46,9 +46,10 @@ Usage()
 
 CopyFrom()
 {
-        _todir="$1"
-        _frombase="$2"
-        _basedir="$3"
+        local _i
+        local _todir="$1"
+        local _frombase="$2"
+        local _basedir="$3"
 
         if [ -d "$_frombase/$_todir" ]
         then
@@ -58,7 +59,10 @@ CopyFrom()
                         ${MKDIR} "$_bname"
                 fi
                 ${CP}  -r -f "$_frombase/$_todir"  "$_bname"
-                ${FIND} "$_basedir/$_todir" -type f | ${XARGS} -I {} ${FILE} {}  | ${GREP} -e 'ASCII text' | ${AWK} -F: '{print $1}' | ${XARGS} -I {} ${SED} -i 's/\r//g' {}
+                for _i in $(${FIND} "$_basedir/$_todir" -type f | ${XARGS}  ${FILE}   | ${GREP} -e 'ASCII text' | ${AWK} -F: '{print $1}')
+                do
+                    ${SED} -i 's/\r//g' "$_i"
+                done
         else
                 _bname=`dirname $_basedir/$_todir`
                 if [ ! -d "$_bname" ]
@@ -66,7 +70,10 @@ CopyFrom()
                         ${MKDIR} "$_bname"
                 fi
                 ${CP} -f "$_frombase/$_todir" "$_basedir/$_todir"
-                ${FIND} "$_basedir/$_todir" -type f | ${XARGS} -I {} ${FILE} {}  | ${GREP} -e 'ASCII text' | ${AWK} -F: '{print $1}' | ${XARGS} -I {} ${SED} -i 's/\r//g' {}
+                for _i in $(${FIND} "$_basedir/$_todir" -type f | ${XARGS}  ${FILE}  | ${GREP} -e 'ASCII text' | ${AWK} -F: '{print $1}')
+                do
+                    ${SED} -i 's/\r//g' "$_i"
+                done
         fi
 }
 
