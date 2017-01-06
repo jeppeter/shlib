@@ -1,0 +1,90 @@
+#! /bin/bash
+
+########################################
+## _is_in_array_byname:
+##         function check item is in array
+## parameter:
+##       _item   _item content to check
+##       _listname list name of variable,it must be accessed
+##
+## return value:
+##       1 for in the array
+##       0 for not in the array
+##
+##  example:
+##      unset _makedisk_cmds_main
+##      declare -g -A _makedisk_cmds_main
+##      _makedisk_cmds_main[0]="fdisk"
+##      _makedisk_cmds_main[1]="debootstrap"
+##      _makedisk_cmds_main[2]="mtab"
+##      _makedisk_cmds_main[3]="installdef"
+##      _makedisk_cmds_main[4]="confiscsi"
+##      _makedisk_cmds_main[5]="run"
+##      
+##      _is_in_array_byname "mtab" "_makedisk_cmds_main"
+##
+########################################
+_is_in_array_byname()
+{
+	local _item="$1"
+	local _listname="$2"
+	local _curitem
+	local _cnt
+	local _i
+	eval _cnt=\${\#$_listname[@]}
+	_i=0
+	while [ $_i -lt $_cnt ]
+	do
+		eval _curitem=\${$_listname[$_i]}
+		if [ "$_curitem" = "$_item" ]
+			then
+			echo "1"
+			return
+		fi
+		_i=`expr $_i \+ 1`
+	done
+	echo "0"
+	return
+}
+
+
+########################################
+## _is_in_array:
+##         function check item is in array
+## parameter:
+##       _item   _item content to check
+##       left variadic parameters are array items
+##
+## return value:
+##       1 for in the array
+##       0 for not in the array
+##
+##  example:
+##      unset _makedisk_cmds_main
+##      declare -g -A _makedisk_cmds_main
+##      _makedisk_cmds_main[0]="fdisk"
+##      _makedisk_cmds_main[1]="debootstrap"
+##      _makedisk_cmds_main[2]="mtab"
+##      _makedisk_cmds_main[3]="installdef"
+##      _makedisk_cmds_main[4]="confiscsi"
+##      _makedisk_cmds_main[5]="run"
+##      
+##      _is_in_array_byname "mtab" ${_makedisk_cmds_main[@]}
+##
+########################################
+_is_in_array()
+{
+	local _item="$1"
+	local _curitem
+
+	for _curitem in "$@"
+	do
+		if [ "$_curitem" = "$_item" ]
+			then
+			echo "1"
+			return
+		fi
+	done
+	echo "0"
+	return 
+}
