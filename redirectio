@@ -1,0 +1,30 @@
+#! /bin/bash
+
+inputfile=/dev/stdin
+outputfile=/dev/stdout
+
+inputfd=4
+outputfd=5
+if [ $# -gt 0 ]
+then
+	inputfile="$1"
+	shift
+fi
+
+if [ $# -gt 0 ]
+then
+	outputfile="$1"
+	shift
+fi
+
+eval "exec $inputfd<&-"
+eval "exec $inputfd<$inputfile"
+eval "exec $outputfd>&-"
+eval "exec $outputfd>$outputfile"
+echo "inputfd $inputfd outputfd $outputfd"
+
+while IFS= read -u $inputfd -r  
+do
+	echo "read $REPLY" >&$outputfd
+done 
+
