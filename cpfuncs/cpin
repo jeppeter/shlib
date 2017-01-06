@@ -61,6 +61,7 @@ CopyFrom()
                 ${CP}  -r -f "$_frombase/$_todir"  "$_bname"
                 for _i in $(${FIND} "$_basedir/$_todir" -type f | ${XARGS}  ${FILE}   | ${GREP} -e 'ASCII text' | ${AWK} -F: '{print $1}')
                 do
+                    ${ECHO} "convert [$_i]" >&2
                     ${SED} -i 's/\r//g' "$_i"
                 done
         else
@@ -72,6 +73,7 @@ CopyFrom()
                 ${CP} -f "$_frombase/$_todir" "$_basedir/$_todir"
                 for _i in $(${FIND} "$_basedir/$_todir" -type f | ${XARGS}  ${FILE}  | ${GREP} -e 'ASCII text' | ${AWK} -F: '{print $1}')
                 do
+                    ${ECHO} "convert [$_i]" >&2
                     ${SED} -i 's/\r//g' "$_i"
                 done
         fi
