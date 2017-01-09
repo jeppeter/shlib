@@ -1,5 +1,9 @@
-#!/bin/sh
+#!/bin/bash
 
+if [ -n "$CPFUNCS_DEBUG" ] && [ $CPFUNCS_DEBUG -gt 3 ]
+    then
+    set -x
+fi
 
 script_file=`which $0`
 if [  -z "$script_file"  ]
@@ -22,16 +26,17 @@ fi
 
 basedir=$DEF_BASEDIR
 mntdir=$DEF_MNTDIR
+verbose=0
 
 Usage()
 {
         _ec=$1
         _fmt=$2
-        _fp=/proc/$/fd/2
+        _fp=/dev/stderr
 
         if [ $_ec -eq 0 ]
                 then
-                _fp=/proc/self/fd/1
+                _fp=/dev/stdout
         fi
 
         if [ -n "$_fmt" ]
@@ -43,6 +48,7 @@ Usage()
         ${ECHO} "  -h|--help              to display this help information" >$_fp
         ${ECHO} "  -m|--mntdir <dir>      to specify mount dir default($DEF_MNTDIR)" >$_fp
         ${ECHO} "  -b|--basedir <dir>     to specify basedir default($DEF_BASEDIR)" >$_fp
+        ${ECHO} "  -v|--verbose           to specify verbose mode default(0)" >$_fp
         ${ECHO} "  destdir                ($DEF_MNTDIR/$DEF_BASEDIR)" >$_fp
         ${ECHO} "  files...               files or directory from current directory" >$_fp
 
@@ -57,27 +63,36 @@ CopyTo()
         _frombase=$2
         _basedir=$3
 
-        ${ECHO} "from $_basedir/$_frombase to $_todir/$_frombase"
+        Debug "from $_basedir/$_frombase to $_todir/$_frombase"
         if [ -d "$_basedir/$_frombase" ]
         then
                 _bname1="$_todir/$_frombase"
                 _bname=`dirname $_bname1`
                 if [ ! -d $_bname ]
                 then
-                        ${ECHO} "mkdir -p ($_bname)"
+                        Debug "mkdir -p ($_bname)"
                         ${SUDO_PREFIX} $MKDIR -p "$_bname"
                 fi
-            ${SUDO_PREFIX}         ${CP}  -r -f  "$_basedir/$_frombase" "$_bname"
+                Debug "[$_basedir/$_frombase] [$_bname]"
+                ${SUDO_PREFIX}         ${CP}  -r -f  "$_basedir/$_frombase" "$_bname"
         else
                 _bname=`dirname $_todir/$_frombase`
                 if [ ! -d "$_bname" ]
                         then
                         ${SUDO_PREFIX} $MKDIR -p $_bname
                 fi
-
+                Debug "[$_basedir/$_frombase] => [$_todir/$_frombase]"
                 ${SUDO_PREFIX} ${CP} -f "$_basedir/$_frombase" "$_todir/$_frombase"
         fi
 }
+
+OPTIONS=`getopt -o hm:b:v --long 'help,mntdir:,basedir:,verbose' -n "$0" -- "$@"`
+
+# Check for non-GNU getopt
+if [ $? != 0 ] ; then echo "W: non-GNU getopt" >&2 ; exit 1 ; fi
+
+eval set -- "$OPTIONS"
+
 
 while [ $# -gt 0 ]
 do
@@ -104,6 +119,9 @@ do
                                 Usage 3 "$1 need arg"
                         fi
                         ;;
+                -v|--verbose)
+                        verbose=`expr $verbose \+ 1`
+                        ;;
                 *)
                         breakone=1
                         ;;                        
@@ -123,14 +141,18 @@ fi
 
 for item in $@
 do
+        if [ "$item" = "--" ]
+            then
+            continue
+        fi
         _absitem=`${READLINK} -f $item`
         _issubdir=$(IsSub "$gitbase_dir" "$_absitem")
         if [ $_issubdir -gt 0 ]
                 then
                 curitem=$(GetSubDir "$gitbase_dir" "$_absitem")
-            CopyTo "$mntdir/$basedir" "$curitem" "$gitbase_dir"
+                CopyTo "$mntdir/$basedir" "$curitem" "$gitbase_dir"
         else
-                ${ECHO} "item($item) not subdir in ($gitbase_dir)" >&2
+                Warn "item($item) not subdir in ($gitbase_dir)" >&2
         fi
 done
 
