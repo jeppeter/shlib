@@ -90,10 +90,18 @@ MountSmb()
 	local _mntdir=$2
 	local _user=$3
 	local _pass=$4
+	local _osname=`uname -s | tr [:upper:] [:lower:]`
+	local _smbpart=`echo -n "$_smbdir" | sed 's|^\/\/||'`
 
-	#Debug "call [${SUDO_PREFIX} ${MOUNT} \"$_smbdir\" \"$_mntdir\" -o username=$_user,password=$_pass]"
-	${SUDO_PREFIX} ${MOUNT} "$_smbdir" "$_mntdir" -o username=$_user,password=$_pass
-	_res=$?
+	Debug "call [${SUDO_PREFIX} ${MOUNT} \"$_smbdir\" \"$_mntdir\" -o username=$_user,password=$_pass]"
+	if [ "$_osname" = "darwin" ]
+		then
+		osascript -e "tell app \"Finder\" to open location \"smb://$_user:$_pass@$_smbpart\""
+		_res=$?
+	else
+		${SUDO_PREFIX} ${MOUNT} "$_smbdir" "$_mntdir" -o username=$_user,password=$_pass
+		_res=$?
+	fi
 	if [  $_res -ne 0 ]
 		then
 		ErrorExit $_res "mount $_smbdir $_mntdir error($_res)"
