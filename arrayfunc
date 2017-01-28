@@ -13,7 +13,7 @@
 ##
 ##  example:
 ##      unset _makedisk_cmds_main
-##      declare -g -A _makedisk_cmds_main
+##      declare -g -a _makedisk_cmds_main
 ##      _makedisk_cmds_main[0]="fdisk"
 ##      _makedisk_cmds_main[1]="debootstrap"
 ##      _makedisk_cmds_main[2]="mtab"
@@ -61,7 +61,7 @@ _is_in_array_byname()
 ##
 ##  example:
 ##      unset _makedisk_cmds_main
-##      declare -g -A _makedisk_cmds_main
+##      declare -g -a _makedisk_cmds_main
 ##      _makedisk_cmds_main[0]="fdisk"
 ##      _makedisk_cmds_main[1]="debootstrap"
 ##      _makedisk_cmds_main[2]="mtab"
