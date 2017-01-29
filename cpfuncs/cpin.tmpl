@@ -12,6 +12,10 @@ use Cwd "abs_path";
 print abs_path(shift);
 EOFMM
 
+read -r -d '' PERL_DOS2UNIX_STR<<EOFMM
+%PERL_DOS2UNIX_STR%
+EOFMM
+
 
 script_file=`which $0`
 if [  -z "$script_file"  ]
@@ -50,6 +54,7 @@ CopyFrom()
         local _frombase="$2"
         local _basedir="$3"
         local _osname=`uname -s | tr [:upper:] [:lower:]`
+        local _content
 
 
         if [ -d "$_frombase/$_todir" ]
@@ -77,7 +82,7 @@ CopyFrom()
                 for _i in $(${FIND} "$_basedir/$_todir" -type f | ${XARGS}  ${FILE}   | ${GREP} -e 'ASCII text' | ${AWK} -F: '{print $1}')
                 do
                     Debug "dos2unix [$_i]"
-                    ${SED} -i 's/\r//g' "$_i"
+                    ${PERL} -e "$PERL_DOS2UNIX_STR" "$_i"
                 done
         else
                 _bname=`dirname $_basedir/$_todir`
@@ -89,7 +94,7 @@ CopyFrom()
                 for _i in $(${FIND} "$_basedir/$_todir" -type f | ${XARGS}  ${FILE}  | ${GREP} -e 'ASCII text' | ${AWK} -F: '{print $1}')
                 do
                     Debug "dos2unix [$_i]"
-                    ${SED} -i 's/\r//g' "$_i"
+                    ${PERL} -e "$PERL_DOS2UNIX_STR" "$_i"
                 done
         fi
 }
@@ -104,13 +109,14 @@ if [ -z "$mntdir" ]
 fi
 
 
-for item in $@
+
+for item in "${args[@]}"
 do
         if [ "$item" = "--" ]
             then
             continue
         fi
-        _absitem=`${READLINK} -f $item`
+        _absitem=`perl -e "$PERL_READLINK_STR_2" $item`
         _issubdir=$(IsSub "$gitbase_dir" "$_absitem")
         if [ $_issubdir -gt 0 ]
                 then

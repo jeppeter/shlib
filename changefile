@@ -67,7 +67,13 @@ EOFCC
 parse_command_line "$OPTIONS" "$@"
 
 exitcode=0
-_tempfile=`mktemp --tmpdir=/tmp immediaXXXXXX`
+osname=`uname -s | tr [:upper:] [:lower:]`
+if [ "$osname" = "darwin" ]
+	then
+	_tempfile=`mktemp /tmp/immediaXXXXXX`
+else
+	_tempfile=`mktemp --tmpdir=/tmp immediaXXXXXX`
+fi
 
 
 
@@ -93,9 +99,9 @@ if [ -z "$output" ]
 	output=/dev/stdout
 fi
 
-cat "$input"  | sed 's/\&/%anddollar%/g'  | sed 's/\$/%dollar%/g' | sed 's/\\/%backslash%/g' > $_tempfile
+cat "$input"  | sed 's/\&/%anddollar%/g'  | sed 's/\$/%dollar%/g' | sed 's/\\/%backslash%/g' | sed 's/\`/%back_address%/g' > $_tempfile
 replaceval=$(cat "$_tempfile" )
 #Debug "replaceval ($replaceval)"
-awk -v replacekey="$replacepattern" -v replacevalue="$replaceval" "$AWK_REPL_STR" $patternfile  | sed 's/%backslash%/\\\\/g' | sed 's/%dollar%/\\\$/g'  | sed 's/%anddollar%/\&/g' >$output
+gawk -v replacekey="$replacepattern" -v replacevalue="$replaceval" "$AWK_REPL_STR" $patternfile  | sed 's/%backslash%/\\\\/g' | sed 's/%dollar%/\\\$/g'  | sed 's/%anddollar%/\&/g' | sed 's/%back_address%/\\\`/g' >$output
 rm -f "$_tempfile"
 exit 0
