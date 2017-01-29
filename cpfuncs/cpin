@@ -1,18 +1,26 @@
 #!/bin/bash
 
+source extargsparse4sh
+
 if [ -n "$CPFUNCS_DEBUG" ] && [ $CPFUNCS_DEBUG -gt 3 ]
     then
     set -x
 fi
 
+read -r -d '' PERL_READLINK_STR_2<<EOFMM
+use Cwd "abs_path";
+print abs_path(shift);
+EOFMM
+
+
 script_file=`which $0`
 if [  -z "$script_file"  ]
 then
-        script_file=`readlink -f $0`
+        script_file=`perl -e "$PERL_READLINK_STR_2" $0`
 fi
 script_dir=`dirname $script_file`
 
-. "$script_dir/cpfuncs"
+source "$script_dir/cpfuncs"
 
 DEF_MNTDIR=$(GetSmbMountDir)
 gitbase_dir=$(GetGitDir)
@@ -22,32 +30,16 @@ mntdir=$DEF_MNTDIR
 basedir=$DEF_BASEDIR
 verbose=0
 
-Usage()
-{
-        _ec=$1
-        _fmt=$2
-        _fp=/dev/stderr
+source extargsparse4sh
 
-        if [ $_ec -eq 0 ]
-                then
-                _fp=/dev/stdout
-        fi
-
-        if [ -n "$_fmt" ]
-        then
-                ${ECHO} "$_fmt" >$_fp
-        fi
-
-        ${ECHO} "$0 [OPTIONS] directorys..." >$_fp
-        ${ECHO} "  -h|--help              to display this help information" >$_fp
-        ${ECHO} "  -m|--mntdir <dir>      to specify mount dir default($DEF_MNTDIR)" >$_fp
-        ${ECHO} "  -b|--basedir <dir>     to specify basedir default($DEF_BASEDIR)" >$_fp
-        ${ECHO} "  -v|--verbose           to specify verbose mode default(0)" >$_fp
-        ${ECHO} "  srcdir                 ($DEF_MNTDIR/$DEF_BASEDIR)" >$_fp
-        ${ECHO} "  directorys...          from current directory" >$_fp
-
-        exit $_ec
-}
+read -r -d ''  OPTIONS<<EOFMM
+    {
+        "verbose|v" : "+",
+        "mntdir|m" : "$DEF_MNTDIR",
+        "basedir|b" : "$DEF_BASEDIR",
+        "\$<args>" : "+"
+    }
+EOFMM
 
 
 
@@ -57,16 +49,31 @@ CopyFrom()
         local _todir="$1"
         local _frombase="$2"
         local _basedir="$3"
+        local _osname=`uname -s | tr [:upper:] [:lower:]`
+
 
         if [ -d "$_frombase/$_todir" ]
         then
                 _bname=`dirname "$_basedir/$_todir"`
-                if [ ! -d "$_bname" ]
+                if [ "$_osname" = "darwin" ]
+                    then
+                    if [ ! -d "$_todir" ]
                         then
-                        ${MKDIR} "$_bname"
-                fi
+                        ${MKDIR} -p "$_todir"
+                    fi
+                else
+                    if [ ! -d "$_bname" ]
+                            then
+                            ${MKDIR} -p "$_bname"
+                    fi
+                fi 
                 Debug "[$_frombase/$_todir] => [$_bname]"
-                ${CP}  -r -f "$_frombase/$_todir"  "$_bname"
+                if [ "$_osname" = "darwin" ]
+                    then
+                    ${CP} -r -f "$_frombase/$_todir" "$_todir"
+                else
+                    ${CP}  -r -f "$_frombase/$_todir"  "$_bname"
+                fi
                 for _i in $(${FIND} "$_basedir/$_todir" -type f | ${XARGS}  ${FILE}   | ${GREP} -e 'ASCII text' | ${AWK} -F: '{print $1}')
                 do
                     Debug "dos2unix [$_i]"
@@ -87,55 +94,13 @@ CopyFrom()
         fi
 }
 
-OPTIONS=`getopt -o hm:b:v --long 'help,mntdir:,basedir:,verbose' -n "$0" -- "$@"`
+parse_command_line "$OPTIONS" "$@"
 
-# Check for non-GNU getopt
-if [ $? != 0 ] ; then echo "W: non-GNU getopt" >&2 ; exit 1 ; fi
-
-eval set -- "$OPTIONS"
-
-while [ $# -gt 0 ]
-do
-        breakone=0
-        case "$1" in
-                -h|--help)
-                        Usage 0 ""
-                        ;;
-                -m|--mntdir)
-                        if [ $# -gt 1 ]
-                        then
-                                mntdir="$2"
-                                shift
-                        else
-                                Usage 3 "$1 need arg"
-                        fi
-                        ;;
-                -b|--basedir)
-                        if [ $# -gt 1 ]
-                        then
-                                basedir="$2"
-                                shift
-                        else
-                                Usage 3 "$1 need arg"
-                        fi
-                        ;;
-                -v|--verbose)
-                        verbose=`expr $verbose \+ 1`
-                        ;;
-                *)
-                        breakone=1
-                        ;;                        
-        esac
-        if [ $breakone -gt 0 ]
-                then
-                break
-        fi
-        shift
-done
 
 if [ -z "$mntdir" ]
         then
-        Usage 4 "please specify mountdir by -m|--mntdir or mount them or export CP_SMB_DIR environment value"
+        printf "please specify mountdir by -m|--mntdir or mount them or export CP_SMB_DIR environment value" >/dev/stderr
+        exit 4
 fi
 
 

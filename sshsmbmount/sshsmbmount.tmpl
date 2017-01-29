@@ -8,8 +8,8 @@ AWK=`/usr/bin/which awk`
 mntdir=$DEF_DIRECTORY
 MKDIR=`/usr/bin/which mkdir`
 MOUNT=`/usr/bin/which mount`
-read -r -d '' SPLITAWK_STR<<EOFMM
-%SPLITAWK_STR%
+read -r -d '' PERL_MOUNTCHECK_STR<<EOFMM
+%PERL_MOUNTCHECK_STR%
 EOFMM
 
 EQUALAWK_STR='{if($0==searchvar){print $0;}}'
@@ -68,15 +68,17 @@ MakeDirNotExist()
 
 CheckMountSmb()
 {
-	_smbdir=$1
-	_mntdir=$2
-	_mounted=0
+	local _smbdir=$1
+	local _mntdir=$2
+	local _mounted=0
+	local _hasmounted
+	local _mountpoint
 
-	_hasmounted=`${MOUNT} | ${AWK} -v splitchar=on -v searchidx=1 "$SPLITAWK_STR"  | ${AWK} -v searchvar="$_smbdir" "$EQUALAWK_STR"`
+	_hasmounted=`${MOUNT} | ${PERL} -e "$PERL_MOUNTCHECK_STR" mntpnt "$_smbdir"`
 	if [ ! -z "$_hasmounted" ]
 	then
-		_mountpoint=`${MOUNT} | ${GREP} "$_smbdir" | ${AWK} -v splitchar=on -v searchidx=2 "$SPLITAWK_STR" | ${AWK} -v splitchar=type -v searchidx=1 "$SPLITAWK_STR" | ${AWK} -v searchvar="$_mntdir" "$EQUALAWK_STR"`
-		if [ ! -z "$_mountpoint" ]
+		_mountpoint=`${MOUNT} | ${PERL} -e "$PERL_MOUNTCHECK_STR" mntpnt "$_smbdir"`
+		if [ ! -z "$_mountpoint" ] && [ "$_mountpoint" = "$_mntdir" ]
 		then
 			_mounted=1
 		fi
