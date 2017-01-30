@@ -2,8 +2,10 @@
 
 source extargsparse4sh
 
+reserved=0
+
 function clear_temp {
-	if [ -n "$_tempfile" ] && [ -f "$_tempfile" ]
+	if [ -n "$_tempfile" ] && [ -f "$_tempfile" ] && [ "$reserved" -eq 0 ]
 		then
 		rm -f "$_tempfile"
 	fi
@@ -31,12 +33,47 @@ function ErrorExit {
 	exit $exitcode
 }
 
-function Debug {
-	local _fmt="$1"
-	if [ $verbose -gt 3 ]
-		then
-		echo "$_fmt" >&2
-	fi
+INFO_LEVEL=2
+DEBUG_LEVEL=3
+WARN_LEVEL=1
+ERROR_LEVEL=0
+
+function __Debug()
+{
+        local _fmt=$1
+        shift
+        local _backstack=0
+        if [ $# -gt 0 ]
+                then
+                _backstack=$1
+        fi
+        
+        _fmtstr=""
+        if [ $verbose -gt $INFO_LEVEL ]
+                then
+                _fmtstr="${BASH_SOURCE[$_backstack]}:${BASH_LINENO[$_backstack]} "
+        fi
+
+        _fmtstr="$_fmtstr$_fmt"
+        ${ECHO} -e "$_fmtstr" >&2
+}
+
+function Debug()
+{
+        local _fmt=$1
+        shift
+        local _backstack=0
+        if [ $# -gt 0 ]
+                then
+                _backstack=$1
+        fi
+        _backstack=`expr $_backstack \+ 1`
+        
+        if [ $verbose -ge $DEBUG_LEVEL ]
+                then
+                __Debug "$_fmt" "$_backstack"
+        fi
+        return
 }
 
 
@@ -47,6 +84,7 @@ read -r -d '' OPTIONS<<EOFCODE
 		"output|o" : null,
 		"patternfile|P" : null,
 		"replacepattern|p" : "%REPLACE_PATTERN%",
+		"reserved|r" : false,
 		"\$<VARARGS>" : 0
 	}
 EOFCODE
@@ -99,9 +137,19 @@ if [ -z "$output" ]
 	output=/dev/stdout
 fi
 
-cat "$input"  | sed 's/\&/%anddollar%/g'  | sed 's/\$/%dollar%/g' | sed 's/\\/%backslash%/g' | sed 's/\`/%back_address%/g' > $_tempfile
+if [ "$osname" = "darwin" ]
+	then
+	cat "$input"  | sed 's/\&/%anddollar%/g'  | sed 's/\$/%dollar%/g' | sed 's/\\/%backslash%/g' | sed 's/\`/%back_address%/g' > $_tempfile
+else
+	cat "$input"  | sed 's/\&/%anddollar%/g'  | sed 's/\$/%dollar%/g' | sed 's/\\/%backslash%/g' | sed 's/\x60/%back_address%/g' > $_tempfile
+fi
 replaceval=$(cat "$_tempfile" )
 #Debug "replaceval ($replaceval)"
-gawk -v replacekey="$replacepattern" -v replacevalue="$replaceval" "$AWK_REPL_STR" $patternfile  | sed 's/%backslash%/\\\\/g' | sed 's/%dollar%/\\\$/g'  | sed 's/%anddollar%/\&/g' | sed 's/%back_address%/\\\`/g' >$output
-rm -f "$_tempfile"
+if [ "$osname" = "darwin" ]
+	then
+	gawk -v replacekey="$replacepattern" -v replacevalue="$replaceval" "$AWK_REPL_STR" $patternfile  | sed 's/%backslash%/\\\\/g' | sed 's/%dollar%/\\\$/g'  | sed 's/%anddollar%/\&/g' | sed 's/%back_address%/\\\`/g' >$output
+else
+	gawk -v replacekey="$replacepattern" -v replacevalue="$replaceval" "$AWK_REPL_STR" $patternfile  | sed 's/%backslash%/\\\\/g' | sed 's/%dollar%/\\\$/g'  | sed 's/%anddollar%/\&/g' | sed 's/%back_address%/\\\x60/g' >$output
+fi
+Debug "_tempfile [$_tempfile]"
 exit 0
