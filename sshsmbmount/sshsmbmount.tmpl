@@ -150,8 +150,8 @@ MountSmb()
 
 	if [ "$_osname" = "darwin" ]
 		then
-		Debug "call [tell app \"Finder\" to open location \"smb://$_user:$_pass@$_smbpart\"]"
-		osascript -e "tell app \"Finder\" to open location \"smb://$_user:$_pass@$_smbpart\""
+		Debug "call [mount volume \"smb://$_user:$_pass@$_smbpart\"]"
+		osascript -e "mount volume \"smb://$_user:$_pass@$_smbpart\"" >/dev/null
 		_res=$?
 		if [ $_res -ne 0 ]
 			then

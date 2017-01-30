@@ -75,7 +75,7 @@ CopyFrom()
                 Debug "[$_frombase/$_todir] => [$_bname]"
                 if [ "$_osname" = "darwin" ]
                     then
-                    ${CP} -r -f "$_frombase/$_todir" "$_todir"
+                    ${CP} -r -f "$_frombase/$_todir" "$_bname"
                 else
                     ${CP}  -r -f "$_frombase/$_todir"  "$_bname"
                 fi
