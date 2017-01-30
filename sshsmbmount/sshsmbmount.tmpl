@@ -2,15 +2,22 @@
 
 DEF_VERBOSE=0
 verbose=$DEF_VERBOSE
-ECHO=`/usr/bin/which echo`
+ECHO=`which echo`
 DEF_DIRECTORY="/mnt/zdisk"
-AWK=`/usr/bin/which awk`
+AWK=`which awk`
 mntdir=$DEF_DIRECTORY
-MKDIR=`/usr/bin/which mkdir`
-MOUNT=`/usr/bin/which mount`
+MKDIR=`which mkdir`
+MOUNT=`which mount`
+PERL=`which perl`
 read -r -d '' PERL_MOUNTCHECK_STR<<EOFMM
 %PERL_MOUNTCHECK_STR%
 EOFMM
+
+read -r -d '' PERL_READLINK_STR<<EOFMM
+use Cwd "abs_path";
+print abs_path(shift);
+EOFMM
+
 
 EQUALAWK_STR='{if($0==searchvar){print $0;}}'
 GREP=`/usr/bin/which grep`
@@ -30,10 +37,48 @@ DEF_PASS=""
 username=$DEF_USER
 password=$DEF_PASS
 
-Debug()
+INFO_LEVEL=2
+DEBUG_LEVEL=3
+WARN_LEVEL=1
+ERROR_LEVEL=0
+
+function __Debug()
 {
-	_fmt=$1
-	${ECHO} "$_fmt"
+        local _fmt=$1
+        shift
+        local _backstack=0
+        local _fmtstr
+        if [ $# -gt 0 ]
+                then
+                _backstack=$1
+        fi
+        
+        _fmtstr=""
+        if [ $verbose -gt $INFO_LEVEL ]
+                then
+                _fmtstr="${BASH_SOURCE[$_backstack]}:${BASH_LINENO[$_backstack]} "
+        fi
+
+        _fmtstr="$_fmtstr$_fmt"
+        ${ECHO} -e "$_fmtstr" >&2
+}
+
+function Debug()
+{
+        local _fmt=$1
+        shift
+        local _backstack=0
+        if [ $# -gt 0 ]
+                then
+                _backstack=$1
+        fi
+        _backstack=`expr $_backstack \+ 1`
+        
+        if [ $verbose -ge $DEBUG_LEVEL ]
+                then
+                __Debug "$_fmt" "$_backstack"
+        fi
+        return
 }
 
 ErrorExit()
@@ -41,7 +86,7 @@ ErrorExit()
 	_ec=$1
 	_fmt=$2
 
-	${ECHO} "$_fmt" >2
+	${ECHO} "$_fmt" >/dev/stderr
 	exit $_ec
 }
 
@@ -73,13 +118,19 @@ CheckMountSmb()
 	local _mounted=0
 	local _hasmounted
 	local _mountpoint
+	local _rpmountpoint
+	local _rpmntdir
 
-	_hasmounted=`${MOUNT} | ${PERL} -e "$PERL_MOUNTCHECK_STR" mntpnt "$_smbdir"`
-	if [ ! -z "$_hasmounted" ]
+
+	_mountpoint=`${MOUNT} | ${PERL} -e "$PERL_MOUNTCHECK_STR" mntpnt "$_smbdir"`
+	Debug "mountpoint [$_mountpoint]"
+	if [ -n "$_mountpoint" ] 
 	then
-		_mountpoint=`${MOUNT} | ${PERL} -e "$PERL_MOUNTCHECK_STR" mntpnt "$_smbdir"`
-		if [ ! -z "$_mountpoint" ] && [ "$_mountpoint" = "$_mntdir" ]
-		then
+		_rpmountpoint=`perl -e "$PERL_READLINK_STR" "$_mountpoint"`
+		_rpmntdir=`perl -e "$PERL_READLINK_STR" "$_mntdir"`
+		Debug "_rpmountpoint [$_rpmountpoint] _rpmntdir [$_rpmntdir]"
+		if [ "$_rpmountpoint" = "$_rpmntdir" ]
+			then
 			_mounted=1
 		fi
 	fi
@@ -94,13 +145,40 @@ MountSmb()
 	local _pass=$4
 	local _osname=`uname -s | tr [:upper:] [:lower:]`
 	local _smbpart=`echo -n "$_smbdir" | sed 's|^\/\/||'`
+	local _tries=0
+	local _mounted
 
-	Debug "call [${SUDO_PREFIX} ${MOUNT} \"$_smbdir\" \"$_mntdir\" -o username=$_user,password=$_pass]"
 	if [ "$_osname" = "darwin" ]
 		then
+		Debug "call [tell app \"Finder\" to open location \"smb://$_user:$_pass@$_smbpart\"]"
 		osascript -e "tell app \"Finder\" to open location \"smb://$_user:$_pass@$_smbpart\""
 		_res=$?
+		if [ $_res -ne 0 ]
+			then
+			ErrorExit $_res "mount $_smbdir $_mntdir error($_res)"
+		fi
+
+		# now wait for the mount dir is ok
+		_tries=0
+		_mounted=0
+		while [ $_tries -lt 10 ]
+		do
+			_mounted=$(CheckMountSmb "$_smbdir" "$_mntdir")
+			if [ $_mounted -gt 0 ]
+				then
+				break
+			fi
+			_tries=`expr $_tries \+ 1`
+			sleep 1
+		done
+		if [ $_mounted -eq 0 ]
+			then
+			ErrorExit 3 "could not mount"
+		fi
+
+
 	else
+		Debug "call [${SUDO_PREFIX} ${MOUNT} \"$_smbdir\" \"$_mntdir\" -o username=$_user,password=$_pass]"
 		${SUDO_PREFIX} ${MOUNT} "$_smbdir" "$_mntdir" -o username=$_user,password=$_pass
 		_res=$?
 	fi
@@ -190,3 +268,4 @@ if [ $mounted -eq 0 ]
 	then
 	MountSmb "$smbdir" "$mntdir" "$username" "$password"
 fi
+echo "$mntdir" >/dev/stdout

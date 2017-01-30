@@ -11,6 +11,7 @@ all:sshsmbmount
 
 sshsmbmount:sshsmbmount.tmpl check_mountcheck_pl
 	${Q}bash ${TOPDIR}/changefile -i ${TOPDIR}/mountcheck.pl -P sshsmbmount.tmpl -o sshsmbmount -p '%PERL_MOUNTCHECK_STR%'
+	${Q}chmod +x sshsmbmount
 
 check_mountcheck_pl:${TOPDIR}/mountcheck.pl
 	${Q}bash ${TOPDIR}/changefile -i ${TOPDIR}/mountcheck.pl -P ${TOPDIR}/echocode.tmpl -o echocode.tmp -p '%REPLACE_PATTERN%'
