@@ -2,6 +2,7 @@
 TOPDIR:=$(shell perl -e 'use Cwd "abs_path"; print abs_path(shift);' ../)
 RM:=$(shell which rm) -rf
 BASH:=$(shell which bash)
+PYTHON:=$(shell which python)
 
 ifeq (${V},)
 Q=@
@@ -11,6 +12,7 @@ endif
 
 all:cpfuncs cpin
 	${Q}chmod +x cpin cpout
+	${Q}${PYTHON} testcp.py -f -v 
 
 
 cpfuncs:cpfuncs.tmpl check_mountcheck_pl check_subpath_pl check_shcp_py
