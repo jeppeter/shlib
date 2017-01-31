@@ -225,18 +225,24 @@ CopyFrom()
         local _todir="$1"
         local _frombase="$2"
         local _basedir="$3"
-        local _osname=`uname -s | tr [:upper:] [:lower:]`
-        local _content
-        local _subpath
-        local _curitem
-
-        Debug "_todir[$_todir]"
-        if [ -z "$_todir" ]
-            then
-            return
-        fi
+        local _oldverbose="$EXTARGS_VERBOSE"
+        local _res
+        export EXTARGS_VERBOSE="$verbose"
 
         ${PYTHON} -c "$PYTHON_SHCP_STR" "$_frombase/$_todir" "$_basedir/$_todir"
+        _res=$?
+
+        if [ -z "$_oldverbose" ]
+                then
+                unset EXTARGS_VERBOSE
+        else
+                export EXTARGS_VERBOSE="$_oldverbose"
+        fi
+
+        if [ $_res -ne 0 ]
+                then
+                ErrorExit $_res "can not copy [$_frombase/$_todir] => [$_basedir/$_todir]"
+        fi
 
         if [ -d "$_frombase/$_todir" ]
         then
@@ -259,8 +265,24 @@ CopyTo()
         local _todir=$1
         local _frombase=$2
         local _basedir=$3
+        local _oldverbose="$EXTARGS_VERBOSE"
+        local _res
+        export EXTARGS_VERBOSE="$verbose"
 
         Debug "from $_basedir/$_frombase to $_todir/$_frombase"
         ${SUDO_PREFIX} ${PYTHON} -c "$PYTHON_SHCP_STR" "$_basedir/$_frombase" "$_todir/$_frombase"
+        _res=$?
+
+        if [ -z "$_oldverbose" ]
+                then
+                unset EXTARGS_VERBOSE
+        else
+                export EXTARGS_VERBOSE="$_oldverbose"
+        fi
+
+        if [ $_res -ne 0 ]
+                then
+                ErrorExit $_res "can not copy [$_frombase/$_todir] => [$_basedir/$_todir]"
+        fi
         return
 }

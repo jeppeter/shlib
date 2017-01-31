@@ -245,7 +245,9 @@ class debug_testcp_case(unittest.TestCase):
 		self.assertEqual(len(cfs.left_diffs),len(cfs.right_diffs))
 		if len(cfs.left_diffs) > 0:
 			for i in range(len(cfs.left_diffs)):
-				self.assertTrue( cfs.left_diffs[i] in crfromfiles )
+				if cfs.left_diffs[i] not in crfromfiles:
+					logging.warn('[%d][%s] not crfromfiles'%(i,cfs.left_diffs[i]))
+				#self.assertTrue( cfs.left_diffs[i] in crfromfiles )
 				cmpfs = CheckFiles(True)
 				retval = cmpfs.check_file_same(cfs.left_diffs[i],cfs.right_diffs[i])
 				self.assertEqual(retval,True)
@@ -328,7 +330,9 @@ class debug_testcp_case(unittest.TestCase):
 		self.assertEqual(len(cfs.left_diffs),len(cfs.right_diffs))
 		if len(cfs.left_diffs) > 0:
 			for i in range(len(cfs.left_diffs)):
-				self.assertTrue( cfs.left_diffs[i] in crfromfiles )
+				if cfs.left_diffs[i] not in crfromfiles:
+					logging.warn('[%d][%s] not crfromfiles'%(i,cfs.left_diffs[i]))
+				#self.assertTrue( cfs.left_diffs[i] in crfromfiles )
 				cmpfs = CheckFiles(True)
 				retval = cmpfs.check_file_same(cfs.left_diffs[i],cfs.right_diffs[i])
 				self.assertEqual(retval,True)
