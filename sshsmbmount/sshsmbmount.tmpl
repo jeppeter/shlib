@@ -45,9 +45,9 @@ ERROR_LEVEL=0
 function __Debug()
 {
         local _fmt=$1
+        local _osname=`uname -s | tr [:upper:] [:lower:]`
         shift
         local _backstack=0
-        local _fmtstr
         if [ $# -gt 0 ]
                 then
                 _backstack=$1
@@ -56,11 +56,22 @@ function __Debug()
         _fmtstr=""
         if [ $verbose -gt $INFO_LEVEL ]
                 then
-                _fmtstr="${BASH_SOURCE[$_backstack]}:${BASH_LINENO[$_backstack]} "
+                if [ "$_osname" = "darwin" ]
+                        then
+                        local _filestack=`expr $_backstack \+ 1`
+                        _fmtstr="${BASH_SOURCE[$_filestack]}:${BASH_LINENO[$_backstack]} "
+                else
+                        _fmtstr="${BASH_SOURCE[$_backstack]}:${BASH_LINENO[$_backstack]} "
+                fi
         fi
 
         _fmtstr="$_fmtstr$_fmt"
-        ${ECHO} -e "$_fmtstr" >&2
+        if [ "$_osname" = "darwin" ]
+        	then
+        	${ECHO} "$_fmtstr" >&2
+        else
+        	${ECHO} -e "$_fmtstr" >&2
+    	fi
 }
 
 function Debug()
