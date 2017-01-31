@@ -194,7 +194,7 @@ class debug_testcp_case(unittest.TestCase):
 			s += curch
 		return s
 
-	def cpin_call(self,pwddir,curdir):
+	def __cpcmd_call(self,cmd,pwddir,curdir):
 		olddir = os.getcwd()
 		try:
 			pwddir = os.path.abspath(pwddir)
@@ -205,19 +205,34 @@ class debug_testcp_case(unittest.TestCase):
 			if not curdir.startswith(pwddir) and curdir != pwddir:
 				raise Exception('[%s] not valid for (%s)'%(curdir,pwddir))
 			curdir = os.path.relpath(curdir,pwddir)
-			logging.warn('pwd [%s] curdir[%s]'%(pwddir,curdir))
 			while curdir.startswith('/'):
 				curdir = curdir[1:]
 			if len(curdir) == 0:
 				curdir = '.'
-			cpin = os.environ['CPIN_BIN']
-			cmd = ['bash',cpin,curdir]
-			logging.warn('cmd (%s)'%(cmd))
+			cmd = ['bash',cmd,curdir]
+			logging.info('cmd (%s) pwd [%s] curdir[%s]'%(cmd,pwddir,curdir))
 			subprocess.check_call(cmd)
 		finally:
 			os.chdir(olddir)
 		return
 
+	def __remove_dir(self,dirn,issuper=False):
+		if issuper:
+			cmd = ['sudo','rm','-rf',dirn]
+		else:
+			cmd = ['rm','-rf',dirn]
+		subprocess.check_call(cmd)
+		return
+
+	def cpin_call(self,pwddir,curdir):
+		cpin = os.environ['CPIN_BIN']
+		self.__cpcmd_call(cpin,pwddir,curdir)
+		return
+
+	def cpout_call(self,pwddir,curdir):
+		cpout = os.environ['CPOUT_BIN']
+		self.__cpcmd_call(cpout,pwddir,curdir)
+		return
 
 	def __cpin_all(self):
 		todir = os.environ['CP_TO_DIR']
@@ -251,8 +266,8 @@ class debug_testcp_case(unittest.TestCase):
 				cmpfs = CheckFiles(True)
 				retval = cmpfs.check_file_same(cfs.left_diffs[i],cfs.right_diffs[i])
 				self.assertEqual(retval,True)
-		shutil.rmtree(todir)
-		shutil.rmtree(fromdir)
+		self.__remove_dir(todir)
+		self.__remove_dir(fromdir)
 		return
 
 	def test_cpin_all(self):
@@ -263,6 +278,52 @@ class debug_testcp_case(unittest.TestCase):
 		for i in range(maxnum):
 			self.__cpin_all()
 		return
+
+	def __cpout_all(self):
+		todir = os.environ['CP_TO_DIR']
+		fromdir = os.environ['CP_SMB_DIR']
+		fromdir = make_tempdir(fromdir)
+		frombasename = os.path.basename(fromdir)
+		fromdirgit = os.path.join(fromdir,'.git')
+		todir = os.path.join(todir,frombasename)
+		todir = os.path.abspath(todir)
+		todirgit = os.path.join(todir,'.git')
+		todirgit = os.path.abspath(todirgit)
+		todir = os.path.abspath(todir)
+		make_dir_safe(todirgit)
+		make_dir_safe(todir)
+		make_dir_safe(fromdir)
+		make_dir_safe(fromdirgit)
+		filenum = random.randint(20,100)
+		crfromfiles = []
+		crfromfiles = self.random_make_subs(todir,filenum)
+		# now copy the file
+		self.cpout_call(todir,'.')
+		cfs = self.dircompare(fromdir,todir,False)
+		self.assertEqual(cfs.left_only,[])
+		self.assertEqual(cfs.right_only,[])
+		self.assertEqual(len(cfs.left_diffs),len(cfs.right_diffs))
+		if len(cfs.left_diffs) > 0:
+			for i in range(len(cfs.left_diffs)):
+				if cfs.left_diffs[i] not in crfromfiles:
+					logging.warn('[%d][%s] not crfromfiles'%(i,cfs.left_diffs[i]))
+				#self.assertTrue( cfs.left_diffs[i] in crfromfiles )
+				cmpfs = CheckFiles(True)
+				retval = cmpfs.check_file_same(cfs.left_diffs[i],cfs.right_diffs[i])
+				self.assertEqual(retval,True)
+		self.__remove_dir(todir)
+		self.__remove_dir(fromdir,True)
+		return
+
+	def test_cpout_all(self):
+		if 'CP_MAX_CNT' in os.environ.keys():
+			maxnum = int(os.environ['CP_MAX_CNT'])
+		else:
+			maxnum = random.randint(1,3)
+		for i in range(maxnum):
+			self.__cpout_all()
+		return
+
 
 	def random_make_subs(self,fromdir,filenum):
 		crfromfiles = []
@@ -310,7 +371,6 @@ class debug_testcp_case(unittest.TestCase):
 		make_dir_safe(fromdirgit)
 		filenum = random.randint(20,100)
 		curdir = fromdir
-		logging.warn('fromdir [%s] frombasename [%s] curdir[%s] filenum[%d]'%(fromdir,frombasename,curdir,filenum))
 		crfromfiles = self.random_make_subs(fromdir,filenum)
 		# now copy the file
 		self.cpin_call(todir,'.')
@@ -318,7 +378,6 @@ class debug_testcp_case(unittest.TestCase):
 		sdir,relpath = select_random_subdir(fromdir)
 		crfromfiles = []
 		filenum = random.randint(1,100)
-		logging.warn('fromdir[%s] todir[%s] curdir[%s] filenum[%d]'%(fromdir,todir,curdir,filenum))
 		crfromfiles = self.random_make_subs(sdir,filenum)
 
 		self.cpin_call(todir,relpath)
@@ -336,8 +395,8 @@ class debug_testcp_case(unittest.TestCase):
 				cmpfs = CheckFiles(True)
 				retval = cmpfs.check_file_same(cfs.left_diffs[i],cfs.right_diffs[i])
 				self.assertEqual(retval,True)
-		shutil.rmtree(todir)
-		shutil.rmtree(fromdir)
+		self.__remove_dir(todir)
+		self.__remove_dir(fromdir)
 		return
 
 	def test_cpin_sub(self):
@@ -347,6 +406,59 @@ class debug_testcp_case(unittest.TestCase):
 			maxnum = random.randint(1,3)
 		for i in range(maxnum):
 			self.__cpin_sub()
+		return
+
+	def __cpout_sub(self):
+		todir = os.environ['CP_TO_DIR']
+		fromdir = os.environ['CP_SMB_DIR']
+		fromdir = make_tempdir(fromdir)
+		frombasename = os.path.basename(fromdir)
+		fromdirgit = os.path.join(fromdir,'.git')
+		todir = os.path.join(todir,frombasename)
+		todir = os.path.abspath(todir)
+		todirgit = os.path.join(todir,'.git')
+		todirgit = os.path.abspath(todirgit)
+		todir = os.path.abspath(todir)
+		make_dir_safe(todirgit)
+		make_dir_safe(todir)
+		make_dir_safe(fromdir)
+		make_dir_safe(fromdirgit)
+		filenum = random.randint(20,100)
+		crfromfiles = self.random_make_subs(todir,filenum)
+		# now copy the file
+		self.cpout_call(todir,'.')
+		# now to make the 
+		sdir,relpath = select_random_subdir(todir)
+		crfromfiles = []
+		filenum = random.randint(1,100)
+		crfromfiles = self.random_make_subs(sdir,filenum)
+
+		self.cpout_call(todir,relpath)
+		tosubdir = os.path.join(todir,relpath)
+		fromsubdir = os.path.join(fromdir,relpath)
+		cfs = self.dircompare(fromsubdir,tosubdir,False)
+		self.assertEqual(cfs.left_only,[])
+		self.assertEqual(cfs.right_only,[])
+		self.assertEqual(len(cfs.left_diffs),len(cfs.right_diffs))
+		if len(cfs.left_diffs) > 0:
+			for i in range(len(cfs.left_diffs)):
+				if cfs.left_diffs[i] not in crfromfiles:
+					logging.warn('[%d][%s] not crfromfiles'%(i,cfs.left_diffs[i]))
+				#self.assertTrue( cfs.left_diffs[i] in crfromfiles )
+				cmpfs = CheckFiles(True)
+				retval = cmpfs.check_file_same(cfs.left_diffs[i],cfs.right_diffs[i])
+				self.assertEqual(retval,True)
+		self.__remove_dir(todir)
+		self.__remove_dir(fromdir,True)
+		return
+
+	def test_cpout_sub(self):
+		if 'CP_MAX_CNT' in os.environ.keys():
+			maxnum = int(os.environ['CP_MAX_CNT'])
+		else:
+			maxnum = random.randint(1,3)
+		for i in range(maxnum):
+			self.__cpout_sub()
 		return
 
 
@@ -400,7 +512,7 @@ def main():
 	os.environ['CPOUT_BIN'] = args.cpout
 	# to set the verbose mode
 	os.environ['EXTARGS_VERBOSE'] = '%s'%(args.verbose)
-	logging.warn('CP_TO_DIR [%s] CP_SMB_DIR [%s] '%(os.environ['CP_TO_DIR'],os.environ['CP_SMB_DIR']))
+	logging.info('CP_TO_DIR [%s] CP_SMB_DIR [%s] '%(os.environ['CP_TO_DIR'],os.environ['CP_SMB_DIR']))
 	random.seed(time.time())
 	sys.argv[1:] = args.args
 	unittest.main(verbosity=args.verbose,failfast=args.failfast)
