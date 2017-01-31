@@ -1,0 +1,31 @@
+#! /usr/bin/env perl -w
+
+use strict;
+
+sub Debug($)
+{
+	my ($fmt)=@_;
+	my ($p,$f,$l) = caller;
+	print STDERR "[$f:$l] $fmt\n";
+}
+
+sub get_mac_volume_dir($)
+{
+	my ($smbdir) = @_;
+	my (@sarr);
+	my ($lastidx);
+	if ($smbdir =~ m/^\/\//) {
+		@sarr = split(/\//,$smbdir);
+		if (scalar(@sarr) < 2) {
+			die "not valid ($smbdir)";
+		}
+		$lastidx = scalar(@sarr) - 1;
+		return "/Volumes/$sarr[$lastidx]";
+	}
+	die "not valid smb format path ($smbdir)";
+}
+
+foreach (@ARGV) {
+	my ($voldir) = get_mac_volume_dir($_);
+	print "$voldir\n";
+}
