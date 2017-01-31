@@ -17,6 +17,8 @@ read -r -d '' PERL_DOS2UNIX_STR<<EOFMM
 EOFMM
 
 
+
+
 script_file=`which $0`
 if [  -z "$script_file"  ]
 then
@@ -47,58 +49,6 @@ EOFMM
 
 
 
-CopyFrom()
-{
-        local _i
-        local _todir="$1"
-        local _frombase="$2"
-        local _basedir="$3"
-        local _osname=`uname -s | tr [:upper:] [:lower:]`
-        local _content
-
-
-        if [ -d "$_frombase/$_todir" ]
-        then
-                _bname=`dirname "$_basedir/$_todir"`
-                if [ "$_osname" = "darwin" ]
-                    then
-                    if [ ! -d "$_todir" ]
-                        then
-                        ${MKDIR} -p "$_todir"
-                    fi
-                else
-                    if [ ! -d "$_bname" ]
-                            then
-                            ${MKDIR} -p "$_bname"
-                    fi
-                fi 
-                if [ "$_osname" = "darwin" ]
-                    then
-                    Debug "[$_frombase/$_todir] => [$_todir]"
-                    ${CP} -r -f "$_frombase/$_todir" "$_todir"
-                else
-                    Debug "[$_frombase/$_todir] => [$_bname]"
-                    ${CP}  -r -f "$_frombase/$_todir"  "$_bname"
-                fi
-                for _i in $(${FIND} "$_basedir/$_todir" -type f | ${XARGS}  ${FILE}   | ${GREP} -e 'ASCII text' | ${AWK} -F: '{print $1}')
-                do
-                    Debug "dos2unix [$_i]"
-                    ${PERL} -e "$PERL_DOS2UNIX_STR" "$_i"
-                done
-        else
-                _bname=`dirname $_basedir/$_todir`
-                if [ ! -d "$_bname" ]
-                        then
-                        ${MKDIR} "$_bname"
-                fi
-                ${CP} -f "$_frombase/$_todir" "$_basedir/$_todir"
-                for _i in $(${FIND} "$_basedir/$_todir" -type f | ${XARGS}  ${FILE}  | ${GREP} -e 'ASCII text' | ${AWK} -F: '{print $1}')
-                do
-                    Debug "dos2unix [$_i]"
-                    ${PERL} -e "$PERL_DOS2UNIX_STR" "$_i"
-                done
-        fi
-}
 
 parse_command_line "$OPTIONS" "$@"
 
@@ -111,8 +61,9 @@ fi
 
 
 
-for item in "${args[@]}"
+for item in ${args[@]}
 do
+        Debug "item [$item]"
         if [ "$item" = "--" ]
             then
             continue
@@ -121,7 +72,8 @@ do
         _issubdir=$(IsSub "$gitbase_dir" "$_absitem")
         if [ $_issubdir -gt 0 ]
                 then
-                curitem=$(GetSubDir "$gitbase_dir" "$_absitem")                
+                curitem=$(GetSubDir "$gitbase_dir" "$_absitem")
+                Debug "curitem [$curitem] _todir [$mntdir/$basedir] gitbase_dir[$gitbase_dir]"
                 CopyFrom "$curitem" "$mntdir/$basedir" "$gitbase_dir"
         else
                 ${ECHO} "item($item) not sub ($gitbase_dir)" >&2

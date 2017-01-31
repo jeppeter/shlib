@@ -46,49 +46,6 @@ read -r -d '' OPTIONS<<EOFMM
 EOFMM
 
 
-
-CopyTo()
-{
-        local _todir=$1
-        local _frombase=$2
-        local _basedir=$3
-        local _osname=`uname -s | tr [:upper:] [:lower:]`
-
-        Debug "from $_basedir/$_frombase to $_todir/$_frombase"
-        if [ -d "$_basedir/$_frombase" ]
-        then
-                _bname1="$_todir/$_frombase"
-                if [ "$_osname" = "darwin" ]
-                    then
-                    if [ ! -d "$_bname1" ]
-                        then
-                        Debug "mkdir -p ($_bname1)"
-                        ${SUDO_PREFIX} $MKDIR -p "$_bname1"
-                    fi
-                    Debug "[$_basedir/$_frombase] [$_bname1]"
-                    ${SUDO_PREFIX} ${CP} -r -f "$_basedir/$_frombase" "$_bname1"
-                else
-                    _bname=`dirname $_bname1`
-                    if [ ! -d "$_bname" ]
-                    then
-                            Debug "mkdir -p ($_bname)"
-                            ${SUDO_PREFIX} $MKDIR -p "$_bname"
-                    fi
-                
-                    Debug "[$_basedir/$_frombase] [$_bname]"
-                    ${SUDO_PREFIX}         ${CP}  -r -f  "$_basedir/$_frombase" "$_bname"
-                fi
-        else
-                _bname=`dirname $_todir/$_frombase`
-                if [ ! -d "$_bname" ]
-                        then
-                        ${SUDO_PREFIX} $MKDIR -p $_bname
-                fi
-                Debug "[$_basedir/$_frombase] => [$_todir/$_frombase]"
-                ${SUDO_PREFIX} ${CP} -f "$_basedir/$_frombase" "$_todir/$_frombase"
-        fi
-}
-
 parse_command_line "$OPTIONS" "$@"
 
 
@@ -99,7 +56,7 @@ if [ -z "$mntdir" ]
 fi
 
 
-for item in "${args[@]}"
+for item in ${args[@]}
 do
         if [ "$item" = "--" ]
             then
@@ -110,6 +67,7 @@ do
         if [ $_issubdir -gt 0 ]
                 then
                 curitem=$(GetSubDir "$gitbase_dir" "$_absitem")
+                Debug "todir [$mntdir/$basedir] curitem [$curitem] gitbase_dir[$gitbase_dir]"
                 CopyTo "$mntdir/$basedir" "$curitem" "$gitbase_dir"
         else
                 Warn "item($item) not subdir in ($gitbase_dir)" >&2
