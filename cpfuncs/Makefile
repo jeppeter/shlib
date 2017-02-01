@@ -16,30 +16,31 @@ all:cpfuncs cpin
 
 
 cpfuncs:cpfuncs.tmpl check_mountcheck_pl check_subpath_pl check_shcp_py
-	${Q}bash ${TOPDIR}/changefile -i ${TOPDIR}/mountcheck.pl -P cpfuncs.tmpl -o cpfuncs1.tmp -p '%PERL_MOUNTCHECK_STR%' 
-	${Q}bash ${TOPDIR}/changefile -i subpath.pl -P cpfuncs1.tmp -o cpfuncs2.tmp -p '%PERL_SUBPATH_STR%'
-	${Q}bash ${TOPDIR}/changefile -i shcp.py -P cpfuncs2.tmp -o cpfuncs -p '%PYTHON_SHCP_STR%'
+	${Q}${PYTHON} ${TOPDIR}/insertcode  -i cpfuncs.tmpl  -p '%PERL_MOUNTCHECK_STR%' bashstring ${TOPDIR}/mountcheck.pl | \
+		${PYTHON} ${TOPDIR}/insertcode -p  '%PERL_SUBPATH_STR%' bashstring subpath.pl  | \
+		${PYTHON} ${TOPDIR}/insertcode -p  '%DEBUGSH_CODE%' bashinsert "${TOPDIR}/libs/debugsh" | \
+		${PYTHON} ${TOPDIR}/insertcode -p  '%PYTHON_SHCP_STR%' bashstring -o cpfuncs shcp.py
 
 cpin:cpin.tmpl check_dos2unix_pl
-	${Q}bash ${TOPDIR}/changefile -i dos2unix.pl -P cpin.tmpl -o cpin -p '%PERL_DOS2UNIX_STR%'
+	${Q}${PYTHON} ${TOPDIR}/insertcode -i cpin.tmpl -o cpin -p '%PERL_DOS2UNIX_STR%'  bashstring dos2unix.pl
 
 check_dos2unix_pl:dos2unix.pl
-	${Q}bash ${TOPDIR}/changefile -i dos2unix.pl -P ${TOPDIR}/echocode.tmpl -o dos2unixpl.tmp -p '%REPLACE_PATTERN%'
+	${Q}${PYTHON} ${TOPDIR}/insertcode -i ${TOPDIR}/echocode.tmpl -o dos2unixpl.tmp -p '%REPLACE_PATTERN%' bashstring dos2unix.pl
 	${Q}bash dos2unixpl.tmp > dos2unix.tmp
 	${Q}diff -q --strip-trailing-cr -B dos2unix.tmp dos2unix.pl || (echo "not change right for dos2unix.pl" && exit 3)
 
 check_mountcheck_pl:${TOPDIR}/mountcheck.pl
-	${Q}bash ${TOPDIR}/changefile -i ${TOPDIR}/mountcheck.pl -P ${TOPDIR}/echocode.tmpl -o echocode.tmp -p '%REPLACE_PATTERN%'
+	${Q}${PYTHON} ${TOPDIR}/insertcode  -i ${TOPDIR}/echocode.tmpl -o echocode.tmp -p '%REPLACE_PATTERN%' bashstring "${TOPDIR}/mountcheck.pl"
 	${Q}bash echocode.tmp > mountcheck.tmp
 	${Q}diff -q --strip-trailing-cr -B mountcheck.tmp ${TOPDIR}/mountcheck.pl || (echo "not change right for mountcheck.pl" && exit 3)
 
 check_subpath_pl:subpath.pl
-	${Q}bash ${TOPDIR}/changefile -i subpath.pl -P ${TOPDIR}/echocode.tmpl -o subpath_echo.tmp -p '%REPLACE_PATTERN%'
+	${Q}${PYTHON} ${TOPDIR}/insertcode -i ${TOPDIR}/echocode.tmpl -o subpath_echo.tmp -p '%REPLACE_PATTERN%' bashstring "subpath.pl"
 	${Q}bash subpath_echo.tmp > subpath.tmp
 	${Q}diff -q --strip-trailing-cr -B subpath.tmp subpath.pl || (echo "not change right for subpath.pl" && exit 3)
 
 check_shcp_py:shcp.py
-	${Q}bash ${TOPDIR}/changefile -i shcp.py -P ${TOPDIR}/echocode.tmpl -o shcp_py_echo.tmp -p '%REPLACE_PATTERN%'
+	${Q}${PYTHON} ${TOPDIR}/insertcode -i ${TOPDIR}/echocode.tmpl -o shcp_py_echo.tmp -p '%REPLACE_PATTERN%' bashstring shcp.py
 	${Q}bash shcp_py_echo.tmp > shcp_py.tmp
 	${Q}diff -q --strip-trailing-cr -B shcp_py.tmp shcp.py || (echo "not change right for shcp.py" && exit 3)
 

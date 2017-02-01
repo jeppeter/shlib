@@ -1,0 +1,119 @@
+#! /usr/bin/env python
+
+import extargsparse
+import sys
+import os
+import logging
+
+def set_log_level(args):
+    loglvl= logging.ERROR
+    if args.verbose >= 3:
+        loglvl = logging.DEBUG
+    elif args.verbose >= 2:
+        loglvl = logging.INFO
+    elif args.verbose >= 1 :
+        loglvl = logging.WARN
+    # we delete old handlers ,and set new handler
+    logging.basicConfig(level=loglvl,format='%(asctime)s:%(filename)s:%(funcName)s:%(lineno)d\t%(message)s')
+    return
+
+def __get_bash_string_file(infile):
+	s = ''
+	logging.info('open file [%s] for string'%(infile))
+	with open(infile,'rb')  as fin:
+		for l in fin:
+			l = l.replace('$',r'%dollar%')
+			l = l.replace('\\',r'%backslash%')
+			l = l.replace('`',r'%back_address%')
+			# now replace the value
+			l = l.replace(r'%dollar%','\\$')
+			l = l.replace(r'%backslash%','\\\\')
+			l = l.replace(r'%back_address%','\\`')
+			s += l
+	logging.info('[%s] (%s)'%(infile,s))
+	return s
+
+def get_bash_string(args):
+	s = ''
+	for c in args.subnargs:
+		s += __get_bash_string_file(c)
+	return s
+
+def replace_string(args,repls):
+	fin = sys.stdin
+	fout = sys.stdout
+	if args.input is not None:
+		fin = open(args.input,'rb')
+	if args.output is not None:
+		fout = open(args.output,'w+b')
+
+	for l in fin:
+		l = l.replace(args.pattern,repls)
+		fout.write('%s'%(l))
+	if fin != sys.stdin:
+		fin.close()
+	fin = None
+	if fout != sys.stdout:
+		fout.close()
+	fout = None
+	return
+
+def __get_insert_string_file(infile):
+	s = ''
+	i = 0
+	logging.info('open [%s] for insert string'%(infile))
+	with open(infile,'rb') as fin:
+		i = 0
+		for l in fin:
+			i += 1
+			if i == 1 and l.startswith('#!'):
+				continue
+			s += l
+	logging.info('[%s] (%s)'%(infile,s))
+	return s
+
+def get_insert_string(args):
+	s = ''
+	for f in args.subnargs:
+		s += __get_insert_string_file(f)
+	return s
+
+def bashinsert_handler(args,parser):
+	set_log_level(args)
+	repls = get_insert_string(args)
+	replace_string(args,repls)
+	sys.exit(0)
+	return
+
+def bashstring_handler(args,parser):
+	set_log_level(args)
+	repls = get_bash_string(args)
+	replace_string(args,repls)
+	sys.exit(0)
+	return
+
+
+def main():
+	commandline='''
+	{
+		"verbose|v" : "+",
+		"input|i##default (stdin)##" : null,
+		"output|o##default (stdout)##": null,
+		"pattern|p" : "%REPLACE_PATTERN%",
+		"bashinsert<bashinsert_handler>" : {
+			"$" : "+"
+		},
+		"bashstring<bashstring_handler>" : {
+			"$" : "+"
+		}
+	}
+	'''
+	parser = extargsparse.ExtArgsParse()
+	parser.load_command_line_string(commandline)
+	args = parser.parse_command_line(None,parser)
+	sys.stderr.write('no handler specified')
+	sys.exit(4)
+	return
+
+if __name__ == '__main__':
+	main()

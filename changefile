@@ -80,8 +80,8 @@ function Debug()
 read -r -d '' OPTIONS<<EOFCODE
 	{
 		"verbose|v" : "+",
-		"input|i" : null,
-		"output|o" : null,
+		"input|i##input file default(/dev/stdin)##" : null,
+		"output|o##output file default(/dev/stdout)##" : null,
 		"patternfile|P" : null,
 		"replacepattern|p" : "%REPLACE_PATTERN%",
 		"reserved|r" : false,
