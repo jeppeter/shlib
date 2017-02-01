@@ -1,0 +1,28 @@
+#! /bin/bash
+
+check_depend()
+{
+	local _bin="$1"
+	local _curpath
+	for _curpath in $(echo "$PATH" | awk -F: '{for(i=1;i<NF;i++) {printf("%s\n",$i)}}')
+	do
+		if [ -f "$_curpath/$_bin" ]
+			then
+			echo "1"
+			return
+		fi
+	done
+	echo "0"
+	return
+}
+
+check_depend_error()
+{
+	local _bin="$1"
+	local _res=$(check_depend "$_bin")
+	if [ $_res -eq 0 ]
+		then
+		echo "[$_bin] not found in [$PATH]" >&2
+		exit 4
+	fi
+}

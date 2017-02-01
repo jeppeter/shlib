@@ -1,0 +1,25 @@
+#! /bin/bash
+
+%DEBUGSH_CODE%
+
+%DEPENDSH_CODE%
+
+res=$(check_depend "extargsparse4sh")
+if [ $res -eq 0 ]
+	then
+	cat >&2 <<EOF
+	can not found extargsparse4sh in [$PATH]
+	please download source code from https://github.com/jeppeter/extargsparse4sh
+	and make to copy to the path
+EOF
+	exit 4
+fi
+
+source extargsparse4sh
+
+
+read -r -d '' OPTIONS<<EOFMM
+	{
+		"verbose|v" : "+"
+	}
+EOFMM
