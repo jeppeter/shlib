@@ -1,7 +1,11 @@
 
 TOPDIR:=$(shell pwd)
+OSNAME:=$(shell uname -s | tr [:upper:] [:lower:])
 
-subdirs:=sshsmbmount cpfuncs
+subdirs=sshsmbmount cpfuncs
+ifeq (${OSNAME},darwin)
+subdirs+= macos
+endif
 
 ifeq (${V},)
 Q=@
