@@ -20,6 +20,10 @@ source extargsparse4sh
 
 read -r -d '' OPTIONS<<EOFMM
 	{
-		"verbose|v" : "+"
+		"verbose|v" : "+",
+		"codesign|C" : false
 	}
 EOFMM
+
+parse_command_line "$OPTIONS" "$@"
+

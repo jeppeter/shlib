@@ -111,8 +111,9 @@ function ErrorExit()
         fi
         _fmtstr="$_fmtstr$_fmt"
         if [ "$_osname" = "darwin" ]
+        	then
         	echo "$_fmtstr" >&2
-        else        	
+        else
         	echo -e "$_fmtstr" >&2
     	fi
         exitcode=$_ec
