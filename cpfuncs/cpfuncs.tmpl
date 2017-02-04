@@ -114,6 +114,7 @@ CopyFrom()
         local _oldverbose="$EXTARGS_VERBOSE"
         local _res
         export EXTARGS_VERBOSE="$verbose"
+        Debug "EXTARGS_VERBOSE=[$EXTARGS_VERBOSE]"
 
         ${PYTHON} -c "$PYTHON_SHCP_STR" "$_frombase/$_todir" "$_basedir/$_todir"
         _res=$?
@@ -154,6 +155,7 @@ CopyTo()
         local _oldverbose="$EXTARGS_VERBOSE"
         local _res
         export EXTARGS_VERBOSE="$verbose"
+        Debug "EXTARGS_VERBOSE [$EXTARGS_VERBOSE]"
 
         Debug "from $_basedir/$_frombase to $_todir/$_frombase"
         ${SUDO_PREFIX} ${PYTHON} -c "$PYTHON_SHCP_STR" "$_basedir/$_frombase" "$_todir/$_frombase"

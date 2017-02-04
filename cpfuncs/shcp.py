@@ -16,20 +16,24 @@ def make_dir_safe(dname=None):
 			if not os.path.isdir(dname):
 				raise Exception('can not make [%s]'%(dname))
 
-def copy_dir(src,dst):
+def copy_dir(src,dst,copied=[]):
 	make_dir_safe(dst)
 	for root,dirs,files in os.walk(src):
 		for c in dirs:
-			nsrc = os.path.join(root,c)
-			subpath = os.path.relpath(nsrc,src)
-			ndst = os.path.join(dst,subpath)
-			copy_dir(nsrc,ndst)
+			if c not in copied:
+				nsrc = os.path.join(root,c)
+				subpath = os.path.relpath(nsrc,src)
+				ndst = os.path.join(dst,subpath)
+				copied.append(nsrc)
+				copy_dir(nsrc,ndst,copied)
 		for f in files:
-			nsrc = os.path.join(root,f)
-			subpath = os.path.relpath(nsrc,src)
-			ndst = os.path.join(dst,subpath)
-			logging.info('copy %s => %s'%(nsrc,ndst))
-			shutil.copyfile(nsrc,ndst)
+			if f not in copied:
+				nsrc = os.path.join(root,f)
+				subpath = os.path.relpath(nsrc,src)
+				ndst = os.path.join(dst,subpath)
+				logging.info('copy %s => %s'%(nsrc,ndst))
+				copied.append(nsrc)
+				shutil.copyfile(nsrc,ndst)
 	return
 
 def set_log_level(verbose):
