@@ -1,7 +1,6 @@
 
 TOPDIR:=$(shell perl -e 'use Cwd "abs_path"; print abs_path(shift);' ../)
 CURDIR:=$(shell perl -e 'use Cwd "abs_path"; print abs_path(shift);' .)
-PYTHON:=$(shell which python)
 
 
 ifeq (${V},)
@@ -19,7 +18,7 @@ mkcode:mkcode.tmpl check_libs
 		${PYTHON} ${TOPDIR}/insertcode -p '%DEFINESH_CODE%' bashinsert "${TOPDIR}/libs/definesh" | \
 		${PYTHON} ${TOPDIR}/insertcode -p '%PERL_BASE_NAME%' bashstring "${CURDIR}/bname.pl" | \
 		${PYTHON} ${TOPDIR}/insertcode -o mkcode -p '%DEPENDSH_CODE%' bashinsert "${TOPDIR}/libs/dependsh","GENSH",$@)
-	$(call call_exec,chmod +x mkcode,"CHX","mkcode")
+	$(call call_exec,${CHX} mkcode,"CHX","mkcode")
 
 check_libs:
 

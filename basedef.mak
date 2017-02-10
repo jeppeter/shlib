@@ -1,5 +1,13 @@
 
 PRINTF:=$(shell which printf)
+OSNAME:=$(shell uname -s | tr [:upper:] [:lower:])
+ECHO:=$(shell which echo)
+MAKE:=$(shell which make)
+PYTHON:=$(shell which python)
+RM:=$(shell which rm)
+BASH:=$(shell which bash)
+DIFF:=$(shell which diff)
+CHX:=$(shell which chmod) +x
 
 define call_exec_echo
 ${PRINTF} "    %-9s %s\n" $(1) $(2);
