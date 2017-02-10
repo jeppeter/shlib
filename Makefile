@@ -2,7 +2,7 @@
 TOPDIR:=$(shell pwd)
 OSNAME:=$(shell uname -s | tr [:upper:] [:lower:])
 
-subdirs=sshsmbmount cpfuncs
+subdirs=sshsmbmount cpfuncs mkcode
 ifeq (${OSNAME},darwin)
 subdirs+= macos
 endif

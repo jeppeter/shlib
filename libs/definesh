@@ -1,0 +1,7 @@
+#! /bin/bash
+
+WHICH=`which which`
+AWK=`${WHICH} gawk`
+ECHO=`${WHICH} echo`
+PYTHON=`${WHICH} python`
+PERL=`${WHICH} perl`

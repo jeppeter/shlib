@@ -1,0 +1,60 @@
+#! /bin/bash
+
+%DEFINESH_CODE%
+
+%DEBUGSH_CODE%
+
+%DEPENDSH_CODE%
+
+res=$(check_depend "extargsparse4sh")
+if [ $res -eq 0 ]
+	then
+	cat >&2 <<EOF
+	can not found extargsparse4sh in [$PATH]
+	please download source code from https://github.com/jeppeter/extargsparse4sh
+	and make to copy to the path
+EOF
+	exit 4
+fi
+
+source extargsparse4sh
+
+read -r -d '' PERL_BASE_NAME<<EOFMM
+%PERL_BASE_NAME%
+EOFMM
+
+function make_header()
+{
+	local _f="$1"
+	local _bname=`${PERL} -e "$PERL_BASE_NAME" "$_f"`
+	local _postfix=`dd if=/dev/urandom bs=100 count=1 2>/dev/null | md5sum | awk '{print $1}' | tr [:lower:] [:upper:]`
+	local _h=`echo -n "${_bname}" | tr . _ | tr [:lower:] [:upper:] `
+	local _defcode="__${_h}_${_postfix}__"
+	Debug "_bname ${_bname} _h ${_h} _defcode ${_defcode} _postfix ${_postfix}"
+	echo "#ifndef ${_defcode}" > "$_f"
+	echo "#define ${_defcode}" >> "$_f"
+	echo "" >> "$_f"
+	echo "#endif /* ${_defcode} */" >> "$_f"
+	return
+}
+
+read -r -d '' OPTIONS<<EOFMM
+	{
+		"verbose|v" : "+",
+		"header<subcommand>" : {
+			"\$<headers>" : "+"
+		}
+	}
+EOFMM
+
+parse_command_line "$OPTIONS" "$@"
+
+if [ "$subcommand" = "header" ]
+	then
+	for curfile in ${headers[@]}
+	do
+		make_header "$curfile"
+	done
+else
+	ErrorExit 4 "not support subcommand [$subcommand]"
+fi
