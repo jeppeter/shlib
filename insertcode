@@ -48,8 +48,9 @@ def replace_string(args,repls):
 		fout = open(args.output,'w+b')
 
 	for l in fin:
-		l = l.replace(args.pattern,repls)
-		fout.write('%s'%(l))
+		chgstr = l.replace(args.pattern,repls)
+		fout.write('%s'%(chgstr))
+		logging.info('[%s] => [%s]'%(l,chgstr))
 	if fin != sys.stdin:
 		fin.close()
 	fin = None
@@ -92,6 +93,43 @@ def bashstring_handler(args,parser):
 	sys.exit(0)
 	return
 
+def __get_make_string(args,infile=None):
+	logging.info('infile [%s]'%(infile))
+	fin = sys.stdin
+	if infile is not None:
+		fin = open(infile,'rb')
+	s = ''
+	for l in fin:
+		if l.startswith('#'):
+			continue
+		l = l.rstrip('\r\n')
+		l = l.replace('\'','%singlequote%')
+		l = l.replace('\\','%back_slash%')
+		l = l.replace('$','%dollar%')
+		l = l.replace('%singlequote%','\'"\'"\'"\'"\'"\'"\'"\'"\'')		
+		l = l.replace('%back_slash%','\\\\')
+		l = l.replace('%dollar%','$$')
+		s += l
+	if fin != sys.stdin:
+		fin.close()
+	fin = None
+	return s
+
+
+def get_make_string(args):
+	s = ''
+	for curfile in args.subnargs:
+		s += __get_make_string(args,curfile)
+	return s
+
+
+def makestring_handler(args,parser):
+	set_log_level(args)
+	repls = get_make_string(args)
+	replace_string(args,repls)
+	sys.exit(0)
+	return
+
 
 def main():
 	commandline='''
@@ -104,6 +142,9 @@ def main():
 			"$" : "+"
 		},
 		"bashstring<bashstring_handler>" : {
+			"$" : "+"
+		},
+		"makestring<makestring_handler>" : {
 			"$" : "+"
 		}
 	}

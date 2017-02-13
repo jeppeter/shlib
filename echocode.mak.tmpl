@@ -1,0 +1,6 @@
+
+ECHO_STRING:= $(shell echo -n '%REPLACE_PATTERN%')
+ECHO:=$(shell which echo)
+
+all:
+	@${ECHO} -n '${ECHO_STRING}'

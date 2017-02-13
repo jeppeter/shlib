@@ -38,11 +38,30 @@ function make_header()
 	return
 }
 
+function make_make_header()
+{
+	local _f="$1"
+	local _bname=`${PERL} -e "$PERL_BASE_NAME" "$_f"`
+	local _postfix=`dd if=/dev/urandom bs=100 count=1 2>/dev/null | md5sum | awk '{print $1}' | tr [:lower:] [:upper:]`
+	local _h=`echo -n "${_bname}" | tr . _ | tr [:lower:] [:upper:] `
+	local _defcode="__${_h}_${_postfix}__"
+	Debug "_bname ${_bname} _h ${_h} _defcode ${_defcode} _postfix ${_postfix}"
+	echo "ifndef ${_defcode}" > "$_f"
+	echo "define ${_defcode}" >> "$_f"
+	echo "" >> "$_f"
+	echo "## ${_defcode} ##" >> "$_f"
+	echo "endif" >> "$_f"
+	return
+}
+
 read -r -d '' OPTIONS<<EOFMM
 	{
 		"verbose|v" : "+",
 		"header<subcommand>" : {
 			"\$<headers>" : "+"
+		},
+		"mkheader<subcommand>" : {
+			"\$<makeheaders>" : "+"
 		}
 	}
 EOFMM
@@ -54,6 +73,12 @@ if [ "$subcommand" = "header" ]
 	for curfile in ${headers[@]}
 	do
 		make_header "$curfile"
+	done
+elif [ "$subcommand" = "mkheader" ]
+	then
+	for curfile in ${makeheaders[@]}
+	do
+		make_make_header "$curfile"
 	done
 else
 	ErrorExit 4 "not support subcommand [$subcommand]"
