@@ -49,27 +49,41 @@ sub disk_Usage($$)
 	exit($ec);
 }
 
-sub disk_get($$)
+sub disk_get($)
 {
-	my ($targetref,$input)=@_;
+	my ($input)=@_;
 	my ($fp);
 	my %diskpairs=();
-	if (!defined($targetref)){
-		disk_Usage(3,"please specify a target at least by --target|-T");
-	}
-	if ($input eq "-") {
+	my ($curtarget);
+	my ($curdisk);
+	if (!defined($input) || $input eq "-") {
 		$fp = \*STDIN;
 	} else {
 		open($fp,"< $input") || die "can not open <$input> error<$!>";
 	}
+	undef($curtarget);
 	while(<$fp>) {
+		my ($l) = $_;
+		chomp($l);
+		if ($l =~ m/^Target:\s+(.*)/o) {
+			$curtarget = $1;
+		} elsif ($l =~ m/^\s+Attached scsi disk\s+([a-zA-Z_0-9]+)\s+/o) {
+			$curdisk = "/dev/$1";
+			if (!defined($diskpairs{$curtarget})) {
+				my (@arr)=();
+				push(@arr,$curdisk);
+				$diskpairs{$curtarget} = \@arr;
+			} else {
+				push(@{diskpairs{$curtarget}},$curdisk);
+			}
+		}
 		
 	}
 	if ($fp != \*STDIN) {
 		close($fp);
 	}
 	undef($fp);
-	return %diskpairs;
+	return \%diskpairs;
 }
 
 my %args=();
@@ -101,7 +115,7 @@ $subcommand = shift @ARGV;
 
 if ($subcommand eq "disk") {
 	my ($targetref,$input);
-	my (%diskp);
+	my ($diskp);
 	undef($targetref);
 	$input="-";
 	if (defined($args{'help'})) {
@@ -114,8 +128,24 @@ if ($subcommand eq "disk") {
 	if (defined($args{'input'})) {
 		$input = $args{'input'};
 	}
-	%diskp = disk_get($targetref,$input);
-	print Dumper(%diskp);
+	$diskp = disk_get($input);
+	if (!defined($diskp)) {
+		print STDERR "can not parse [$args{'input'}]";
+		exit 3;
+	} 
+	foreach (keys(%{$diskp})) {
+		my ($curk) = $_;
+		foreach (@{$args{'target'}}) {
+			my ($cmpk) = $_;
+			my ($i,$j,$curarr);
+			if ($curk eq $cmpk) {
+				print STDOUT "$curk:\n";
+				for ($i=0;$i< scalar(@{$diskp->{$curk}});$i++) {
+					print STDOUT "    ".$diskp->{$curk}->[$i]."\n";
+				}
+			}
+		}
+	}
 } else {
 	usage(3,"unknown subcommand [$subcommand]");
 }
