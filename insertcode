@@ -59,6 +59,18 @@ def replace_string(args,repls):
 	fout = None
 	return
 
+def out_string(args,repls):
+	fout = sys.stdout
+	if args.output is not None:
+		fout = open(args.output,'w+b')
+
+	fout.write('%s'%(repls))
+
+	if fout != sys.stdout:
+		fout.close()
+	fout = None
+	return
+
 def __get_insert_string_file(infile):
 	s = ''
 	i = 0
@@ -130,6 +142,35 @@ def makestring_handler(args,parser):
 	sys.exit(0)
 	return
 
+def __get_make_format(args,infile=None):
+	logging.info('infile [%s]'%(infile))
+	fin = sys.stdin
+	if infile is not None:
+		fin = open(infile,'rb')
+	s = ''
+	for l in fin:
+		if l.startswith('#'):
+			continue
+		l = l.rstrip('\r\n')
+		s += l
+	if fin != sys.stdin:
+		fin.close()
+	fin = None
+	return s
+
+def get_make_format(args):
+	s = ''
+	for curfile in args.subnargs:
+		s += __get_make_format(args,curfile)
+	return s
+
+def makeformat_handler(args,parser):
+	set_log_level(args)
+	repls = get_make_format(args)
+	out_string(args,repls)
+	sys.exit(0)
+	return
+
 
 def main():
 	commandline='''
@@ -139,13 +180,16 @@ def main():
 		"output|o##default (stdout)##": null,
 		"pattern|p" : "%REPLACE_PATTERN%",
 		"bashinsert<bashinsert_handler>" : {
-			"$" : "+"
+			"$" : "*"
 		},
 		"bashstring<bashstring_handler>" : {
-			"$" : "+"
+			"$" : "*"
 		},
 		"makestring<makestring_handler>" : {
-			"$" : "+"
+			"$" : "*"
+		},
+		"makeformat<makeformat_handler>" : {
+			"$" : "*"
 		}
 	}
 	'''

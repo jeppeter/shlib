@@ -9,6 +9,7 @@ BASH:=$(shell which bash)
 DIFF:=$(shell which diff)
 CHX:=$(shell which chmod) +x
 
+
 define call_exec_echo
 ${PRINTF} "    %-9s %s\n" $(1) $(2);
 endef

@@ -1,0 +1,161 @@
+ifndef __DEPENDS_OP_MAK__
+define __DEPENDS_OP_MAK__
+
+
+#########################################
+##  build_c_depends
+##            to build c depends
+##  input value
+##      1        input c file 
+##      2        output depend file
+##      3        for shortname handle
+##      4        for common cflags
+##      5        for compiler default gcc
+#########################################
+define build_c_depends
+$(call call_exec_directly,$(call get_value_default,$(5),gcc) $(call get_value_default,$(4),${CFLAGS}) $$($(3)_CFLAGS) -MM $(1) | ${PERL} -e '%PERL_DEP_HANDLE%' $(3)_DEPS > $(2),"DEPS","$(call get_basename,$(2))")
+endef
+
+#########################################
+##  build_S_depends
+##            to build S depends
+##  input value
+##      1        input S file 
+##      2        output depend file
+##      3        for shortname handle
+##      4        for common cflags
+##      5        for compiler default gcc
+#########################################
+define build_S_depends
+$(call call_exec_directly,$(call get_value_default,$(5),gcc) $(call get_value_default,$(4),${ASMFLAGS}) $$($(3)_ASMFLAGS) -MM $(1) | ${PERL} -e '%PERL_DEP_HANDLE%' $(3) > $(2),"DEPS","$(call get_basename,$(2))")
+endef
+
+
+#########################################
+##  build_c
+##            to build c into o
+##  input value
+##      1        output file
+##      2        input c file 
+##      3        for shortname handle
+##      4        cflags
+##      5        compiler default gcc
+#########################################
+define build_c
+$(call call_exec_directly,$(call get_value_default,$(5),gcc) $(call get_value_default,$(4),${CFLAGS}) $$($(3)_CFLAGS) -c $(2) -o $(1),"CC","$(call get_basename,$(1))")
+endef
+
+#########################################
+##  build_S
+##            to build S file into o
+##  input value
+##      1        output file
+##      2        input S file 
+##      3        for shortname handle
+##      4        cflags
+##      5        compiler default gcc
+#########################################
+define build_S
+$(call call_exec_directly,$(call get_value_default,$(5),gcc) $(call get_value_default,$(4),${ASMFLAGS}) $$($(3)_ASMFLAGS) -c $(2) -o $(1),"CC","$(call get_basename,$(1))")
+endef
+
+
+#########################################
+##  input : $(1)   object file
+##          $(2)   for C file
+##          $(3)   shortname for c
+##          $(4)   depends file
+##          $(5)   cflags
+##          $(6)   gcc or compiler
+#########################################
+define make_c_rules
+$(1): $(2) $$(MAKEDEPS) $$($(3)_DEPS)
+	$${Q}$$(call build_c,$$@,$$<,$(3),$(5),$(6))
+
+
+$(4): $$($(3)_DEPS)
+	$${Q}$$(call build_c_depends,$(2),$(4),$(3),$(5),$(6))
+endef
+
+
+#########################################
+##  input : $(1)   src file
+##          $(2)   link file
+#########################################
+define link_c_file
+$(call call_exec_directly,if [ -e $(2) ];then ${RM} $(2);fi;${LN} -s $(1) $(2),"LINK","$(call get_basename,$(2))")
+endef
+
+#########################################
+##  input : $(1)   object file
+##          $(2)   for C file
+##          $(3)   shortname for c
+##          $(4)   depends file
+##          $(5)   cflags
+##          $(6)   gcc or compiler
+#########################################
+define make_link_c_rules
+$(1): $(2) $$(MAKEDEPS) $$($(3)_DEPS) $$($(3)_SRC)
+	$${Q}$$(call build_c,$$@,$$<,$(3),$(5),$(6))
+
+
+$(4): $$($(3)_DEPS)
+	$${Q}$$(call link_c_file,$$($(3)_SRC),$(2))
+	$${Q}$$(call build_c_depends,$(2),$(4),$(3),$(5),$(6))
+endef
+
+#########################################
+##  input : $(1)   object file
+##          $(2)   for C file
+##          $(3)   shortname for c
+##          $(4)   depends file
+##          $(5)   cflags
+##          $(6)   gcc or compiler
+#########################################
+define make_S_rules
+$(1): $(2) $$(MAKEDEPS) $$($(3)_DEPS)
+	$${Q}$$(call build_S,$$@,$$<,$(3),$(5),$(6))
+
+$(4):$$($(3)_DEPS)
+	$${Q}$$(call build_S_depends,$(2),$(4),$(3),$(5),$(6))
+endef
+
+#########################################
+##  input : $(1)   lists for c file
+##          $(2)   cflags
+##          $(3)   gcc or compiler
+#########################################
+define foreach_c_file_basic
+$(foreach cursrc,$(1),$(eval $(call make_c_rules,$(patsubst %.c,%.o,\
+	$(cursrc)),$(cursrc),\
+	$(call get_shortname,${cursrc}),\
+	${cursrc}.d,$(2),$(3))))
+endef
+
+#########################################
+##  input : $(1)   lists for c file
+##          $(2)   cflags
+##          $(3)   gcc or compiler
+#########################################
+define foreach_link_c_file_basic
+$(foreach cursrc,$(1),$(eval $(call make_link_c_rules,$(patsubst %.c,%.o,\
+	$(cursrc)),$(cursrc),\
+	$(call get_shortname,${cursrc}),\
+	${cursrc}.d,$(2),$(3))))
+endef
+
+#########################################
+##  input : $(1)   lists for S file
+##          $(2)   cflags
+##          $(3)   gcc or compiler
+#########################################
+define foreach_S_file_basic
+$(foreach cursrc,$(1),$(eval $(call make_S_rules,$(patsubst %.S,%.o,\
+	$(cursrc)),$(cursrc),\
+	$(call get_shortname,${cursrc}),\
+	${cursrc}.d,$(2),$(3))))
+endef
+
+
+## __DEPENDS_OP_MAK__ ##
+endif
