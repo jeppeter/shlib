@@ -4,25 +4,226 @@ import sys
 import os
 import extargsparse
 import unittest
+import logging
+import cmdpack
+import tempfile
+import subprocess
+
+
+def make_dir_safe(dname=None):
+	if dname is not None:
+		if not os.path.isdir(dname):
+			try:
+				os.makedirs(dname)
+			except:
+				pass
+			if not os.path.isdir(dname):
+				raise Exception('can not make [%s]'%(dname))
+
+def make_tempdir(prefix=None):
+	make_dir_safe(prefix)
+	return tempfile.mkdtemp(dir=prefix)
+
+def make_tempfile(prefix=None):
+	make_dir_safe(prefix)
+	fd,result = tempfile.mkstemp(dir=prefix)
+	os.close(fd)
+	return result
+
+
+def read_callback(rl,ctx):
+	ctx.read_cmd(rl)
+	return
 
 class debug_testmak_case(unittest.TestCase):
-	def 
+	def setUp(self):
+		return
 
+	def tearDown(self):
+		return
+
+	@classmethod
+	def setupClass(cls):
+		return
+
+	@classmethod
+	def tearDownClass(cls):
+		return
+
+	def __format_make_common(self,s):
+		return s + '\n'
+
+	def __format_make_command(self,s,nooutput=True):
+		rets = '\t'
+		if nooutput:
+			rets += '@'
+		rets += s + '\n'
+		return rets
+
+	def __format_varaible_echo(self,varname,echobin='/bin/echo'):
+		return self.__format_make_command('%s "%s ${%s}"'%(echobin,varname,varname))
+
+	def __format_basedef_testmak(self,basedef,echobin='/bin/echo'):
+		s = ''
+		s += self.__format_make_common('include %s'%(basedef))
+		s += self.__format_make_common('')
+		s += self.__format_make_common('all:')
+		s += self.__format_varaible_echo('PERL',echobin)
+		s += self.__format_varaible_echo('PYTHON',echobin)
+		s += self.__format_varaible_echo('SED',echobin)
+		s += self.__format_varaible_echo('SUDO',echobin)
+		s += self.__format_varaible_echo('LD',echobin)
+		s += self.__format_varaible_echo('OBJCOPY',echobin)
+		s += self.__format_varaible_echo('ECHO',echobin)
+		s += self.__format_varaible_echo('RM',echobin)
+		s += self.__format_varaible_echo('CAT',echobin)
+		s += self.__format_varaible_echo('PRINTF',echobin)
+		s += self.__format_varaible_echo('LN',echobin)
+		s += self.__format_varaible_echo('TRUE',echobin)
+		s += self.__format_varaible_echo('TOUCH',echobin)
+		return s
+
+	def __write_tempfile(self,s,tmpdir='/tmp'):
+		tempfile = make_tempfile(tmpdir)
+		with open(tempfile,'w+b') as f:
+			f.write('%s'%(s))
+		logging.debug('write [%s] << %s'%(tempfile,s))
+		return tempfile
+
+	def read_cmd(self,rl):
+		self.__output.append(rl)
+		return
+
+	def __run_command_output(self,cmds,stdoutcatch=True,stderrcatch=False):
+		self.__output = []
+		stdoutpipe = subprocess.PIPE
+		stderrpipe = subprocess.PIPE
+		if not stdoutcatch :
+			stdoutpipe = open(os.devnull,'w')
+		if not stderrcatch:
+			stderrpipe = open(os.devnull,'w')
+		logging.debug('run (%s)'%(cmds))
+		retcode = cmdpack.run_command_callback(cmds,read_callback,self,stdoutpipe,stderrpipe,True)
+		self.assertEqual(retcode,0)
+		logging.debug('output (%s)'%(self.__output))
+		stdoutpipe = None
+		stderrpipe = None
+		return self.__output
+
+	def __run_make(self,f,target=None,vardict=None):
+		makebin = 'make'
+		if 'MAKEBIN' in  os.environ.keys():
+			makebin = os.environ['MAKEBIN']
+		cmds = []
+		cmds.append(makebin)
+		cmds.append('--no-print-directory')
+		cmds.append('-C')
+		cmds.append('%s'%(os.path.dirname(f)))
+		cmds.append('-f')
+		cmds.append('%s'%(os.path.basename(f)))
+		if vardict is not None:
+			for c in vardict.keys():				
+				cmds.append('%s=%s'%(c,vardict[c]))
+		if target is not None:
+			cmds.append(target)
+		return self.__run_command_output(cmds)
+
+	def __check_str_value(self,outsarr,s):
+		cnt = 0
+		for l in outsarr:
+			if l.rstrip('\r\n') == s.rstrip('\r\n'):
+				return cnt
+			cnt += 1
+		return -1
+
+	def __get_which(self,binname):
+		cmds = []
+		cmds.append('which')
+		cmds.append(binname)
+		outsarr = self.__run_command_output(cmds)
+		if len(outsarr) > 0:
+			return outsarr[0]
+		return None
+
+	def __check_which_bin(self,binname,outsarr,varname=None):
+		binpath = self.__get_which(binname)
+		binvar = binpath.upper()
+		if varname is not None:
+			binvar = varname
+		s = '%s %s'%(binvar,binpath)
+		return self.__check_str_value(outsarr,s)
+
+	def __remove_dir(self,dirn,issuper=False):
+		if issuper:
+			cmd = ['sudo','rm','-rf',dirn]
+		else:
+			cmd = ['rm','-rf',dirn]
+		subprocess.check_call(cmd)
+		return
+
+
+	def __remove_file_safe(self,f=None):
+		if 'TEST_RESERVED' not in os.environ.keys() and f is not None:
+			if os.path.exists(f):
+				if os.path.isdir(f):
+					logging.debug('remove %s'%(f))
+					self.__remove_dir(f)
+				else:
+					logging.debug('remove %s'%(f))
+					os.remove(f)
+		return
+
+	def test_basedef_case(self):
+		testf=None
+		try:
+			makelibdir = os.path.dirname(os.path.realpath(__file__))
+			if 'MAKELIB_DIR' in os.environ.keys():
+				makelibdir = os.environ['MAKELIB_DIR']
+			s = self.__format_basedef_testmak(os.path.join(makelibdir,'basedef.mak'))
+			testf = self.__write_tempfile(s)
+			outsarr = self.__run_make(testf,'all')
+			self.assertEqual(0,self.__check_which_bin('perl',outsarr))
+			self.assertEqual(1,self.__check_which_bin('python',outsarr))
+		finally:
+			self.__remove_file_safe(testf)
+		return
+
+def set_log_level(args):
+    loglvl= logging.ERROR
+    if args.verbose >= 3:
+        loglvl = logging.DEBUG
+    elif args.verbose >= 2:
+        loglvl = logging.INFO
+    elif args.verbose >= 1 :
+        loglvl = logging.WARN
+    # we delete old handlers ,and set new handler
+    logging.basicConfig(level=loglvl,format='%(asctime)s:%(filename)s:%(funcName)s:%(lineno)d\t%(message)s')
+    return
 
 
 def main():
-	commandline='''
+	commandline_fmt='''
 	{
 		"verbose|v" : "+",
 		"failfast|f" : false,
+		"makebin|m" : "make",
+		"reserved|r" : false,
+		"makelibdir|d" : "%s",
 		"$" : "*"
 	}
 	'''
+	commandline = commandline_fmt%(os.path.dirname(os.path.realpath(__file__)))
 	parser = extargsparse.ExtArgsParse()
 	parser.load_command_line_string(commandline)
 	args = parser.parse_command_line()
+	set_log_level(args)
 	sys.argv[1:] = args.args
-	unittext.main(verbosity=args.verbose,failfast=args.failfast)
+	if args.reserved : 
+		os.environ['TEST_RESERVED'] = '1'
+	else:
+		if 'TEST_RESERVED' in os.environ.keys():
+			del os.environ['TEST_RESERVED']
+	unittest.main(verbosity=args.verbose,failfast=args.failfast)
 	return
 
 if __name__ == '__main__':
