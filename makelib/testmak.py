@@ -132,7 +132,8 @@ class debug_testmak_case(unittest.TestCase):
 		cmds.append('-f')
 		cmds.append('%s'%(os.path.basename(f)))
 		if vardict is not None:
-			for c in vardict.keys():				
+			for c in vardict.keys():
+				logging.debug('%s=%s'%(c,vardict[c]))
 				cmds.append('%s=%s'%(c,vardict[c]))
 		if target is not None:
 			cmds.append(target)
@@ -270,6 +271,43 @@ class debug_testmak_case(unittest.TestCase):
 		finally:
 			self.__remove_file_safe(testf)
 			self.__remove_file_safe(longname)
+		return
+
+	def __format_testexecmak(self,makelibdir,longname):
+		s = ''
+		s += self.__format_make_common('include %s'%(os.path.join(makelibdir,'basedef.mak')))
+		s += self.__format_make_common('include %s'%(os.path.join(makelibdir,'varop.mak')))
+		s += self.__format_make_common('include %s'%(os.path.join(makelibdir,'exec.mak')))
+		s += self.__format_make_common('')
+		s += self.__format_make_common('all:')
+		s += self.__format_make_command('$(call call_exec,${TRUE},"ECHO","hello")',False)
+		s += self.__format_make_command('$(call call_exec,${TRUE},"ECHO","%s")'%(longname),False)
+		return s
+
+	def test_exec_case(self):
+		testf = None
+		longname = None
+		try:
+			makelibdir = self.__get_makelib_dir()
+			longname = make_tempfile()
+			s = self.__format_testexecmak(makelibdir,longname)
+			testf = self.__write_tempfile(s)
+			truebin = self.__get_which('true')
+			outsarr = self.__run_make(testf,'all')
+			self.assertEqual(len(outsarr),2)
+			self.assertEqual(0,self.__check_str_value(outsarr,'    %-9s hello'%('ECHO')))
+			self.assertEqual(1,self.__check_str_value(outsarr,'    %-9s %s'%('ECHO',longname)))
+			vardict = dict()
+			vardict['V']='1'
+			outsarr = self.__run_make(testf,'all',vardict)
+			self.assertEqual(len(outsarr),2)
+			self.assertEqual(0,self.__check_str_value(outsarr,'%s'%(truebin)))
+			self.assertEqual(0,self.__check_str_value(outsarr[1:],'%s'%(truebin)))
+		finally:
+			self.__remove_file_safe(testf)
+			self.__remove_file_safe(longname)
+		return
+
 
 
 def set_log_level(args):

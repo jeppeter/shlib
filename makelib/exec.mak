@@ -1,6 +1,6 @@
 
 ifndef __EXEC_MAK__
-define __EXEC_MAK__
+__EXEC_MAK__:=1
 
 define call_exec_echo
 ${PRINTF} "    %-9s %s\n" $(1) $(2);
