@@ -35,32 +35,32 @@ my ($fromdir,$todir,$replace);
 Getopt::Long::Configure("no_ignorecase","bundling");
 Getopt::Long::GetOptions(\%opts,"help|h",
 	"verbose|v" => sub {
-		if (!defined($opts{'verbose'})) {
-			$opts{'verbose'} = 0;
+		if (!defined($opts{"verbose"})) {
+			$opts{"verbose"} = 0;
 		}
-		${opts{'verbose'}} ++;
+		${opts{"verbose"}} ++;
 	},
 	"todir|t=s",
 	"fromdir|f=s");
 
-if (defined($opts{'help'})) {
+if (defined($opts{"help"})) {
 	Usage( 0,"");
 }
 
-if (!defined($opts{'fromdir'})) {
+if (!defined($opts{"fromdir"})) {
 	Usage(3,"please specified --fromdir");
 }
-$fromdir = $opts{'fromdir'};
-if (!defined($opts{'todir'})) {
+$fromdir = $opts{"fromdir"};
+if (!defined($opts{"todir"})) {
 	$todir = $fromdir;
 } else {
-	$todir = $opts{'todir'};
+	$todir = $opts{"todir"};
 }
 
-if (!defined($opts{'replace'})){
-	$replace = 's/\.c/\.o/';
+if (!defined($opts{"replace"})){
+	$replace = "s/\.c/\.o/";
 } else {
-	$replace = $opts{'replace'};
+	$replace = $opts{"replace"};
 }
 
 

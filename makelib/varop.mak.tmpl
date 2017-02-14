@@ -1,5 +1,5 @@
 ifndef __VAR_OP_MAK__
-define __VAR_OP_MAK__
+__VAR_OP_MAK__:=1
 
 ifeq (${V},)
 Q=@
@@ -11,9 +11,11 @@ define get_value_default
 $(if $(1),$(1),$(2))
 endef
 
+
 define get_shortname
-$(shell ${PERL} -e '%PERL_SHORTNAME_STR%' -t $(call get_value_default,$(2),"") $(1))
+$(shell ${PERL} -e '%PERL_SHORTNAME_STR%' -- -t "$(call get_value_default,$(2),)" $(1))
 endef
+
 
 ## __VAR_OP_MAK__ ##
 endif

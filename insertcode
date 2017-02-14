@@ -4,6 +4,7 @@ import extargsparse
 import sys
 import os
 import logging
+import re
 
 def set_log_level(args):
     loglvl= logging.ERROR
@@ -119,7 +120,7 @@ def __get_make_string(args,infile=None):
 		l = l.replace('\\','%back_slash%')
 		l = l.replace('$','%dollar%')
 		l = l.replace('%singlequote%','\'"\'"\'"\'"\'"\'"\'"\'"\'')		
-		l = l.replace('%back_slash%','\\\\')
+		l = l.replace('%back_slash%','\\')
 		l = l.replace('%dollar%','$$')
 		s += l
 	if fin != sys.stdin:
@@ -149,9 +150,10 @@ def __get_make_format(args,infile=None):
 		fin = open(infile,'rb')
 	s = ''
 	for l in fin:
-		if l.startswith('#'):
-			continue
 		l = l.rstrip('\r\n')
+		l = re.sub('#.*','',l)
+		if len(l) == 0:
+			continue
 		s += l
 	if fin != sys.stdin:
 		fin.close()

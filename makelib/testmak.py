@@ -37,6 +37,10 @@ def read_callback(rl,ctx):
 
 class debug_testmak_case(unittest.TestCase):
 	def setUp(self):
+		if 'C' in os.environ.keys():
+			del os.environ['C']
+		if 'V' in os.environ.keys():
+			del os.environ['V']
 		return
 
 	def tearDown(self):
@@ -63,9 +67,9 @@ class debug_testmak_case(unittest.TestCase):
 	def __format_varaible_echo(self,varname,echobin='/bin/echo'):
 		return self.__format_make_command('%s "%s ${%s}"'%(echobin,varname,varname))
 
-	def __format_basedef_testmak(self,basedef,echobin='/bin/echo'):
+	def __format_basedef_testmak(self,includedir,echobin='/bin/echo'):
 		s = ''
-		s += self.__format_make_common('include %s'%(basedef))
+		s += self.__format_make_common('include %s'%(os.path.join(includedir,'basedef.mak')))
 		s += self.__format_make_common('')
 		s += self.__format_make_common('all:')
 		s += self.__format_varaible_echo('PERL',echobin)
@@ -83,6 +87,7 @@ class debug_testmak_case(unittest.TestCase):
 		s += self.__format_varaible_echo('TRUE',echobin)
 		s += self.__format_varaible_echo('TOUCH',echobin)
 		return s
+
 
 	def __write_tempfile(self,s,tmpdir='/tmp'):
 		tempfile = make_tempfile(tmpdir)
@@ -177,13 +182,17 @@ class debug_testmak_case(unittest.TestCase):
 					os.remove(f)
 		return
 
+	def __get_makelib_dir(self):
+		makelibdir = os.path.dirname(os.path.realpath(__file__))
+		if 'MAKELIB_DIR' in os.environ.keys():
+			makelibdir = os.environ['MAKELIB_DIR']
+		return makelibdir
+
 	def test_basedef_case(self):
 		testf=None
 		try:
-			makelibdir = os.path.dirname(os.path.realpath(__file__))
-			if 'MAKELIB_DIR' in os.environ.keys():
-				makelibdir = os.environ['MAKELIB_DIR']
-			s = self.__format_basedef_testmak(os.path.join(makelibdir,'basedef.mak'))
+			makelibdir = self.__get_makelib_dir()
+			s = self.__format_basedef_testmak(makelibdir)
 			testf = self.__write_tempfile(s)
 			outsarr = self.__run_make(testf,'all')
 			self.assertEqual(0,self.__check_which_bin('perl',outsarr))
@@ -203,6 +212,58 @@ class debug_testmak_case(unittest.TestCase):
 		finally:
 			self.__remove_file_safe(testf)
 		return
+
+	def __format_varop_testmak(self,includedir,longname):
+		s = ''
+		s += self.__format_make_common('include %s'%(os.path.join(includedir,'basedef.mak')))
+		s += self.__format_make_common('include %s'%(os.path.join(includedir,'varop.mak')))
+		s += self.__format_make_common('')
+		s += self.__format_make_common('ifeq (${C},)')
+		s += self.__format_make_common('unexport CVALUE')
+		s += self.__format_make_common('else')
+		s += self.__format_make_common('CVALUE=${C}')
+		s += self.__format_make_common('endif')
+		s += self.__format_make_common('')
+		s += self.__format_make_common('all:')
+		s += self.__format_make_command('${ECHO} "CVALUE $(call get_value_default,${CVALUE},default_c_value)"')
+		s += self.__format_make_command('${ECHO} "%s shortname $(call get_shortname,\\\"%s\\\")"'%(longname,longname))
+		return s
+
+	def __get_shortname(self,longname,basedir=None):
+		
+		if basedir is not None:
+			shortname = longname
+			shortname = shortname.replace(basedir,'')
+			while shortname.startswith('/') or shortname.startswith('\\'):
+				shortname = shortname[1:]
+		else:
+			shortname = os.path.basename(longname)
+		shortname = shortname.replace('.','_')
+		shortname = shortname.replace('/','_')
+		shortname = shortname.replace('\\','_')
+		return shortname
+
+
+	def test_varop_case(self):
+		testf = None
+		try:
+			makelibdir = self.__get_makelib_dir()
+			longname = make_tempfile()
+			s = self.__format_varop_testmak(makelibdir,longname)
+			testf = self.__write_tempfile(s)
+			outsarr = self.__run_make(testf,'all')
+			self.assertEqual(len(outsarr),2)
+			self.assertEqual(0,self.__check_str_value(outsarr,'CVALUE default_c_value'))
+			self.assertEqual(1,self.__check_str_value(outsarr,'%s shortname %s'%(longname,self.__get_shortname(longname))))
+			vardict = dict()
+			vardict['C'] = 'c_value_set'
+			outsarr = self.__run_make(testf,'all',vardict)
+			self.assertEqual(len(outsarr),2)
+			self.assertEqual(0,self.__check_str_value(outsarr,'CVALUE c_value_set'))
+			self.assertEqual(1,self.__check_str_value(outsarr,'%s shortname %s'%(longname,self.__get_shortname(longname))))
+		finally:
+			self.__remove_file_safe(testf)
+
 
 def set_log_level(args):
     loglvl= logging.ERROR
