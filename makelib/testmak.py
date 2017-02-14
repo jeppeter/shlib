@@ -72,6 +72,7 @@ class debug_testmak_case(unittest.TestCase):
 		s += self.__format_varaible_echo('PYTHON',echobin)
 		s += self.__format_varaible_echo('SED',echobin)
 		s += self.__format_varaible_echo('SUDO',echobin)
+		s += self.__format_varaible_echo('GCC',echobin)
 		s += self.__format_varaible_echo('LD',echobin)
 		s += self.__format_varaible_echo('OBJCOPY',echobin)
 		s += self.__format_varaible_echo('ECHO',echobin)
@@ -91,6 +92,7 @@ class debug_testmak_case(unittest.TestCase):
 		return tempfile
 
 	def read_cmd(self,rl):
+		logging.debug('rl [%s]'%(rl.rstrip('\r\n')))
 		self.__output.append(rl)
 		return
 
@@ -103,7 +105,8 @@ class debug_testmak_case(unittest.TestCase):
 		if not stderrcatch:
 			stderrpipe = open(os.devnull,'w')
 		logging.debug('run (%s)'%(cmds))
-		retcode = cmdpack.run_command_callback(cmds,read_callback,self,stdoutpipe,stderrpipe,True)
+		logging.debug('PATH [%s]'%(os.environ['PATH']))
+		retcode = cmdpack.run_command_callback(cmds,read_callback,self,stdoutpipe,stderrpipe)
 		self.assertEqual(retcode,0)
 		logging.debug('output (%s)'%(self.__output))
 		stdoutpipe = None
@@ -130,6 +133,7 @@ class debug_testmak_case(unittest.TestCase):
 
 	def __check_str_value(self,outsarr,s):
 		cnt = 0
+		logging.debug('outsarr (%s) s[%s]'%(outsarr,s))
 		for l in outsarr:
 			if l.rstrip('\r\n') == s.rstrip('\r\n'):
 				return cnt
@@ -147,7 +151,7 @@ class debug_testmak_case(unittest.TestCase):
 
 	def __check_which_bin(self,binname,outsarr,varname=None):
 		binpath = self.__get_which(binname)
-		binvar = binpath.upper()
+		binvar = binname.upper()
 		if varname is not None:
 			binvar = varname
 		s = '%s %s'%(binvar,binpath)
@@ -184,6 +188,18 @@ class debug_testmak_case(unittest.TestCase):
 			outsarr = self.__run_make(testf,'all')
 			self.assertEqual(0,self.__check_which_bin('perl',outsarr))
 			self.assertEqual(1,self.__check_which_bin('python',outsarr))
+			self.assertEqual(2,self.__check_which_bin('sed',outsarr))
+			self.assertEqual(3,self.__check_which_bin('sudo',outsarr))
+			self.assertEqual(4,self.__check_which_bin('gcc',outsarr))
+			self.assertEqual(5,self.__check_which_bin('ld',outsarr))
+			self.assertEqual(6,self.__check_which_bin('objcopy',outsarr))
+			self.assertEqual(7,self.__check_which_bin('echo',outsarr))
+			self.assertEqual(8,self.__check_which_bin('rm',outsarr))
+			self.assertEqual(9,self.__check_which_bin('cat',outsarr))
+			self.assertEqual(10,self.__check_which_bin('printf',outsarr))
+			self.assertEqual(11,self.__check_which_bin('ln',outsarr))
+			self.assertEqual(12,self.__check_which_bin('true',outsarr))
+			self.assertEqual(13,self.__check_which_bin('touch',outsarr))
 		finally:
 			self.__remove_file_safe(testf)
 		return
