@@ -108,12 +108,14 @@ class debug_testmak_case(unittest.TestCase):
 		if not stdoutcatch :
 			stdoutpipe = open(os.devnull,'w')
 		if not stderrcatch:
-			stderrpipe = open(os.devnull,'w')
+			stderrpipe = None
 		logging.debug('run (%s)'%(cmds))
 		logging.debug('PATH [%s]'%(os.environ['PATH']))
 		retcode = cmdpack.run_command_callback(cmds,read_callback,self,stdoutpipe,stderrpipe)
 		self.assertEqual(retcode,0)
 		logging.debug('output (%s)'%(self.__output))
+		if stdoutpipe != subprocess.PIPE and stdoutpipe is not None:
+			stdoutpipe.close()
 		stdoutpipe = None
 		stderrpipe = None
 		return self.__output
@@ -180,6 +182,10 @@ class debug_testmak_case(unittest.TestCase):
 				else:
 					logging.debug('remove %s'%(f))
 					os.remove(f)
+			else:
+				logging.debug('[%s] not exists'%(f))
+		else:
+			logging.debug('not remove [%s]'%(f))
 		return
 
 	def __get_makelib_dir(self):
@@ -226,7 +232,7 @@ class debug_testmak_case(unittest.TestCase):
 		s += self.__format_make_common('')
 		s += self.__format_make_common('all:')
 		s += self.__format_make_command('${ECHO} "CVALUE $(call get_value_default,${CVALUE},default_c_value)"')
-		s += self.__format_make_command('${ECHO} "%s shortname $(call get_shortname,\\\"%s\\\")"'%(longname,longname))
+		s += self.__format_make_command('${ECHO} "%s shortname $(call get_shortname,"%s")"'%(longname,longname))
 		return s
 
 	def __get_shortname(self,longname,basedir=None):
@@ -263,6 +269,7 @@ class debug_testmak_case(unittest.TestCase):
 			self.assertEqual(1,self.__check_str_value(outsarr,'%s shortname %s'%(longname,self.__get_shortname(longname))))
 		finally:
 			self.__remove_file_safe(testf)
+			self.__remove_file_safe(longname)
 
 
 def set_log_level(args):

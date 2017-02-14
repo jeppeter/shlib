@@ -67,20 +67,22 @@ if (defined($opts{"verbose"})) {
 	$verbose=$opts{"verbose"};
 }
 
-foreach (@ARGV) {
-	my ($cp) = abs_path($_);
-	Debug("cp [$cp]");
-	if (length($topdir) > 0) {
-		$cp =~ s/$topdir//;
-		Debug("change topdir[$topdir]");
-	} else {
-		$cp = basename($cp);
-		Debug("basename");
-	}
+if (scalar(@ARGV) > 0) {
+	foreach (@ARGV) {
+		my ($cp) = abs_path($_);
+		Debug("cp [$cp]");
+		if (length($topdir) > 0) {
+			$cp =~ s/$topdir//;
+			Debug("change topdir[$topdir]");
+		} else {
+			$cp = basename($cp);
+			Debug("basename");
+		}
 
-	$cp =~ s/\./_/g;
-	$cp =~ s/\//_/g;
-	$cp =~ s/\\/_/g;
-	print STDOUT "$cp\n";
+		$cp =~ s/\./_/g;
+		$cp =~ s/\//_/g;
+		$cp =~ s/\\/_/g;
+		print STDOUT "$cp\n";
+	}
 }
 
