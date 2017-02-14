@@ -13,7 +13,7 @@ __DEPENDS_OP_MAK__:=1
 ##      5        for compiler default gcc
 #########################################
 define build_c_depends
-$(call call_exec_directly,$(call get_value_default,$(5),gcc) $(call get_value_default,$(4),${CFLAGS}) $${$(3)_CFLAGS} -MM $(1) | ${PERL} -e '%PERL_DEP_HANDLE%' -- $(3)_DEPS > $(2),"DEPS","$(call get_basename,$(2))")
+$(call call_exec_directly,$(call get_value_default,$(5),gcc) $(call get_value_default,$(4),${CFLAGS}) $($(3)_CFLAGS) -MM $(1) | ${PERL} -e '%PERL_DEP_HANDLE%' -- $(3)_DEPS > $(2),"DEPS","$(call get_basename,$(2))")
 endef
 
 #########################################
@@ -27,7 +27,7 @@ endef
 ##      5        for compiler default gcc
 #########################################
 define build_S_depends
-$(call call_exec_directly,$(call get_value_default,$(5),gcc) $(call get_value_default,$(4),${ASMFLAGS}) $${$(3)_ASMFLAGS} -MM $(1) | ${PERL} -e '%PERL_DEP_HANDLE%' -- $(3) > $(2),"DEPS","$(call get_basename,$(2))")
+$(call call_exec_directly,$(call get_value_default,$(5),gcc) $(call get_value_default,$(4),${ASMFLAGS}) $($(3)_ASMFLAGS) -MM $(1) | ${PERL} -e '%PERL_DEP_HANDLE%' -- $(3) > $(2),"DEPS","$(call get_basename,$(2))")
 endef
 
 
@@ -42,7 +42,7 @@ endef
 ##      5        compiler default gcc
 #########################################
 define build_c
-$(call call_exec_directly,$(call get_value_default,$(5),gcc) $(call get_value_default,$(4),${CFLAGS}) $${$(3)_CFLAGS} -c $(2) -o $(1),"CC","$(call get_basename,$(1))")
+$(call call_exec_directly,$(call get_value_default,$(5),gcc) $(call get_value_default,$(4),${CFLAGS}) $($(3)_CFLAGS) -c $(2) -o $(1),"CC","$(call get_basename,$(1))")
 endef
 
 #########################################
@@ -56,7 +56,7 @@ endef
 ##      5        compiler default gcc
 #########################################
 define build_S
-$(call call_exec_directly,$(call get_value_default,$(5),gcc) $(call get_value_default,$(4),${ASMFLAGS}) $${$(3)_ASMFLAGS} -c $(2) -o $(1),"CC","$(call get_basename,$(1))")
+$(call call_exec_directly,$(call get_value_default,$(5),gcc) $(call get_value_default,$(4),${ASMFLAGS}) $($(3)_ASMFLAGS) -c $(2) -o $(1),"CC","$(call get_basename,$(1))")
 endef
 
 
@@ -126,10 +126,7 @@ endef
 ##          $(3)   gcc or compiler
 #########################################
 define foreach_c_file_basic
-$(foreach cursrc,$(1),$(eval $(call make_c_rules,$(patsubst %.c,%.o,\
-	$(cursrc)),$(cursrc),\
-	$(call get_shortname,${cursrc}),\
-	${cursrc}.d,$(2),$(3))))
+$(foreach cursrc,$(1),$(eval $(call make_c_rules,$(patsubst %.c,%.o,$(cursrc)),$(cursrc),$(call get_shortname,${cursrc}),${cursrc}.d,$(2),$(3))))
 endef
 
 #########################################
@@ -148,10 +145,7 @@ endef
 ##          $(3)   gcc or compiler
 #########################################
 define foreach_link_c_file_basic
-$(foreach cursrc,$(1),$(eval $(call make_link_c_rules,$(patsubst %.c,%.o,\
-	$(cursrc)),$(cursrc),\
-	$(call get_shortname,${cursrc}),\
-	${cursrc}.d,$(2),$(3))))
+$(foreach cursrc,$(1),$(eval $(call make_link_c_rules,$(patsubst %.c,%.o,$(cursrc)),$(cursrc),$(call get_shortname,${cursrc}),${cursrc}.d,$(2),$(3))))
 endef
 
 #########################################
@@ -161,10 +155,7 @@ endef
 ##          $(4)   gcc or compiler
 #########################################
 define foreach_link_c_file_shortname
-$(foreach cursrc,$(1),$(eval $(call make_link_c_rules,$(patsubst %.c,%.o,\
-	$(cursrc)),$(cursrc),\
-	$(call get_shortname,$(1),$(2)),\
-	${cursrc}.d,$(3),$(4))))
+$(foreach cursrc,$(1),$(eval $(call make_link_c_rules,$(patsubst %.c,%.o,$(cursrc)),$(cursrc),$(call get_shortname,$(cursrc),$(2)),${cursrc}.d,$(3),$(4))))
 endef
 
 
@@ -174,10 +165,7 @@ endef
 ##          $(3)   gcc or compiler
 #########################################
 define foreach_S_file_basic
-$(foreach cursrc,$(1),$(eval $(call make_S_rules,$(patsubst %.S,%.o,\
-	$(cursrc)),$(cursrc),\
-	$(call get_shortname,${cursrc}),\
-	${cursrc}.d,$(2),$(3))))
+$(foreach cursrc,$(1),$(eval $(call make_S_rules,$(patsubst %.S,%.o,$(cursrc)),$(cursrc),$(call get_shortname,${cursrc}),${cursrc}.d,$(2),$(3))))
 endef
 
 #########################################
@@ -186,11 +174,8 @@ endef
 ##          $(3)   cflags
 ##          $(4)   gcc or compiler
 #########################################
-define foreach_S_file_basic
-$(foreach cursrc,$(1),$(eval $(call make_S_rules,$(patsubst %.S,%.o,\
-	$(cursrc)),$(cursrc),\
-	$(call get_shortname,$(1),$(2)),\
-	${cursrc}.d,$(3),$(4))))
+define foreach_S_file_shortname
+$(foreach cursrc,$(1),$(eval $(call make_S_rules,$(patsubst %.S,%.o,$(cursrc)),$(cursrc),$(call get_shortname,$(cursrc),$(2)),${cursrc}.d,$(3),$(4))))
 endef
 
 
