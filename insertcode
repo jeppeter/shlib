@@ -113,7 +113,8 @@ def __get_make_string(args,infile=None):
 		fin = open(infile,'rb')
 	s = ''
 	for l in fin:
-		if l.startswith('#'):
+		l = re.sub('#.*','',l)
+		if len(l) == 0:
 			continue
 		l = l.rstrip('\r\n')
 		l = l.replace('\'','%singlequote%')

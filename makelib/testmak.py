@@ -20,13 +20,13 @@ def make_dir_safe(dname=None):
 			if not os.path.isdir(dname):
 				raise Exception('can not make [%s]'%(dname))
 
-def make_tempdir(prefix=None):
+def make_tempdir(prefix=None,suffix=''):
 	make_dir_safe(prefix)
-	return tempfile.mkdtemp(dir=prefix)
+	return tempfile.mkdtemp(suffix=suffix,dir=prefix)
 
-def make_tempfile(prefix=None):
+def make_tempfile(prefix=None,suffix=''):
 	make_dir_safe(prefix)
-	fd,result = tempfile.mkstemp(dir=prefix)
+	fd,result = tempfile.mkstemp(suffix=suffix,dir=prefix)
 	os.close(fd)
 	return result
 
@@ -308,6 +308,46 @@ class debug_testmak_case(unittest.TestCase):
 			self.__remove_file_safe(longname)
 		return
 
+	def __format_testfileop(self,makelibdir,longname):
+		s = ''
+		s += self.__format_make_common('include %s'%(os.path.join(makelibdir,'basedef.mak')))
+		s += self.__format_make_common('include %s'%(os.path.join(makelibdir,'varop.mak')))
+		s += self.__format_make_common('include %s'%(os.path.join(makelibdir,'exec.mak')))
+		s += self.__format_make_common('include %s'%(os.path.join(makelibdir,'fileop.mak')))
+		s += self.__format_make_common('')
+		s += self.__format_make_common('CURDIR:=$(call readlink_f,.)')
+		s += self.__format_make_common('BASENAME:=$(call get_basename,"%s")'%(longname))
+		s += self.__format_make_common('')
+		s += self.__format_make_common('all:')
+		s += self.__format_make_command('$(call call_exec,${TRUE},"PWD","${CURDIR}")',False)
+		s += self.__format_make_command('$(call call_exec,${TRUE},"BASE","${BASENAME}")',False)
+		return s
+
+	def test_fileop_case(self):
+		testf = None
+		longname = None
+		try:
+			makelibdir = self.__get_makelib_dir()
+			longname = make_tempfile()
+			s = self.__format_testfileop(makelibdir,'%s.suffix'%(longname))
+			testf = self.__write_tempfile(s)
+			outsarr = self.__run_make(testf,'all')
+			truebin = self.__get_which('true')
+			self.assertEqual(len(outsarr),2)
+			self.assertEqual(0,self.__check_str_value(outsarr,'    %-9s %s'%('PWD',os.path.dirname(os.path.realpath(testf)))))
+			self.assertEqual(1,self.__check_str_value(outsarr,'    %-9s %s'%('BASE',os.path.basename('%s.suffix'%(longname)))))
+			vardict = dict()
+			vardict['V']='1'
+			outsarr = self.__run_make(testf,'all',vardict)
+			self.assertEqual(len(outsarr),2)
+			self.assertEqual(0,self.__check_str_value(outsarr,'%s'%(truebin)))
+			self.assertEqual(0,self.__check_str_value(outsarr[1:],'%s'%(truebin)))
+		finally:
+			self.__remove_file_safe(testf)
+			self.__remove_file_safe(longname)
+		return
+
+	def __format_depops
 
 
 def set_log_level(args):

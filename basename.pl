@@ -1,9 +1,9 @@
 #! /usr/bin/env perl
 
 use strict;
-use Getopt::Long;
-use File::Basename;
 use Cwd "abs_path";
+use File::Basename;
+use Getopt::Long;
 
 sub Usage($$)
 {
@@ -22,12 +22,12 @@ sub Usage($$)
 	print $fp "[OPTIONS]\n";
 	print $fp "\t-h|--help               to give this help information\n";
 	print $fp "\t-v|--verbose            to make verbose mode\n";
-	print $fp "\t-t|--topdir dir         to make replace dir\n";
 	print $fp "\n";
-	print $fp "\t[dirs]                  if not set topdir ,it will get the basename\n";
+	print $fp "\t[dirs]                  if will give basename of it\n";
 
 	exit($ec);
 }
+
 
 my ($verbose)=0;
 
@@ -46,45 +46,25 @@ sub Debug($)
 }
 
 my %opts;
-my ($topdir);
 Getopt::Long::Configure("no_ignorecase","bundling");
 Getopt::Long::GetOptions(\%opts,"help|h",
 	"verbose|v" => sub {
 		if (!defined($opts{"verbose"})) {
 			$opts{"verbose"} = 0;
 		}
-		$opts{"verbose"}++;
-	},
-	"topdir|t=s");
+		${opts{"verbose"}} ++;
+	});
 
 if (defined($opts{"help"})) {
-	Usage( 0,"");
-}
-$topdir = "";
-if (defined($opts{"topdir"})) {
-	$topdir = $opts{"topdir"};
+	Usage(0,"");
 }
 
 if (defined($opts{"verbose"})) {
-	$verbose=$opts{"verbose"};
+	$verbose = $opts{"verbose"};
 }
 
-if (scalar(@ARGV) > 0) {
-	foreach (@ARGV) {
-		my ($cp) = abs_path($_);
-		Debug("cp [$cp]");
-		if (length($topdir) > 0) {
-			$cp =~ s/$topdir//;
-			Debug("change topdir[$topdir]");
-		} else {
-			$cp = basename($cp);
-			Debug("basename");
-		}
-
-		$cp =~ s/\./_/g;
-		$cp =~ s/\//_/g;
-		$cp =~ s/\\/_/g;
-		print STDOUT "$cp\n";
-	}
+foreach(@ARGV) {
+	my ($c) = $_;
+	Debug("in [$c]");
+	print basename(abs_path($c))."\n";
 }
-

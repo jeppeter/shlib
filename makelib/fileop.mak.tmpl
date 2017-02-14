@@ -1,17 +1,14 @@
 
 ifndef __FILE_OP_MAK__
-define __FILE_OP_MAK__
+__FILE_OP_MAK__:=1
 
-define get_depname
-$(shell ${PERL} ${CURDIR}/bname $(1) | ${SED} 's/\./_/g')_DEPS
-endef
 
 define readlink_f
-$(shell ${PERL} -e '%PERL_READLINK_STR%' $(1) )
+$(shell ${PERL} -e '%PERL_READLINK_STR%' --  $(1) )
 endef
 
 define get_basename
-$(basename $(notdir $(1)))$(suffix $(1))
+$(shell ${PERL} -e '%PERL_BASENAME_STR%' -- $(1) )
 endef
 
 
