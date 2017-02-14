@@ -8,6 +8,8 @@ import logging
 import cmdpack
 import tempfile
 import subprocess
+import random
+import time
 
 
 def make_dir_safe(dname=None):
@@ -88,13 +90,18 @@ class debug_testmak_case(unittest.TestCase):
 		s += self.__format_varaible_echo('TOUCH',echobin)
 		return s
 
+	def __write_file(self,s,f):
+		with open(f,'w+b') as fout:
+			fout.write('%s'%(s))
+		return f
+
+
 
 	def __write_tempfile(self,s,tmpdir='/tmp'):
-		tempfile = make_tempfile(tmpdir)
-		with open(tempfile,'w+b') as f:
-			f.write('%s'%(s))
-		logging.debug('write [%s] << %s'%(tempfile,s))
-		return tempfile
+		tempf = make_tempfile(tmpdir)
+		self.__write_file(s,tempf)
+		logging.debug('write [%s] << %s'%(tempf,s))
+		return tempf
 
 	def read_cmd(self,rl):
 		logging.debug('rl [%s]'%(rl.rstrip('\r\n')))
@@ -347,7 +354,296 @@ class debug_testmak_case(unittest.TestCase):
 			self.__remove_file_safe(longname)
 		return
 
-	def __format_depops
+	def __get_random_max(self,maxnum,minnum=0):
+		return random.randint(minnum,maxnum)
+
+	def __get_relocate_path(self,fname,basedir):
+		s = ''
+		fullpath = os.path.realpath(fname)		
+		s = fullpath
+		if  basedir is not None and fullpath.startswith(basedir):
+			s = fullpath.replace(basedir,'')
+			while s.startswith('/') or s.startswith('\\'):
+				s = s[1:]
+		return s
+
+
+	def __format_depop_make(self,makelibdir,basedir,cfilelist,Sfilelist,linkcfiles=None,mainexe='main',cflagname='CFLAGS',sflagname='ASMFLAG',ldflagname='LDFLAGS',includedir=[],definemacros=None,filespec=None):
+		s = ''
+		s += self.__format_make_common('include %s'%(os.path.join(makelibdir,'basedef.mak')))
+		s += self.__format_make_common('include %s'%(os.path.join(makelibdir,'varop.mak')))
+		s += self.__format_make_common('include %s'%(os.path.join(makelibdir,'exec.mak')))
+		s += self.__format_make_common('include %s'%(os.path.join(makelibdir,'fileop.mak')))
+		s += self.__format_make_common('include %s'%(os.path.join(makelibdir,'depop.mak')))
+		s += self.__format_make_common('')
+		s += self.__format_make_common('CURDIR:=$(call readlink_f,.)')
+		rets = 'c_srcs_basic :='			
+		if len(cfilelist) > 0:
+			for i in range(len(cfilelist)):
+				rets += ' %s'%(self.__get_relocate_path(cfilelist[i],basedir))
+		s += self.__format_make_common('%s'%(rets))
+		s += self.__format_make_common('c_srcs := $(patsubst %,${CURDIR}/%,${c_srcs_basic})')
+		s += self.__format_make_common('c_objs := $(patsubst %.c,%.o,${c_srcs})')
+		s += self.__format_make_common('c_deps := $(patsubst %,%.d,${c_srcs})')
+
+		rets = 'link_c_srcs_basic :='			
+		if linkcfiles is not None:
+			linkcs = linkcfiles.keys()
+			for i in range(len(linkcs)):
+				rets += ' %s'%(self.__get_relocate_path(linkcs[i],basedir))
+		s += self.__format_make_common('%s'%(rets))
+		s += self.__format_make_common('link_c_srcs := $(patsubst %,${CURDIR}/%,${link_c_srcs_basic})')
+		s += self.__format_make_common('link_c_objs := $(patsubst %.c,%.o,${link_c_srcs})')
+		s += self.__format_make_common('link_c_deps := $(patsubst %,%.d,${link_c_srcs})')
+
+		if linkcfiles is not None:
+			for c in linkcfiles.keys():
+				s += self.__format_make_common('%s_SRC := %s'%(self.__get_shortname(c,basedir),linkcfiles[c]))
+
+		rets = 'S_srcs_basic := '
+		if len(Sfilelist) >0:
+			for i in range(len(Sfilelist)):
+				rets += ' %s'%(self.__get_relocate_path(Sfilelist[i],basedir))
+		s += self.__format_make_common('%s'%(rets))
+		s += self.__format_make_common('S_srcs := $(patsubst %,${CURDIR}/%,${S_srcs_basic})')
+		s += self.__format_make_common('S_objs := $(patsubst %.S,%.o,${S_srcs})')
+		s += self.__format_make_common('S_deps := $(patsubst %,%.d,${S_srcs})')
+		s += self.__format_make_common('%s = -Wall '%(cflagname))
+
+		s += self.__format_make_common('objs := ${c_objs} ${S_objs} ${link_c_objs}')
+		s += self.__format_make_common('deps := ${c_deps} ${S_deps} ${link_c_deps}')
+		s += self.__format_make_common('')
+
+		if len(includedir) > 0:
+			for c in includedir:
+				s += self.__format_make_common('%s += -I%s'%(cflagname,c))
+
+		if definemacros is not None:
+			for c in definemacros.keys():
+				s += self.__format_make_common('%s += -D%s=%s'%(cflagname,c,definemacros[c]))
+
+
+		s += self.__format_make_common('%s = ${%s} -D__ASSEMBLY__'%(sflagname,cflagname))
+
+
+		if filespec is not None:
+			for c in filespec.keys():
+				s += self.__format_make_common('%s_CFLAGS += %s'%(self.__get_shortname(c,basedir),filespec[c]))
+
+
+		s += self.__format_make_common('%s = -Wall '%(ldflagname))
+
+		s += self.__format_make_common('')
+		s += self.__format_make_common('all:%s'%(mainexe))
+		s += self.__format_make_common('%s:${objs}'%(mainexe))
+		s += self.__format_make_command('$(call call_exec,${GCC} ${%s} -o %s ${objs},"LD","%s")'%(ldflagname,mainexe,mainexe),False)
+
+		s += self.__format_make_common('')
+		s += self.__format_make_common('-include ${deps}')
+		if len(cfilelist) > 0:
+			s += self.__format_make_common('')
+			s += self.__format_make_common('$(call foreach_c_file_shortname,${c_srcs},${CURDIR},${%s},${GCC})'%(cflagname))
+			s += self.__format_make_common('')
+
+		if linkcfiles is not None:
+			s += self.__format_make_common('')
+			s += self.__format_make_common('$(call foreach_link_c_file_shortname,${link_c_srcs},${CURDIR},${%s},${GCC})'%(cflagname))
+			s += self.__format_make_common('')
+
+		if len(Sfilelist) > 0:
+			s += self.__format_make_common('')
+			s += self.__format_make_common('$(call foreach_S_file_shortname,${S_srcs},${CURDIR},${%s},${GCC})'%(sflagname))
+			s += self.__format_make_common('')
+
+		s += self.__format_make_common('clean:')
+		s += self.__format_make_command('$(call call_exec,${RM} -f %s,"RM","%s")'%(mainexe,mainexe),False)
+		s += self.__format_make_command('$(call call_exec,${RM} -f ${deps},"RM","deps")',False)
+		s += self.__format_make_command('$(call call_exec,${RM} -f ${objs},"RM","objs")',False)
+		s += self.__format_make_command('$(call call_exec,${RM} -f ${link_c_srcs},"RM","linkcs")',False)
+		return s
+
+	def __get_define_macro(self,fname,basedir):
+		s = ''
+		s = fname.replace(basedir,'')
+		s = s.replace('\\','_')
+		s = s.replace('/','_')
+		s = s.replace('.','_')
+		s = s.upper()
+		s = '__%s__'%(s)
+		return s
+
+	def __get_file_relative(self,fname,basedir):
+		s = ''
+		s = fname.replace(basedir,'')
+		s = s.replace('\\','/')
+		while len(s) > 0 and (s[0] == '/' or s[0] == '\\') :
+			s = s[1:]
+		return s
+
+	def __make_header_s(self,fname,basedir,includeothers=[]):
+		s = ''
+		macro = self.__get_define_macro(fname,basedir)
+		s += self.__format_make_common('#ifndef %s'%(macro))
+		s += self.__format_make_common('#define %s'%(macro))
+		s += self.__format_make_common('')
+		for c in includeothers:
+			s += self.__format_make_common('#include <%s>'%(self.__get_file_relative(c,basedir)))
+		s += self.__format_make_common('')
+		s += self.__format_make_common('#endif /*%s*/'%(macro))
+		return s
+
+	def __make_c_s(self,fname,includedir,includes=[]):
+		s = ''
+		for c in includes:
+			s += self.__format_make_common('#include <%s>'%(self.__get_file_relative(c,includedir)))
+		return s
+
+
+	def __get_include_files(self,allfiles):
+		if len(allfiles) > 1:
+			rn = self.__get_random_max(len(allfiles)-1,0)
+		else:
+			rn = 0
+		includes = []
+		if rn > 0 :
+			while len(includes) < rn:
+				curfile = random.choice(allfiles)
+				if curfile not in includes:
+					includes.append(curfile)
+		return includes
+
+	def __get_use_max_cnt(self):
+		maxnum = 200
+		if 'TEST_MAXNUM' in os.environ.keys():
+			maxnum = int(os.environ['TEST_MAXNUM'])
+		return maxnum
+
+	def __get_use_min_cnt(self):
+		minnum = 20
+		if 'TEST_MINNUM' in os.environ.keys():
+			minnum = int(os.environ['TEST_MINNUM'])
+		return minnum
+
+
+	def __make_headers(self,includedir):
+		maxfiles = self.__get_random_max(self.__get_use_max_cnt(),self.__get_use_min_cnt())
+		files = dict()
+		curdir = includedir
+		while len(files.keys()) < maxfiles:
+			rn = self.__get_random_max(20)
+			if rn == 0:
+				curdir = os.path.realpath(os.path.join(curdir,'..'))
+				if len(curdir) < len(includedir):
+					curdir = includedir
+			elif rn == 1:
+				curdir = make_tempdir(curdir)
+			else:
+				includefiles = self.__get_include_files(files.keys())
+				curfile = make_tempfile(curdir,'.h')
+				s = self.__make_header_s(curfile,includedir,includefiles)
+				self.__write_file(s,curfile)
+				files[curfile] = includefiles
+		return files
+
+	def __make_c_files(self,basedir,includefiles,includedir=None,cdir=None):
+		maxc = self.__get_random_max(self.__get_use_max_cnt(),self.__get_use_min_cnt())
+		cfiles = dict()
+		if cdir is None:
+			cdir = os.path.join(basedir,'src')
+		if includedir is None:
+			includedir = os.path.join(basedir,'include')
+		curdir = cdir
+		while len(cfiles.keys()) < maxc:
+			rn = self.__get_random_max(20)
+			if rn == 0:
+				curdir = os.path.realpath(os.path.join(curdir,'..'))
+				if len(curdir) < len(cdir):
+					curdir = cdir
+			elif rn == 1:
+				curdir = make_tempdir(curdir)
+			else:
+				curincludes = self.__get_include_files(includefiles)
+				curfile = make_tempfile(curdir,'.c')
+				s = self.__make_c_s(curfile,includedir,curincludes)
+				self.__write_file(s,curfile)
+				cfiles[curfile] = curincludes
+		return  cfiles
+
+	def __make_link_c_files(self,basedir,cfiles,cdir=None,linkdir=None):
+		linked = dict()
+		if cdir is None:
+			cdir = os.path.join(basedir,'src')
+		if linkdir is None:
+			linkdir = os.path.join(basedir,'link')
+		curdir = linkdir
+		maxlink = self.__get_random_max(self.__get_use_max_cnt(),self.__get_use_min_cnt())
+		while len(linked.keys()) < maxlink:
+			rn = self.__get_random_max(20)
+			if rn == 0:
+				curdir = os.path.realpath(os.path.join(curdir,'..'))
+				if len(curdir) < len(linkdir):
+					curdir = linkdir
+			elif rn == 1:
+				curdir = make_tempdir(curdir)
+			else:
+				curfile = make_tempfile(curdir)
+				if curfile not in linked.keys():
+					cursrc = random.choice(cfiles)
+					linked[curfile] = cursrc
+					os.remove(curfile)
+		return linked
+
+	def __make_S_files(self,basedir,includefiles,includedir=None,sdir=None):
+		if includedir is None:
+			includedir = os.path.join(basedir,'include')
+		if sdir is None:
+			sdir = os.path.join(basedir,'asm')
+		maxs = self.__get_random_max(self.__get_use_max_cnt(),self.__get_use_min_cnt())
+		sfiles = dict()
+		curdir = sdir
+		while len(sfiles.keys()) < maxs:
+			rn = self.__get_random_max(20)
+			if rn == 0:
+				curdir = os.path.realpath(os.path.join(curdir,'..'))
+				if len(curdir) < len(sdir):
+					curdir = sdir
+			elif rn == 1:
+				curdir = make_tempdir(curdir)
+			else:
+				curfile = make_tempfile(curdir,'.S')
+				includes = self.__get_include_files(includefiles)
+				s = self.__make_c_s(curfile,includedir,includes)
+				self.__write_file(s,curfile)
+				sfiles[curdir] = includes
+		return sfiles
+
+
+	def test_depop_case(self):
+		random.seed(time.time())
+		basedir = None
+		try:
+			basedir = make_tempdir()
+			headdir = make_tempdir(basedir)
+			cdir = make_tempdir(basedir)
+			linkdir = make_tempdir(basedir)
+			sdir = make_tempdir(basedir)
+			headerfiles = self.__make_headers(headdir)
+			cfiles = self.__make_c_files(basedir,headerfiles.keys(),headdir,cdir)
+			linkcfiles = self.__make_link_c_files(basedir,cfiles.keys(),cdir,linkdir)
+			sfiles = self.__make_S_files(basedir,headerfiles.keys(),headdir,sdir)
+			makelibdir = self.__get_makelib_dir()
+			s = self.__format_depop_make(makelibdir,basedir,cfiles.keys(),sfiles.keys(),linkcfiles,'main','CFLAGS','ASMFLAG','LDFLAGS',includedir=[headdir])
+			makefile = os.path.join(basedir,'Makefile')
+			self.__write_file(s,makefile)
+			outsarr = self.__run_make(makefile,'all')
+
+		finally:
+			self.__remove_file_safe(basedir)
+		return
+				
+
+
+
 
 
 def set_log_level(args):
@@ -371,15 +667,19 @@ def main():
 		"makebin|m" : "make",
 		"reserved|r" : false,
 		"makelibdir|d" : "%s",
+		"maxnum" : 30,
+		"minnum" : 3,
 		"$" : "*"
 	}
-	'''
+	''' 
 	commandline = commandline_fmt%(os.path.dirname(os.path.realpath(__file__)))
 	parser = extargsparse.ExtArgsParse()
 	parser.load_command_line_string(commandline)
 	args = parser.parse_command_line()
 	set_log_level(args)
 	sys.argv[1:] = args.args
+	os.environ['TEST_MAXNUM'] = '%s'%(args.maxnum)
+	os.environ['TEST_MINNUM'] = '%s'%(args.minnum)
 	if args.reserved : 
 		os.environ['TEST_RESERVED'] = '1'
 	else:

@@ -47,7 +47,7 @@ function make_make_header()
 	local _defcode="__${_h}_${_postfix}__"
 	Debug "_bname ${_bname} _h ${_h} _defcode ${_defcode} _postfix ${_postfix}"
 	echo "ifndef ${_defcode}" > "$_f"
-	echo "define ${_defcode}" >> "$_f"
+	echo "${_defcode}:=1" >> "$_f"
 	echo "" >> "$_f"
 	echo "## ${_defcode} ##" >> "$_f"
 	echo "endif" >> "$_f"
@@ -56,7 +56,7 @@ function make_make_header()
 
 read -r -d '' OPTIONS<<EOFMM
 	{
-		"verbose|v" : "+",
+		"verbose|v" : "+",		
 		"header<subcommand>" : {
 			"\$<headers>" : "+"
 		},
