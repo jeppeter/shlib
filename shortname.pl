@@ -75,7 +75,15 @@ if (scalar(@ARGV) > 0) {
 		Debug("cp [$cp]");
 		if (length($topdir) > 0) {
 			$cp =~ s/$topdir//;
-			Debug("change topdir[$topdir]");
+			while (length($cp) > 0 ) {
+				if ($cp =~ m/^\//o || 
+					$cp =~ m/^\\/o) {
+					$cp =~ s/.//;
+				} else {
+					last;
+				}
+			}
+			Debug("change topdir[$topdir] [$cp]");
 		} else {
 			$cp = basename($cp);
 			Debug("basename");

@@ -457,9 +457,11 @@ class debug_testmak_case(unittest.TestCase):
 
 		s += self.__format_make_common('clean:')
 		s += self.__format_make_command('$(call call_exec,${RM} -f %s,"RM","%s")'%(mainexe,mainexe),False)
-		s += self.__format_make_command('$(call call_exec,${RM} -f ${deps},"RM","deps")',False)
-		s += self.__format_make_command('$(call call_exec,${RM} -f ${objs},"RM","objs")',False)
-		s += self.__format_make_command('$(call call_exec,${RM} -f ${link_c_srcs},"RM","linkcs")',False)
+		s += self.__format_make_command('$(call call_exec,${RM} -f *.d,"RM","deps")',False)
+		s += self.__format_make_command('$(call call_exec,${RM} -f *.o,"RM","objs")',False)
+		for c in linkcfiles.keys():
+			s += self.__format_make_command('$(call call_exec,${RM} -f ${CURDIR}/%s,"RM","$(call get_basename,${CURDIR}/%s)")'%(self.__get_relocate_path(c,basedir),
+				self.__get_relocate_path(c,basedir)),False)
 		return s
 
 	def __get_define_macro(self,fname,basedir):
