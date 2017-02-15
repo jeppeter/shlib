@@ -760,6 +760,84 @@ class debug_testmak_case(unittest.TestCase):
 		curidx += 1
 		return curidx
 
+	def touch_file(self,infile):
+		with open(infile,'r'):
+			os.utime(infile,None)
+		return
+
+	def sorted_and_uniq(self,arr):
+		sortarr = sorted(arr)
+		i = 0
+		while i < len(sortarr):
+			if i < (len(sortarr)-1):
+				if sortarr[i] == sortarr[i+1]:
+					del sortarr[i+1]
+					continue
+			i += 1
+		return sortarr
+
+	def select_touch_files(self,hfiles,cfiles,sfiles,linkcfiles):
+		touchincs = []
+		touchcs = []
+		touchss = []
+		rn = self.__get_random_max(self.__get_use_max_cnt(),self.__get_use_min_cnt())
+		linksrcs = []
+		if linkcfiles is not None:
+			for c in linkcfiles.keys():
+				linksrcs.append(linkcfiles[c])
+		for i in range(rn):
+			cn = self.__get_random_max(4)
+			if cn == 0:
+				if len(hfiles) > 0:
+					touchincs.append(random.choice(hfiles))
+			elif cn == 1:
+				if len(cfiles) > 0:
+					touchcs.append(random.choice(cfiles))
+			elif cn == 2:
+				if len(sfiles) > 0:
+					touchss.append(random.choice(sfiles))
+			elif cn == 3:
+				if len(linksrcs) > 0:
+					touchcs.append(random.choice(linksrcs))
+		touchincs = self.sorted_and_uniq(touchincs)
+		touchss = self.sorted_and_uniq(touchss)
+		touchcs = self.sorted_and_uniq(touchcs)
+		for c in touchincs:
+			self.touch_file(c)
+		for c in touchcs:
+			self.touch_file(c)
+		for c in touchss:
+			self.touch_file(c)
+		return touchincs,touchcs,touchss
+
+	def __get_affected_cfiles(self,cdict,chgincludes):
+		caffects = []
+		for c in cdict:
+			curincs = cdict[c]
+			for cc in curincs:
+				if cc in chgincludes:
+					caffects.append(c)
+		return caffects
+
+	def __get_affected_sfiles(self,sdict,chgincludes):
+		saffects = []
+		for s in sdict:
+			curincs = sdict[s]
+			for ss in curincs:
+				if ss in chgincludes:
+					saffects.append(s)
+		return saffects
+
+	def __get_affected_linkcfiles(self,linkcfiles,cfiles):
+		linkaffects = []
+		if linkcfiles is not None:
+			for c in linkcfiles.keys():
+				linksrc = linkcfiles[c]
+				if linksrc in cfiles:
+					linkaffects.append(c)
+		return linkaffects
+
+
 
 	def test_depop_case(self):
 		random.seed(time.time())
@@ -780,6 +858,8 @@ class debug_testmak_case(unittest.TestCase):
 			makelibdir = self.__get_makelib_dir()
 			sortedcfiles = sorted(cfiles.keys())
 			sortedsfiles = sorted(sfiles.keys())
+			sortedhfiles = sorted(headerfiles.keys())
+			sortedsfiles = sorted(sfiles.keys())
 			for k in linkcfiles.keys():
 				linksrc = linkcfiles[k]
 				if linksrc in sortedcfiles:
@@ -799,6 +879,32 @@ class debug_testmak_case(unittest.TestCase):
 			curidx = self.__check_S_files_cc(outsarr,curidx,sortedsfiles)
 			curidx = self.__check_link_c_files_cc(outsarr,curidx,linkcfiles)
 			curidx = self.__check_ld_main(outsarr,curidx,mainexe)
+			outsarr = self.__run_make(makefile,'all')
+			# nothing to do any more
+			self.assertEqual(1,len(outsarr))
+			self.assertEqual(0,self.__check_str_value(outsarr,'make: Nothing to be done for `%s\'.'%('all')))
+			# now we should test for part change
+			touchincs,touchcs,touchss = self.select_touch_files(sortedhfiles,sortedcfiles,sortedsfiles,linkcfiles)
+			affectc = self.__get_affected_cfiles(cfiles,touchincs)
+			affects = self.__get_affected_sfiles(sfiles,touchincs)
+			allcfiles = touchcs
+			allcfiles.extend(affectc)
+			allcfiles = self.sorted_and_uniq(allcfiles)
+			affectlc = self.__get_affected_linkcfiles(linkcfiles,allcfiles)
+
+			logging.debug('touchincs (%s)'%(touchincs))
+			logging.debug('touchcs (%s)'%(touchcs))
+			logging.debug('touchss (%s)'%(touchss))
+			logging.debug('affectc (%s)'%(affectc))
+			logging.debug('affects (%s)'%(affects))
+			logging.debug('affectlc (%s)'%(affectlc))
+			# now we should make the affected to handle change
+			outsarr = self.__run_make(makefile,'all')
+
+
+
+
+
 		finally:
 			self.__remove_file_safe(basedir)
 		return

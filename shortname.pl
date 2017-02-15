@@ -3,6 +3,7 @@
 use strict;
 use Getopt::Long;
 use File::Basename;
+use File::Spec;
 use Cwd "abs_path";
 
 sub Usage($$)
@@ -71,7 +72,12 @@ if (defined($opts{"verbose"})) {
 
 if (scalar(@ARGV) > 0) {
 	foreach (@ARGV) {
-		my ($cp) = abs_path($_);
+		my ($cp) = $_;
+		if ( -l "$cp") {
+			$cp = File::Spec->rel2abs($cp);
+		} else {
+			$cp = abs_path($cp);
+		}
 		Debug("cp [$cp]");
 		if (length($topdir) > 0) {
 			$cp =~ s/$topdir//;
