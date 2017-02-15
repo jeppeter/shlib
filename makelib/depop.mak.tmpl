@@ -104,6 +104,34 @@ $(4): $$($(3)_DEPS) $$($(3)_SRC)
 	$${Q}$$(call build_c_depends,$(2),$(4),$(3),$(5),$(6))
 endef
 
+
+#########################################
+##  input : $(1)   src file
+##          $(2)   link file
+#########################################
+define link_S_file
+$(call call_exec_directly,if [ -e $(2) ];then ${RM} -f $(2);fi;${LN} -s $(1) $(2),"LINK","$(call get_basename,$(2))")
+endef
+
+#########################################
+##  input : $(1)   object file
+##          $(2)   for S file
+##          $(3)   shortname for S
+##          $(4)   depends file
+##          $(5)   cflags
+##          $(6)   gcc or compiler
+#########################################
+define make_link_S_rules
+$(1): $(2) $$(MAKEDEPS) $$($(3)_DEPS) $$($(3)_SRC)
+	$${Q}$$(call build_S,$$@,$$<,$(3),$(5),$(6))
+
+
+$(4): $$($(3)_DEPS) $$($(3)_SRC)
+	$${Q}$$(call link_S_file,$$($(3)_SRC),$(2))
+	$${Q}$$(call build_S_depends,$(2),$(4),$(3),$(5),$(6))
+endef
+
+
 #########################################
 ##  input : $(1)   object file
 ##          $(2)   for C file
@@ -176,6 +204,25 @@ endef
 #########################################
 define foreach_S_file_shortname
 $(foreach cursrc,$(1),$(eval $(call make_S_rules,$(patsubst %.S,%.o,$(cursrc)),$(cursrc),$(call get_shortname,$(cursrc),$(2)),${cursrc}.d,$(3),$(4))))
+endef
+
+#########################################
+##  input : $(1)   lists for S link file
+##          $(2)   cflags
+##          $(3)   gcc or compiler
+#########################################
+define foreach_link_S_file_basic
+$(foreach cursrc,$(1),$(eval $(call make_link_S_rules,$(patsubst %.S,%.o,$(cursrc)),$(cursrc),$(call get_shortname,${cursrc}),${cursrc}.d,$(2),$(3))))
+endef
+
+#########################################
+##  input : $(1)   lists for S  link file
+##          $(2)   basedir
+##          $(3)   cflags
+##          $(4)   gcc or compiler
+#########################################
+define foreach_link_S_file_shortname
+$(foreach cursrc,$(1),$(eval $(call make_link_S_rules,$(patsubst %.S,%.o,$(cursrc)),$(cursrc),$(call get_shortname,$(cursrc),$(2)),${cursrc}.d,$(3),$(4))))
 endef
 
 

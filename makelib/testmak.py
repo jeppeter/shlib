@@ -370,7 +370,7 @@ class debug_testmak_case(unittest.TestCase):
 		return s
 
 
-	def __format_depop_make(self,makelibdir,basedir,cfilelist,Sfilelist,linkcfiles=None,mainexe='main',cflagname='CFLAGS',sflagname='ASMFLAG',ldflagname='LDFLAGS',includedir=[],definemacros=None,filespec=None):
+	def __format_depop_make(self,makelibdir,basedir,cfilelist,Sfilelist,linkcfiles=None,linksfiles=None,mainexe='main',cflagname='CFLAGS',sflagname='ASMFLAG',ldflagname='LDFLAGS',includedir=[],definemacros=None,filespec=None):
 		s = ''
 		s += self.__format_make_common('include %s'%(os.path.join(makelibdir,'basedef.mak')))
 		s += self.__format_make_common('include %s'%(os.path.join(makelibdir,'varop.mak')))
@@ -436,8 +436,32 @@ class debug_testmak_case(unittest.TestCase):
 		s += self.__format_make_common('S_objs := $(patsubst %.S,%.o,${S_srcs})')
 		s += self.__format_make_common('S_deps := $(patsubst %,%.d,${S_srcs})')
 
-		s += self.__format_make_common('objs := ${c_objs} ${S_objs} ${link_c_objs}')
-		s += self.__format_make_common('deps := ${c_deps} ${S_deps} ${link_c_deps}')
+		rets = 'link_S_srcs_basic ='
+		s += self.__format_make_common('%s'%(rets))
+		if linksfiles is not None:
+			linkss = sorted(linksfiles.keys())
+			rets = 'link_S_srcs_basic += '
+			for i in range(len(linkss)):
+				if (i%5) == 0 and i > 0:
+					s += self.__format_make_common('%s'%(rets))
+					rets = 'link_S_srcs_basic += '
+				rets += ' %s'%(self.__get_relocate_path(linkss[i],basedir))
+			if len(rets) > 0:
+				s += self.__format_make_common('%s'%(rets))
+		rets = ''
+		s += self.__format_make_common('%s'%(rets))
+		s += self.__format_make_common('link_S_srcs := $(patsubst %,${CURDIR}/%,${link_S_srcs_basic})')
+		s += self.__format_make_common('link_S_objs := $(patsubst %.S,%.o,${link_S_srcs})')
+		s += self.__format_make_common('link_S_deps := $(patsubst %,%.d,${link_S_srcs})')
+
+		if linksfiles is not None:
+			sortedkeys = sorted(linksfiles.keys())
+			for c in sortedkeys:
+				s += self.__format_make_common('%s_SRC := ${CURDIR}/%s'%(self.__get_shortname(c,basedir),self.__get_relocate_path(linksfiles[c],basedir)))
+
+
+		s += self.__format_make_common('objs := ${c_objs} ${S_objs} ${link_c_objs} ${link_S_objs}')
+		s += self.__format_make_common('deps := ${c_deps} ${S_deps} ${link_c_deps} ${link_S_deps}')
 		s += self.__format_make_common('')
 
 		s += self.__format_make_common('%s = -Wall '%(cflagname))
@@ -483,11 +507,17 @@ class debug_testmak_case(unittest.TestCase):
 			s += self.__format_make_common('$(call foreach_S_file_shortname,${S_srcs},${CURDIR},${%s},${GCC})'%(sflagname))
 			s += self.__format_make_common('')
 
+		if linksfiles is not None:
+			s += self.__format_make_common('')
+			s += self.__format_make_common('$(call foreach_link_S_file_shortname,${link_S_srcs},${CURDIR},${%s},${GCC})'%(cflagname))
+			s += self.__format_make_common('')
+
 		s += self.__format_make_common('clean:')
 		s += self.__format_make_command('$(call call_exec,${RM} -f %s,"RM","%s")'%(mainexe,mainexe),False)
 		s += self.__format_make_command('$(call call_exec,${RM} -f ${deps},"RM","deps")',False)
 		s += self.__format_make_command('$(call call_exec,${RM} -f ${objs},"RM","objs")',False)
-		s += self.__format_make_command('$(call call_exec,${RM} -f ${link_c_srcs},"RM","links")',False)
+		s += self.__format_make_command('$(call call_exec,${RM} -f ${link_c_srcs},"RM","linkc")',False)
+		s += self.__format_make_command('$(call call_exec,${RM} -f ${link_S_srcs},"RM","links")',False)
 		#for c in linkcfiles.keys():
 		#	s += self.__format_make_command('$(call call_exec,${RM} -f ${CURDIR}/%s,"RM","$(call get_basename,${CURDIR}/%s)")'%(self.__get_relocate_path(c,basedir),
 		#		self.__get_relocate_path(c,basedir)),False)
@@ -646,6 +676,36 @@ class debug_testmak_case(unittest.TestCase):
 					os.remove(curfile)
 		return linked
 
+	def __make_link_S_files(self,basedir,sfiles,sdir=None,linkdir=None):
+		linked = dict()
+		if sdir is None:
+			sdir = os.path.join(basedir,'asm')
+		if linkdir is None:
+			linkdir = os.path.join(basedir,'linkS')
+		curdir = linkdir
+		maxlink = self.__get_random_max(self.__get_use_max_cnt(),self.__get_use_min_cnt())
+		while len(linked.keys()) < maxlink:
+			rn = self.__get_random_max(20)
+			if rn == 0:
+				curdir = os.path.realpath(os.path.join(curdir,'..'))
+				if len(curdir) < len(linkdir):
+					curdir = linkdir
+			elif rn == 1:
+				curdir = make_tempdir(curdir)
+			else:
+				curfile = make_tempfile(curdir,'.S')
+				if curfile not in linked.keys():
+					if (len(sfiles) == 0):
+						# nothing to make
+						os.remove(curfile)
+						break
+					cursrc = random.choice(sfiles)
+					linked[curfile] = cursrc
+					logging.debug('[%s] linked [%s]'%(curfile,cursrc))
+					sfiles.remove(cursrc)
+					os.remove(curfile)
+		return linked
+
 	def __make_S_files(self,basedir,includefiles,includedir=None,sdir=None):
 		if includedir is None:
 			includedir = os.path.join(basedir,'include')
@@ -683,6 +743,27 @@ class debug_testmak_case(unittest.TestCase):
 				sortedkeys = sorted(linkcfiles.keys())
 			else:
 				sortedkeys = sorted(affectlc)
+			i = len(sortedkeys) - 1
+			while i >= 0:
+				curs = self.__format_exec_output('LINK',self.__get_basename(sortedkeys[i]))
+				logging.debug('curidx[%d][%d] [%s]'%(curidx,i,curs))
+				self.assertEqual(0,self.__check_str_value(outsarr[curidx:],curs))
+				curidx += 1
+				curs = self.__format_exec_output('DEPS','%s.d'%(self.__get_basename(sortedkeys[i])))
+				logging.debug('curidx[%d][%d] [%s]'%(curidx,i,curs))
+				self.assertEqual(0,self.__check_str_value(outsarr[curidx:],curs))
+				curidx += 1
+				i -= 1
+		return curidx
+
+
+	def __check_link_S_files_link_deps(self,outsarr,startidx,linksfiles=None,affectls=None):
+		curidx = startidx
+		if linksfiles is not None:
+			if affectls is None:
+				sortedkeys = sorted(linksfiles.keys())
+			else:
+				sortedkeys = sorted(affectls)
 			i = len(sortedkeys) - 1
 			while i >= 0:
 				curs = self.__format_exec_output('LINK',self.__get_basename(sortedkeys[i]))
@@ -766,6 +847,23 @@ class debug_testmak_case(unittest.TestCase):
 				i += 1
 		return curidx
 
+	def __check_link_S_files_cc(self,outsarr,startidx,linksfiles=None,affectls=None):
+		curidx = startidx
+		if linksfiles is not None:
+			if affectls is None:
+				sortedlinks = sorted(linksfiles.keys())
+			else:
+				sortedlinks = sorted(affectls)
+			i = 0
+			while i < len(sortedlinks):
+				curs = self.__format_exec_output('CC','%s'%(self.__get_to_o(sortedlinks[i])))
+				logging.debug('curidx[%d][%d] [%s]'%(curidx,i,curs))
+				self.assertEqual(0,self.__check_str_value(outsarr[curidx:],curs))
+				curidx += 1
+				i += 1
+		return curidx
+
+
 	def __check_ld_main(self,outsarr,startidx,mainexe):
 		curidx = startidx
 		curs = self.__format_exec_output('LD',mainexe)
@@ -790,17 +888,21 @@ class debug_testmak_case(unittest.TestCase):
 			i += 1
 		return sortarr
 
-	def select_touch_files(self,hfiles,cfiles,sfiles,linkcfiles):
+	def select_touch_files(self,hfiles,cfiles,sfiles,linkcfiles,linksfiles):
 		touchincs = []
 		touchcs = []
 		touchss = []
 		rn = self.__get_random_max(self.__get_use_max_cnt(),self.__get_use_min_cnt())
-		linksrcs = []
+		linksrcc = []
 		if linkcfiles is not None:
 			for c in linkcfiles.keys():
-				linksrcs.append(linkcfiles[c])
+				linksrcc.append(linkcfiles[c])
+		linksrcs = []
+		if linksfiles is not None:
+			for c in linksfiles.keys():
+				linksrcs.append(linksfiles[c])
 		for i in range(rn):
-			cn = self.__get_random_max(4)
+			cn = self.__get_random_max(5)
 			if cn == 0:
 				if len(hfiles) > 0:
 					touchincs.append(random.choice(hfiles))
@@ -811,8 +913,12 @@ class debug_testmak_case(unittest.TestCase):
 				if len(sfiles) > 0:
 					touchss.append(random.choice(sfiles))
 			elif cn == 3:
+				if len(linksrcc) > 0:
+					touchcs.append(random.choice(linksrcc))
+			elif cn == 4:
 				if len(linksrcs) > 0:
-					touchcs.append(random.choice(linksrcs))
+					touchss.append(random.choice(linksrcs))
+
 		touchincs = self.sorted_and_uniq(touchincs)
 		touchss = self.sorted_and_uniq(touchss)
 		touchcs = self.sorted_and_uniq(touchcs)
@@ -834,9 +940,9 @@ class debug_testmak_case(unittest.TestCase):
 					caffects.append(c)	
 		return caffects
 
-	def __get_affected_sfiles(self,sdict,chgincludes):
+	def __get_affected_sfiles(self,sdict,chgincludes,validsfiles):
 		checks = []
-		for s in sdict.keys():
+		for s in validsfiles:
 			curincs = sdict[s]
 			for ss in curincs:
 				if ss in chgincludes:
@@ -862,6 +968,22 @@ class debug_testmak_case(unittest.TestCase):
 					logging.debug('add[%s] because [%s]'%(c,linksrc))
 					linkaffects.append(c)
 				hfiles = cdict[linksrc]
+				for h in hfiles:
+					if h in chgincludes:
+						logging.debug('add[%s] because [%s]'%(c,h))
+						linkaffects.append(c)
+		return linkaffects
+
+
+	def __get_affected_linksfiles(self,linksfiles,sfiles,sdict,chgincludes):
+		linkaffects = []
+		if linksfiles is not None:
+			for c in linksfiles.keys():
+				linksrc = linksfiles[c]
+				if linksrc in sfiles:
+					logging.debug('add[%s] because [%s]'%(c,linksrc))
+					linkaffects.append(c)
+				hfiles = sdict[linksrc]
 				for h in hfiles:
 					if h in chgincludes:
 						logging.debug('add[%s] because [%s]'%(c,h))
@@ -894,12 +1016,14 @@ class debug_testmak_case(unittest.TestCase):
 			cdir = make_tempdir(basedir)
 			linkdir = make_tempdir(basedir)
 			sdir = make_tempdir(basedir)
+			linksdir = make_tempdir(basedir)
 			headerfiles = self.__make_headers(headdir)
 			longname = make_tempfile(basedir)
 			mainexe = self.__get_shortname(longname)
 			cfiles = self.__make_c_files(mainexe,basedir,headerfiles.keys(),headdir,cdir)
 			linkcfiles = self.__make_link_c_files(basedir,cfiles.keys(),cdir,linkdir)
 			sfiles = self.__make_S_files(basedir,headerfiles.keys(),headdir,sdir)
+			linksfiles = self.__make_link_S_files(basedir,sfiles.keys(),sdir,linksdir)
 			makelibdir = self.__get_makelib_dir()
 			sortedcfiles = sorted(cfiles.keys())
 			sortedsfiles = sorted(sfiles.keys())
@@ -909,7 +1033,11 @@ class debug_testmak_case(unittest.TestCase):
 				linksrc = linkcfiles[k]
 				if linksrc in sortedcfiles:
 					sortedcfiles.remove(linksrc)
-			s = self.__format_depop_make(makelibdir,basedir,sortedcfiles,sortedsfiles,linkcfiles,mainexe,'CFLAGS','ASMFLAG','LDFLAGS',includedir=[headdir])
+			for k in linksfiles.keys():
+				linksrc = linksfiles[k]
+				if linksrc in sortedsfiles:
+					sortedsfiles.remove(linksrc)
+			s = self.__format_depop_make(makelibdir,basedir,sortedcfiles,sortedsfiles,linkcfiles,linksfiles,mainexe,'CFLAGS','ASMFLAG','LDFLAGS',includedir=[headdir])
 			makefile = os.path.join(basedir,'Makefile')
 			self.__write_file(s,makefile)
 			# we remove the file 
@@ -917,25 +1045,27 @@ class debug_testmak_case(unittest.TestCase):
 			outsarr = self.__run_make(makefile,'all')
 			# now we should get the output for handle
 			curidx = 0
+			curidx = self.__check_link_S_files_link_deps(outsarr,curidx,linksfiles)
 			curidx = self.__check_link_c_files_link_deps(outsarr,curidx,linkcfiles)
 			curidx = self.__check_S_files_deps(outsarr,curidx,sortedsfiles)
 			curidx = self.__check_c_files_deps(outsarr,curidx,sortedcfiles)
 			curidx = self.__check_c_files_cc(outsarr,curidx,sortedcfiles)
 			curidx = self.__check_S_files_cc(outsarr,curidx,sortedsfiles)
 			curidx = self.__check_link_c_files_cc(outsarr,curidx,linkcfiles)
+			curidx = self.__check_link_S_files_cc(outsarr,curidx,linksfiles)
 			curidx = self.__check_ld_main(outsarr,curidx,mainexe)
 			outsarr = self.__run_make(makefile,'all')
 			# nothing to do any more
 			self.assertEqual(1,len(outsarr))
 			self.assertEqual(0,self.__check_str_value(outsarr,'make: Nothing to be done for `%s\'.'%('all')))
 			# now we should test for part change
-			touchincs,touchcs,touchss = self.select_touch_files(sortedhfiles,sortedcfiles,sortedsfiles,linkcfiles)
+			touchincs,touchcs,touchss = self.select_touch_files(sortedhfiles,sortedcfiles,sortedsfiles,linkcfiles,linksfiles)
 			logging.debug('touchincs (%s)'%(self.__get_array(touchincs)))
 			logging.debug('touchcs (%s)'%(self.__get_array(touchcs)))
 			logging.debug('touchss (%s)'%(self.__get_array(touchss)))
 			touchincs = self.make_header_expand(headerfiles,touchincs)			
 			checkc = self.__get_affected_cfiles(cfiles,touchincs,sortedcfiles)
-			checks = self.__get_affected_sfiles(sfiles,touchincs)
+			checks = self.__get_affected_sfiles(sfiles,touchincs,sortedsfiles)
 
 			allcfiles = []
 			for c in touchcs:
@@ -943,10 +1073,19 @@ class debug_testmak_case(unittest.TestCase):
 			allcfiles.extend(checkc)
 			allcfiles = self.sorted_and_uniq(allcfiles)
 			affectlc = self.__get_affected_linkcfiles(linkcfiles,allcfiles,cfiles,touchincs)
-			checks = self.sorted_and_uniq(checks)
 
 			affectlc = self.sorted_and_uniq(affectlc)
 			checkc = self.sorted_and_uniq(checkc)
+
+			checks = self.sorted_and_uniq(checks)
+			allsfiles = []
+			for c in touchss:
+				allsfiles.append(c)
+			allsfiles.extend(checks)
+			affectls = self.__get_affected_linksfiles(linksfiles,allsfiles,sfiles,touchincs)
+
+			affectls = self.sorted_and_uniq(affectls)
+
 
 			logging.debug('touchincs (%s)'%(self.__get_array(touchincs)))
 			logging.debug('touchcs (%s)'%(self.__get_array(touchcs)))
@@ -954,9 +1093,11 @@ class debug_testmak_case(unittest.TestCase):
 			logging.debug('checkc (%s)'%(self.__get_array(checkc)))
 			logging.debug('checks (%s)'%(self.__get_array(checks)))
 			logging.debug('affectlc (%s)'%(self.__get_array(affectlc)))
+			logging.debug('affectls (%s)'%(self.__get_array(affectls)))
 			# now we should make the affected to handle change
 			outsarr = self.__run_make(makefile,'all')
 			curidx = 0
+			curidx = self.__check_link_S_files_link_deps(outsarr,curidx,linksfiles,affectls)
 			curidx = self.__check_link_c_files_link_deps(outsarr,curidx,linkcfiles,affectlc)
 			curidx = self.__check_S_files_deps(outsarr,curidx,checks)
 			curidx = self.__check_c_files_deps(outsarr,curidx,checkc)
@@ -967,17 +1108,22 @@ class debug_testmak_case(unittest.TestCase):
 					compilec.append(c)			
 
 			compilec = self.sorted_and_uniq(compilec)
-			logging.debug('compilec (%s)'%(self.__get_array(compilec)))			
+			logging.debug('compilec (%s)'%(self.__get_array(compilec)))
 
 			curidx = self.__check_c_files_cc(outsarr,curidx,compilec)
 
 			compiles = checks
-			compiles.extend(touchss)
+			logging.debug('compiles (%s)'%(self.__get_array(compiles)))
+			for c in touchss:
+				if c in sortedsfiles:
+					logging.debug('add[%s]'%(c))
+					compiles.append(c)
 			compiles = self.sorted_and_uniq(compiles)
 			logging.debug('compiles (%s)'%(self.__get_array(compiles)))
 			curidx = self.__check_S_files_cc(outsarr,curidx,compiles)
 			curidx = self.__check_link_c_files_cc(outsarr,curidx,linkcfiles,affectlc)
-			if len(affectlc) > 0 or len(compiles) > 0 or len(compilec) > 0:
+			curidx = self.__check_link_S_files_cc(outsarr,curidx,linksfiles,affectls)
+			if len(affectls) > 0 or len(affectlc) > 0 or len(compiles) > 0 or len(compilec) > 0:
 				curidx = self.__check_ld_main(outsarr,curidx,mainexe)
 		finally:
 			self.__remove_file_safe(basedir)
