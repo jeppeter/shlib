@@ -10,6 +10,7 @@ import tempfile
 import subprocess
 import random
 import time
+import re
 
 
 def make_dir_safe(dname=None):
@@ -91,6 +92,7 @@ class debug_testmak_case(unittest.TestCase):
 		return s
 
 	def __write_file(self,s,f):
+		#logging.debug('write [%s] <<<EOF\n%s\nEOF'%(f,s))
 		with open(f,'w+b') as fout:
 			fout.write('%s'%(s))
 		return f
@@ -148,7 +150,7 @@ class debug_testmak_case(unittest.TestCase):
 
 	def __check_str_value(self,outsarr,s):
 		cnt = 0
-		logging.debug('outsarr (%s) s[%s]'%(outsarr,s))
+		#logging.debug('outsarr (%s) s[%s]'%(outsarr,s))
 		for l in outsarr:
 			if l.rstrip('\r\n') == s.rstrip('\r\n'):
 				return cnt
@@ -377,46 +379,71 @@ class debug_testmak_case(unittest.TestCase):
 		s += self.__format_make_common('include %s'%(os.path.join(makelibdir,'depop.mak')))
 		s += self.__format_make_common('')
 		s += self.__format_make_common('CURDIR:=$(call readlink_f,.)')
-		rets = 'c_srcs_basic :='			
+		rets = 'c_srcs_basic ='
+		s += self.__format_make_common('%s'%(rets))
 		if len(cfilelist) > 0:
+			rets = 'c_srcs_basic += '
 			for i in range(len(cfilelist)):
+				if (i%5) == 0 and i > 0:
+					s += self.__format_make_common('%s'%(rets))
+					rets = 'c_srcs_basic +='
 				rets += ' %s'%(self.__get_relocate_path(cfilelist[i],basedir))
+			if len(rets) > 0:
+				s += self.__format_make_common('%s'%(rets))
+		rets = ''
 		s += self.__format_make_common('%s'%(rets))
 		s += self.__format_make_common('c_srcs := $(patsubst %,${CURDIR}/%,${c_srcs_basic})')
 		s += self.__format_make_common('c_objs := $(patsubst %.c,%.o,${c_srcs})')
 		s += self.__format_make_common('c_deps := $(patsubst %,%.d,${c_srcs})')
 
-		rets = 'link_c_srcs_basic :='			
+		rets = 'link_c_srcs_basic ='
+		s += self.__format_make_common('%s'%(rets))
 		if linkcfiles is not None:
-			linkcs = linkcfiles.keys()
+			linkcs = sorted(linkcfiles.keys())
+			rets = 'link_c_srcs_basic += '
 			for i in range(len(linkcs)):
+				if (i%5) == 0 and i > 0:
+					s += self.__format_make_common('%s'%(rets))
+					rets = 'link_c_srcs_basic += '
 				rets += ' %s'%(self.__get_relocate_path(linkcs[i],basedir))
+			if len(rets) > 0:
+				s += self.__format_make_common('%s'%(rets))
+		rets = ''
 		s += self.__format_make_common('%s'%(rets))
 		s += self.__format_make_common('link_c_srcs := $(patsubst %,${CURDIR}/%,${link_c_srcs_basic})')
 		s += self.__format_make_common('link_c_objs := $(patsubst %.c,%.o,${link_c_srcs})')
 		s += self.__format_make_common('link_c_deps := $(patsubst %,%.d,${link_c_srcs})')
 
 		if linkcfiles is not None:
-			for c in linkcfiles.keys():
-				s += self.__format_make_common('%s_SRC := %s'%(self.__get_shortname(c,basedir),linkcfiles[c]))
+			sortedkeys = sorted(linkcfiles.keys())
+			for c in sortedkeys:
+				s += self.__format_make_common('%s_SRC := ${CURDIR}/%s'%(self.__get_shortname(c,basedir),self.__get_relocate_path(linkcfiles[c],basedir)))
 
-		rets = 'S_srcs_basic := '
+		rets = 'S_srcs_basic = '
+		s += self.__format_make_common('%s'%(rets))
 		if len(Sfilelist) >0:
+			rets = 'S_srcs_basic += '
 			for i in range(len(Sfilelist)):
+				if (i % 5) == 0 and i > 0:
+					s += self.__format_make_common('%s'%(rets))
+					rets = 'S_srcs_basic += '
 				rets += ' %s'%(self.__get_relocate_path(Sfilelist[i],basedir))
+			if len(rets) > 0:
+				s += self.__format_make_common('%s'%(rets))
+		rets = ''
 		s += self.__format_make_common('%s'%(rets))
 		s += self.__format_make_common('S_srcs := $(patsubst %,${CURDIR}/%,${S_srcs_basic})')
 		s += self.__format_make_common('S_objs := $(patsubst %.S,%.o,${S_srcs})')
 		s += self.__format_make_common('S_deps := $(patsubst %,%.d,${S_srcs})')
-		s += self.__format_make_common('%s = -Wall '%(cflagname))
 
 		s += self.__format_make_common('objs := ${c_objs} ${S_objs} ${link_c_objs}')
 		s += self.__format_make_common('deps := ${c_deps} ${S_deps} ${link_c_deps}')
 		s += self.__format_make_common('')
 
+		s += self.__format_make_common('%s = -Wall '%(cflagname))
 		if len(includedir) > 0:
 			for c in includedir:
-				s += self.__format_make_common('%s += -I%s'%(cflagname,c))
+				s += self.__format_make_common('%s += -I${CURDIR}/%s'%(cflagname,self.__get_relocate_path(c,basedir)))
 
 		if definemacros is not None:
 			for c in definemacros.keys():
@@ -435,6 +462,7 @@ class debug_testmak_case(unittest.TestCase):
 
 		s += self.__format_make_common('')
 		s += self.__format_make_common('all:%s'%(mainexe))
+		s += self.__format_make_common('')
 		s += self.__format_make_common('%s:${objs}'%(mainexe))
 		s += self.__format_make_command('$(call call_exec,${GCC} ${%s} -o %s ${objs},"LD","%s")'%(ldflagname,mainexe,mainexe),False)
 
@@ -457,11 +485,12 @@ class debug_testmak_case(unittest.TestCase):
 
 		s += self.__format_make_common('clean:')
 		s += self.__format_make_command('$(call call_exec,${RM} -f %s,"RM","%s")'%(mainexe,mainexe),False)
-		s += self.__format_make_command('$(call call_exec,${RM} -f *.d,"RM","deps")',False)
-		s += self.__format_make_command('$(call call_exec,${RM} -f *.o,"RM","objs")',False)
-		for c in linkcfiles.keys():
-			s += self.__format_make_command('$(call call_exec,${RM} -f ${CURDIR}/%s,"RM","$(call get_basename,${CURDIR}/%s)")'%(self.__get_relocate_path(c,basedir),
-				self.__get_relocate_path(c,basedir)),False)
+		s += self.__format_make_command('$(call call_exec,${RM} -f ${deps},"RM","deps")',False)
+		s += self.__format_make_command('$(call call_exec,${RM} -f ${objs},"RM","objs")',False)
+		s += self.__format_make_command('$(call call_exec,${RM} -f ${link_c_srcs},"RM","links")',False)
+		#for c in linkcfiles.keys():
+		#	s += self.__format_make_command('$(call call_exec,${RM} -f ${CURDIR}/%s,"RM","$(call get_basename,${CURDIR}/%s)")'%(self.__get_relocate_path(c,basedir),
+		#		self.__get_relocate_path(c,basedir)),False)
 		return s
 
 	def __get_define_macro(self,fname,basedir):
@@ -498,6 +527,17 @@ class debug_testmak_case(unittest.TestCase):
 		s = ''
 		for c in includes:
 			s += self.__format_make_common('#include <%s>'%(self.__get_file_relative(c,includedir)))
+		return s
+
+	def __make_main_c_s(self,exename,fname,includedir,includes=[]):
+		s = self.__make_c_s(fname,includedir,includes)
+		s += self.__format_make_common('#include <stdio.h>')
+		s += self.__format_make_common('')
+		s += self.__format_make_common('int main(int argc,char* argv[])')
+		s += self.__format_make_common('{')
+		s += self.__format_make_common('\tprintf("%s called\\n");'%(exename))
+		s += self.__format_make_common('\treturn 0;')
+		s += self.__format_make_common('}')
 		return s
 
 
@@ -547,7 +587,7 @@ class debug_testmak_case(unittest.TestCase):
 				files[curfile] = includefiles
 		return files
 
-	def __make_c_files(self,basedir,includefiles,includedir=None,cdir=None):
+	def __make_c_files(self,mainexe,basedir,includefiles,includedir=None,cdir=None):
 		maxc = self.__get_random_max(self.__get_use_max_cnt(),self.__get_use_min_cnt())
 		cfiles = dict()
 		if cdir is None:
@@ -569,6 +609,11 @@ class debug_testmak_case(unittest.TestCase):
 				s = self.__make_c_s(curfile,includedir,curincludes)
 				self.__write_file(s,curfile)
 				cfiles[curfile] = curincludes
+		curfile = make_tempfile(curdir,'.c')
+		curincludes = self.__get_include_files(includefiles)
+		s = self.__make_main_c_s(mainexe,curfile,includedir,curincludes)
+		self.__write_file(s,curfile)
+		cfiles[curfile] = curincludes
 		return  cfiles
 
 	def __make_link_c_files(self,basedir,cfiles,cdir=None,linkdir=None):
@@ -588,10 +633,16 @@ class debug_testmak_case(unittest.TestCase):
 			elif rn == 1:
 				curdir = make_tempdir(curdir)
 			else:
-				curfile = make_tempfile(curdir)
+				curfile = make_tempfile(curdir,'.c')
 				if curfile not in linked.keys():
+					if (len(cfiles) == 0):
+						# nothing to make
+						os.remove(curfile)
+						break
 					cursrc = random.choice(cfiles)
 					linked[curfile] = cursrc
+					logging.debug('[%s] linked [%s]'%(curfile,cursrc))
+					cfiles.remove(cursrc)
 					os.remove(curfile)
 		return linked
 
@@ -614,15 +665,106 @@ class debug_testmak_case(unittest.TestCase):
 			else:
 				curfile = make_tempfile(curdir,'.S')
 				includes = self.__get_include_files(includefiles)
-				s = self.__make_c_s(curfile,includedir,includes)
+				s = self.__make_c_s(curfile,includedir,includes)				
 				self.__write_file(s,curfile)
-				sfiles[curdir] = includes
+				sfiles[curfile] = includes
 		return sfiles
+
+	def __get_basename(self,c):
+		return os.path.basename(c)
+
+	def __format_exec_output(self,verb,cont):
+		return '    %-9s %s'%(verb,cont)
+
+	def __check_link_c_files_link_deps(self,outsarr,startidx,linkcfiles=None):
+		curidx = startidx
+		if linkcfiles is not None:
+			sortedkeys = sorted(linkcfiles.keys())
+			i = len(sortedkeys) - 1
+			while i >= 0:
+				curs = self.__format_exec_output('LINK',self.__get_basename(sortedkeys[i]))
+				self.assertEqual(0,self.__check_str_value(outsarr[curidx:],curs))
+				curidx += 1
+				curs = self.__format_exec_output('DEPS','%s.d'%(self.__get_basename(sortedkeys[i])))
+				self.assertEqual(0,self.__check_str_value(outsarr[curidx:],curs))
+				curidx += 1
+				i -= 1
+		return curidx
+
+
+	def __check_S_files_deps(self,outsarr,startidx,sfiles):
+		curidx = startidx
+		if len(sfiles) > 0:
+			i = len(sfiles) - 1
+			while i >=0 :
+				curs = self.__format_exec_output('DEPS','%s.d'%(self.__get_basename(sfiles[i])))
+				self.assertEqual(0,self.__check_str_value(outsarr[curidx:],curs))
+				curidx += 1
+				i -= 1
+		return curidx
+
+	def __check_c_files_deps(self,outsarr,startidx,cfiles):
+		curidx = startidx
+		if len(cfiles) > 0:
+			i = len(cfiles) - 1
+			while i >= 0:
+				curs = self.__format_exec_output('DEPS','%s.d'%(self.__get_basename(cfiles[i])))
+				self.assertEqual(0,self.__check_str_value(outsarr[curidx:],curs))
+				i -= 1
+				curidx += 1
+		return curidx
+
+	def __get_to_o(self,fname):
+		s = self.__get_basename(fname)
+		s = re.sub('\.[cS]$','.o',s)
+		return s
+
+	def __check_c_files_cc(self,outsarr,startidx,cfiles):
+		curidx = startidx
+		if len(cfiles) > 0:
+			i = 0
+			while i < len(cfiles):
+				curs = self.__format_exec_output('CC','%s'%(self.__get_to_o(cfiles[i])))
+				self.assertEqual(0,self.__check_str_value(outsarr[curidx:],curs))
+				i += 1
+				curidx += 1
+		return curidx
+
+	def __check_S_files_cc(self,outsarr,startidx,sfiles):
+		curidx = startidx
+		if len(sfiles) > 0:
+			i = 0
+			while i < len(sfiles):
+				curs = self.__format_exec_output('CC','%s'%(self.__get_to_o(sfiles[i])))
+				self.assertEqual(0,self.__check_str_value(outsarr[curidx:],curs))
+				i += 1
+				curidx += 1
+		return curidx
+
+	def __check_link_c_files_cc(self,outsarr,startidx,linkcfiles=None):
+		curidx = startidx
+		if linkcfiles is not None:
+			sortedlinks = sorted(linkcfiles.keys())
+			i = 0
+			while i < len(sortedlinks):
+				curs = self.__format_exec_output('CC','%s'%(self.__get_to_o(sortedlinks[i])))
+				self.assertEqual(0,self.__check_str_value(outsarr[curidx:],curs))
+				curidx += 1
+				i += 1
+		return curidx
+
+	def __check_ld_main(self,outsarr,startidx,mainexe):
+		curidx = startidx
+		curs = self.__format_exec_output('LD',mainexe)
+		self.assertEqual(0,self.__check_str_value(outsarr[curidx:],curs))
+		curidx += 1
+		return curidx
 
 
 	def test_depop_case(self):
 		random.seed(time.time())
 		basedir = None
+		longname = None
 		try:
 			basedir = make_tempdir()
 			headdir = make_tempdir(basedir)
@@ -630,15 +772,33 @@ class debug_testmak_case(unittest.TestCase):
 			linkdir = make_tempdir(basedir)
 			sdir = make_tempdir(basedir)
 			headerfiles = self.__make_headers(headdir)
-			cfiles = self.__make_c_files(basedir,headerfiles.keys(),headdir,cdir)
+			longname = make_tempfile(basedir)
+			mainexe = self.__get_shortname(longname)
+			cfiles = self.__make_c_files(mainexe,basedir,headerfiles.keys(),headdir,cdir)
 			linkcfiles = self.__make_link_c_files(basedir,cfiles.keys(),cdir,linkdir)
 			sfiles = self.__make_S_files(basedir,headerfiles.keys(),headdir,sdir)
 			makelibdir = self.__get_makelib_dir()
-			s = self.__format_depop_make(makelibdir,basedir,cfiles.keys(),sfiles.keys(),linkcfiles,'main','CFLAGS','ASMFLAG','LDFLAGS',includedir=[headdir])
+			sortedcfiles = sorted(cfiles.keys())
+			sortedsfiles = sorted(sfiles.keys())
+			for k in linkcfiles.keys():
+				linksrc = linkcfiles[k]
+				if linksrc in sortedcfiles:
+					sortedcfiles.remove(linksrc)
+			s = self.__format_depop_make(makelibdir,basedir,sortedcfiles,sortedsfiles,linkcfiles,mainexe,'CFLAGS','ASMFLAG','LDFLAGS',includedir=[headdir])
 			makefile = os.path.join(basedir,'Makefile')
 			self.__write_file(s,makefile)
+			# we remove the file 
+			os.remove(longname)
 			outsarr = self.__run_make(makefile,'all')
-
+			# now we should get the output for handle
+			curidx = 0
+			curidx = self.__check_link_c_files_link_deps(outsarr,curidx,linkcfiles)
+			curidx = self.__check_S_files_deps(outsarr,curidx,sortedsfiles)
+			curidx = self.__check_c_files_deps(outsarr,curidx,sortedcfiles)
+			curidx = self.__check_c_files_cc(outsarr,curidx,sortedcfiles)
+			curidx = self.__check_S_files_cc(outsarr,curidx,sortedsfiles)
+			curidx = self.__check_link_c_files_cc(outsarr,curidx,linkcfiles)
+			curidx = self.__check_ld_main(outsarr,curidx,mainexe)
 		finally:
 			self.__remove_file_safe(basedir)
 		return
@@ -669,7 +829,7 @@ def main():
 		"makebin|m" : "make",
 		"reserved|r" : false,
 		"makelibdir|d" : "%s",
-		"maxnum" : 30,
+		"maxnum" : 8,
 		"minnum" : 3,
 		"$" : "*"
 	}
