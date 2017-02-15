@@ -15,6 +15,10 @@ define get_exename
 $(shell ${PERL} -e '%PERL_EXENAME_STR%' -- $(1) )
 endef
 
+define get_toobj
+$(shell ${PERL} -e '%PERL_TOOBJ_STR%' -- $(1))
+endef
+
 define get_cfile
 $(shell ${PERL} -e '%PERL_FILTEROP_STR%' -- cfile $(1))
 endef

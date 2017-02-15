@@ -82,11 +82,6 @@ if (defined($opts{"todir"})) {
 my ($cnt)=0;
 foreach(@ARGV) {
 	my ($c) = $_;
-	if (-l "$c") {
-		$c = File::Spec->rel2abs($c);
-	} else {
-		$c = abs_path($c);
-	}
 
 	if (length($fromdir) > 0 && length($todir) > 0) {
 		$c =~ s/^$fromdir/$todir/;
