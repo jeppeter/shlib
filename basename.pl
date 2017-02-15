@@ -4,6 +4,7 @@ use strict;
 use Cwd "abs_path";
 use File::Basename;
 use Getopt::Long;
+use File::Spec;
 
 sub Usage($$)
 {
@@ -65,6 +66,11 @@ if (defined($opts{"verbose"})) {
 
 foreach(@ARGV) {
 	my ($c) = $_;
+	if (-l "$c") {
+		$c = File::Spec->rel2abs($c);
+	} else {
+		$c = abs_path($c);
+	}
 	Debug("in [$c]");
-	print basename(abs_path($c))."\n";
+	print basename($c)."\n";
 }

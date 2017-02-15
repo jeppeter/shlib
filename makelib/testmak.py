@@ -676,16 +676,21 @@ class debug_testmak_case(unittest.TestCase):
 	def __format_exec_output(self,verb,cont):
 		return '    %-9s %s'%(verb,cont)
 
-	def __check_link_c_files_link_deps(self,outsarr,startidx,linkcfiles=None):
+	def __check_link_c_files_link_deps(self,outsarr,startidx,linkcfiles=None,affectlc=None):
 		curidx = startidx
 		if linkcfiles is not None:
-			sortedkeys = sorted(linkcfiles.keys())
+			if affectlc is None:
+				sortedkeys = sorted(linkcfiles.keys())
+			else:
+				sortedkeys = sorted(affectlc)
 			i = len(sortedkeys) - 1
 			while i >= 0:
 				curs = self.__format_exec_output('LINK',self.__get_basename(sortedkeys[i]))
+				logging.debug('curidx[%d][%d] [%s]'%(curidx,i,curs))
 				self.assertEqual(0,self.__check_str_value(outsarr[curidx:],curs))
 				curidx += 1
 				curs = self.__format_exec_output('DEPS','%s.d'%(self.__get_basename(sortedkeys[i])))
+				logging.debug('curidx[%d][%d] [%s]'%(curidx,i,curs))
 				self.assertEqual(0,self.__check_str_value(outsarr[curidx:],curs))
 				curidx += 1
 				i -= 1
@@ -698,6 +703,7 @@ class debug_testmak_case(unittest.TestCase):
 			i = len(sfiles) - 1
 			while i >=0 :
 				curs = self.__format_exec_output('DEPS','%s.d'%(self.__get_basename(sfiles[i])))
+				logging.debug('curidx[%d][%d] [%s]'%(curidx,i,curs))
 				self.assertEqual(0,self.__check_str_value(outsarr[curidx:],curs))
 				curidx += 1
 				i -= 1
@@ -709,6 +715,7 @@ class debug_testmak_case(unittest.TestCase):
 			i = len(cfiles) - 1
 			while i >= 0:
 				curs = self.__format_exec_output('DEPS','%s.d'%(self.__get_basename(cfiles[i])))
+				logging.debug('curidx[%d][%d] [%s]'%(curidx,i,curs))
 				self.assertEqual(0,self.__check_str_value(outsarr[curidx:],curs))
 				i -= 1
 				curidx += 1
@@ -725,6 +732,7 @@ class debug_testmak_case(unittest.TestCase):
 			i = 0
 			while i < len(cfiles):
 				curs = self.__format_exec_output('CC','%s'%(self.__get_to_o(cfiles[i])))
+				logging.debug('curidx[%d][%d] [%s]'%(curidx,i,curs))
 				self.assertEqual(0,self.__check_str_value(outsarr[curidx:],curs))
 				i += 1
 				curidx += 1
@@ -736,18 +744,23 @@ class debug_testmak_case(unittest.TestCase):
 			i = 0
 			while i < len(sfiles):
 				curs = self.__format_exec_output('CC','%s'%(self.__get_to_o(sfiles[i])))
+				logging.debug('curidx[%d][%d] [%s]'%(curidx,i,curs))
 				self.assertEqual(0,self.__check_str_value(outsarr[curidx:],curs))
 				i += 1
 				curidx += 1
 		return curidx
 
-	def __check_link_c_files_cc(self,outsarr,startidx,linkcfiles=None):
+	def __check_link_c_files_cc(self,outsarr,startidx,linkcfiles=None,affectlc=None):
 		curidx = startidx
 		if linkcfiles is not None:
-			sortedlinks = sorted(linkcfiles.keys())
+			if affectlc is None:
+				sortedlinks = sorted(linkcfiles.keys())
+			else:
+				sortedlinks = sorted(affectlc)
 			i = 0
 			while i < len(sortedlinks):
 				curs = self.__format_exec_output('CC','%s'%(self.__get_to_o(sortedlinks[i])))
+				logging.debug('curidx[%d][%d] [%s]'%(curidx,i,curs))
 				self.assertEqual(0,self.__check_str_value(outsarr[curidx:],curs))
 				curidx += 1
 				i += 1
@@ -756,6 +769,7 @@ class debug_testmak_case(unittest.TestCase):
 	def __check_ld_main(self,outsarr,startidx,mainexe):
 		curidx = startidx
 		curs = self.__format_exec_output('LD',mainexe)
+		logging.debug('curidx[%d] [%s]'%(curidx,curs))
 		self.assertEqual(0,self.__check_str_value(outsarr[curidx:],curs))
 		curidx += 1
 		return curidx
@@ -810,32 +824,63 @@ class debug_testmak_case(unittest.TestCase):
 			self.touch_file(c)
 		return touchincs,touchcs,touchss
 
-	def __get_affected_cfiles(self,cdict,chgincludes):
+	def __get_affected_cfiles(self,cdict,chgincludes,validcfiles):
 		caffects = []
-		for c in cdict:
+		for c in validcfiles:
 			curincs = cdict[c]
 			for cc in curincs:
-				if cc in chgincludes:
-					caffects.append(c)
+				if cc in chgincludes :
+					logging.debug('add[%s] because [%s]'%(c,cc))
+					caffects.append(c)	
 		return caffects
 
 	def __get_affected_sfiles(self,sdict,chgincludes):
-		saffects = []
-		for s in sdict:
+		checks = []
+		for s in sdict.keys():
 			curincs = sdict[s]
 			for ss in curincs:
 				if ss in chgincludes:
-					saffects.append(s)
-		return saffects
+					logging.debug('add [%s] because [%s]'%(s,ss))
+					checks.append(s)
+		return checks
 
-	def __get_affected_linkcfiles(self,linkcfiles,cfiles):
+	def __get_array(self,arr):
+		s = '['
+		for i in range(len(arr)):
+			if i > 0:
+				s += ' '
+			s += '\'%s\''%(arr[i])
+		s += ']'
+		return s
+
+	def __get_affected_linkcfiles(self,linkcfiles,cfiles,cdict,chgincludes):
 		linkaffects = []
 		if linkcfiles is not None:
 			for c in linkcfiles.keys():
 				linksrc = linkcfiles[c]
 				if linksrc in cfiles:
+					logging.debug('add[%s] because [%s]'%(c,linksrc))
 					linkaffects.append(c)
+				hfiles = cdict[linksrc]
+				for h in hfiles:
+					if h in chgincludes:
+						logging.debug('add[%s] because [%s]'%(c,h))
+						linkaffects.append(c)
 		return linkaffects
+
+	def make_header_expand(self,hdict,chgincludes):
+		retincs = chgincludes
+		cont = True
+		while cont:
+			cont = False
+			for k in hdict.keys():
+				hfiles = hdict[k]
+				for h in hfiles:
+					if h in retincs and k not in retincs:
+						logging.debug('add[%s] because [%s]'%(k,h))
+						retincs.append(k)
+						cont = True
+		return retincs
 
 
 
@@ -885,26 +930,55 @@ class debug_testmak_case(unittest.TestCase):
 			self.assertEqual(0,self.__check_str_value(outsarr,'make: Nothing to be done for `%s\'.'%('all')))
 			# now we should test for part change
 			touchincs,touchcs,touchss = self.select_touch_files(sortedhfiles,sortedcfiles,sortedsfiles,linkcfiles)
-			affectc = self.__get_affected_cfiles(cfiles,touchincs)
-			affects = self.__get_affected_sfiles(sfiles,touchincs)
-			allcfiles = touchcs
-			allcfiles.extend(affectc)
-			allcfiles = self.sorted_and_uniq(allcfiles)
-			affectlc = self.__get_affected_linkcfiles(linkcfiles,allcfiles)
+			logging.debug('touchincs (%s)'%(self.__get_array(touchincs)))
+			logging.debug('touchcs (%s)'%(self.__get_array(touchcs)))
+			logging.debug('touchss (%s)'%(self.__get_array(touchss)))
+			touchincs = self.make_header_expand(headerfiles,touchincs)			
+			checkc = self.__get_affected_cfiles(cfiles,touchincs,sortedcfiles)
+			checks = self.__get_affected_sfiles(sfiles,touchincs)
 
-			logging.debug('touchincs (%s)'%(touchincs))
-			logging.debug('touchcs (%s)'%(touchcs))
-			logging.debug('touchss (%s)'%(touchss))
-			logging.debug('affectc (%s)'%(affectc))
-			logging.debug('affects (%s)'%(affects))
-			logging.debug('affectlc (%s)'%(affectlc))
+			allcfiles = []
+			for c in touchcs:
+				allcfiles.append(c)
+			allcfiles.extend(checkc)
+			allcfiles = self.sorted_and_uniq(allcfiles)
+			affectlc = self.__get_affected_linkcfiles(linkcfiles,allcfiles,cfiles,touchincs)
+			checks = self.sorted_and_uniq(checks)
+
+			affectlc = self.sorted_and_uniq(affectlc)
+			checkc = self.sorted_and_uniq(checkc)
+
+			logging.debug('touchincs (%s)'%(self.__get_array(touchincs)))
+			logging.debug('touchcs (%s)'%(self.__get_array(touchcs)))
+			logging.debug('touchss (%s)'%(self.__get_array(touchss)))
+			logging.debug('checkc (%s)'%(self.__get_array(checkc)))
+			logging.debug('checks (%s)'%(self.__get_array(checks)))
+			logging.debug('affectlc (%s)'%(self.__get_array(affectlc)))
 			# now we should make the affected to handle change
 			outsarr = self.__run_make(makefile,'all')
+			curidx = 0
+			curidx = self.__check_link_c_files_link_deps(outsarr,curidx,linkcfiles,affectlc)
+			curidx = self.__check_S_files_deps(outsarr,curidx,checks)
+			curidx = self.__check_c_files_deps(outsarr,curidx,checkc)
 
+			compilec = checkc
+			for c in touchcs:
+				if c in sortedcfiles:
+					compilec.append(c)			
 
+			compilec = self.sorted_and_uniq(compilec)
+			logging.debug('compilec (%s)'%(self.__get_array(compilec)))			
 
+			curidx = self.__check_c_files_cc(outsarr,curidx,compilec)
 
-
+			compiles = checks
+			compiles.extend(touchss)
+			compiles = self.sorted_and_uniq(compiles)
+			logging.debug('compiles (%s)'%(self.__get_array(compiles)))
+			curidx = self.__check_S_files_cc(outsarr,curidx,compiles)
+			curidx = self.__check_link_c_files_cc(outsarr,curidx,linkcfiles,affectlc)
+			if len(affectlc) > 0 or len(compiles) > 0 or len(compilec) > 0:
+				curidx = self.__check_ld_main(outsarr,curidx,mainexe)
 		finally:
 			self.__remove_file_safe(basedir)
 		return
