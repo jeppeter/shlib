@@ -11,6 +11,9 @@ define get_basename
 $(shell ${PERL} -e '%PERL_BASENAME_STR%' -- $(1) )
 endef
 
+define get_exename
+$(shell ${PERL} -e '%PERL_EXENAME_STR%' -- $(1) )
+endef
 
 ## __FILE_OP_MAK__ ##
 endif
