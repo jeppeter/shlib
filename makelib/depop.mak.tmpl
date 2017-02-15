@@ -225,6 +225,26 @@ define foreach_link_S_file_shortname
 $(foreach cursrc,$(1),$(eval $(call make_link_S_rules,$(patsubst %.S,%.o,$(cursrc)),$(cursrc),$(call get_shortname,$(cursrc),$(2)),${cursrc}.d,$(3),$(4))))
 endef
 
+#########################################
+##  input : $(1)   exe file name
+##          $(2)   exe objects
+##          $(3)   ldflags
+##          $(4)   gcc or compiler
+#########################################
+define build_exe_only
+$(1) : $(2)
+	$(call call_exec,$(get_value_default $(4),${GCC}) $(get_value_default $(3),${LDFLAGS}) -o $(1) $(2),"LD","$(call get_basename,$(1))")
+endef
+
+
+#########################################
+##  input : $(1)   exe file name
+##          $(4)   gcc or compiler
+##  this defines
+#########################################
+define build_exe_whole
+endef
+
 
 ## __DEPENDS_OP_MAK__ ##
 endif
