@@ -93,23 +93,6 @@ $(call call_exec_directly,$(call get_value_default,$(5),${GAS}) $(call get_value
 endef
 
 
-#########################################
-##  input : $(1)   object file
-##          $(2)   for C file
-##          $(3)   shortname for c
-##          $(4)   depends file
-##          $(5)   cflags
-##          $(6)   gcc or compiler
-#########################################
-define make_c_rules
--include $(4)
-$(1): $(2) $$(MAKEDEPS) $$($(3)_DEPS)
-	$${Q}$$(call build_c,$$@,$$<,$(3),$(5),$(6))
-
-
-$(4): $${$(3)_DEPS} $$(MAKEDEPS)
-	$${Q}$$(call build_c_depends,$(2),$(4),$(3),$(5),$(6))
-endef
 
 
 #########################################
@@ -136,24 +119,6 @@ define link_S_file
 $(call call_exec_directly,if [ -e $(2) ];then ${RM} -f $(2);fi;${LN} -s $(1) $(2),"LINK","$(call get_basename,$(2))")
 endef
 
-#########################################
-##  input : $(1)   object file
-##          $(2)   for C file
-##          $(3)   shortname for c
-##          $(4)   depends file
-##          $(5)   cflags
-##          $(6)   gcc or compiler
-#########################################
-define make_link_c_rules
--include $(4)
-$(1): $(2) $$(MAKEDEPS) $$($(3)_DEPS) $$($(3)_SRC)
-	$${Q}$$(call build_c,$$@,$$<,$(3),$(5),$(6))
-
-
-$(4): $$($(3)_DEPS) $$($(3)_SRC)
-	$${Q}$$(call link_c_file,$$($(3)_SRC),$(2))
-	$${Q}$$(call build_c_depends,$(2),$(4),$(3),$(5),$(6))
-endef
 
 
 #########################################
@@ -164,42 +129,6 @@ define link_S_file
 $(call call_exec_directly,if [ -e $(2) ];then ${RM} -f $(2);fi;${LN} -s $(1) $(2),"LINK","$(call get_basename,$(2))")
 endef
 
-#########################################
-##  input : $(1)   object file
-##          $(2)   for S file
-##          $(3)   shortname for S
-##          $(4)   depends file
-##          $(5)   cflags
-##          $(6)   gcc or compiler
-#########################################
-define make_link_S_rules
--include $(4)
-$(1): $(2) $$(MAKEDEPS) $$($(3)_DEPS) $$($(3)_SRC)
-	$${Q}$$(call build_S,$$@,$$<,$(3),$(5),$(6))
-
-
-$(4): $$($(3)_DEPS) $$($(3)_SRC)
-	$${Q}$$(call link_S_file,$$($(3)_SRC),$(2))
-	$${Q}$$(call build_S_depends,$(2),$(4),$(3),$(5),$(6))
-endef
-
-
-#########################################
-##  input : $(1)   object file
-##          $(2)   for C file
-##          $(3)   shortname for c
-##          $(4)   depends file
-##          $(5)   cflags
-##          $(6)   gcc or compiler
-#########################################
-define make_S_rules
--include $(4)
-$(1): $(2) $$(MAKEDEPS) $$($(3)_DEPS)
-	$${Q}$$(call build_S,$$@,$$<,$(3),$(5),$(6))
-
-$(4):$$($(3)_DEPS) $$(MAKEDEPS)
-	$${Q}$$(call build_S_depends,$(2),$(4),$(3),$(5),$(6))
-endef
 
 #########################################
 ##  input : $(1)   lists for c file
