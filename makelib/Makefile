@@ -14,7 +14,7 @@ include ${TOPDIR}/basedef.mak
 all:test
 
 test:makelib.mak
-	$(call call_exec,${PYTHON} ${CURDIR}/testmak.py -f -r ,"TEST","makelib")
+	$(call call_exec,${PYTHON} ${CURDIR}/testmak.py -f >/dev/null,"TEST","makelib")
 
 makelib.mak:basedef.mak fileop.mak varop.mak exec.mak  depop.mak makelib.mak.tmpl
 	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode -i makelib.mak.tmpl -p '%BASEDEF_MAK%' bashinsert ${CURDIR}/basedef.mak |\
