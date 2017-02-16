@@ -280,6 +280,220 @@ endef
 
 
 
+define ld_run_direct
+$(call call_exec,$(call get_value_default,$(5),${GPP}) $(3) -o $(1) $(2) $(4),"LD","$(call get_basename,$(1))")
+endef
+
+define build_exe_only
+$(1) : $(2)
+	$(call ld_run_direct,$(1),$(2),$(3),$(4),$(5))
+endef
+
+#$(info "cobj[$(1)] csrc[$(2)] shortname[$(3)]  deps[$(4)] cflags[$(5)] compiler[$(6)]")
+define build_objs_c
+-include $(4)
+$(1): $(2) $$(MAKEDEPS) $$($(3)_DEPS)
+	$${Q}$$(call build_c,$$@,$$<,$(3),$(5),$(6))
+
+
+$(4): $${$(3)_DEPS} $$(MAKEDEPS)
+	$${Q}$$(call build_c_depends,$(2),$(4),$(3),$(5),$(6))
+endef
+
+
+#$(info "cppobj[$(1)] cppsrc[$(2)] shortname[$(3)]  deps[$(4)] cppflags[$(5)] compiler[$(6)]")
+define build_objs_cpp
+-include $(4)
+$(1): $(2) $$(MAKEDEPS) $$($(3)_DEPS)
+	$${Q}$$(call build_cpp,$$@,$$<,$(3),$(5),$(6))
+
+
+$(4): $${$(3)_DEPS} $$(MAKEDEPS)
+	$${Q}$$(call build_cpp_depends,$(2),$(4),$(3),$(5),$(6))
+endef
+
+#$(info "Sobj[$(1)] Ssrc[$(2)] shortname[$(3)]  deps[$(4)] sflags[$(5)] compiler[$(6)]")
+define build_objs_S
+-include $(4)
+$(1) : $(2) $(4) $$(MAKEDEPS) $$($(3)_DEPS)
+	$${Q}$$(call build_S,$(1),$(2),$(3),$(5),$(6))
+
+$(4) : $$($(3)_DEPS)
+	$${Q}$$(call build_S_depends,$(2),$(4),$(3),$(5),$(6))
+endef
+
+#$(info "cobj[$(1)] csrc[$(2)] shortname[$(3)]  deps[$(4)] cflags[$(5)] compiler[$(6)]")
+define build_objs_link_c
+-include $(4)
+$(1) : $(2) $(4) $$(MAKEDEPS) $$($(3)_DEPS)
+	$${Q}$$(call build_c,$(1),$(2),$(3),$(5),$(6))
+
+$(4) : $$($(3)_DEPS) $$($(3)_SRC)
+	$${Q}$$(call link_c_file,$$($(3)_SRC),$(2))
+	$${Q}$$(call build_c_depends,$(2),$(4),$(3),$(5),$(6))
+endef
+
+
+
+#$(info "cppobj[$(1)] cppsrc[$(2)] shortname[$(3)]  deps[$(4)] cppflags[$(5)] compiler[$(6)]")
+define build_objs_link_cpp
+-include $(4)
+$(1) : $(2) $(4) $$(MAKEDEPS) $$($(3)_DEPS)
+	$${Q}$$(call build_cpp,$(1),$(2),$(3),$(5),$(6))
+
+$(4) : $$($(3)_DEPS) $$($(3)_SRC)
+	$${Q}$$(call link_cpp_file,$$($(3)_SRC),$(2))
+	$${Q}$$(call build_cpp_depends,$(2),$(4),$(3),$(5),$(6))
+endef
+
+#$(info "Sobj[$(1)] Ssrc[$(2)] shortname[$(3)]  deps[$(4)] asflags[$(5)] compiler[$(6)]")
+define build_objs_link_S
+-include $(4)
+$(1) : $(2) $(4) $$(MAKEDEPS) $$($(3)_DEPS)
+	$${Q}$$(call build_S,$(1),$(2),$(3),$(5),$(6))
+
+$(4) : $$($(3)_DEPS) $$($(3)_SRC)
+	$${Q}$$(call link_S_file,$$($(3)_SRC),$(2))
+	$${Q}$$(call build_S_depends,$(2),$(4),$(3),$(5),$(6))
+endef
+
+define build_clean_exe_only
+$(call call_exec,${RM} -f $(1),"RM","$(call get_basename,$(1))")
+endef
+
+
+
+#####################################
+##  input $(1)  src files
+##        $(2)  shortname
+##        $(3)  flags
+##        $(4)  compiler
+#####################################
+define foreach_build_objs_c
+$(foreach cursrc,$(1),\
+$(eval $(call build_objs_c,$(call get_toobj,$(cursrc),\
+${PWD},$($(2)_BINDIR)),$(cursrc),$(call get_shortname,$(cursrc),$($(2)_BASEDIR)),$(call get_depname,$(cursrc),${PWD},$($(2)_BINDIR)),$(3),$(4))))
+endef
+
+#####################################
+##  input $(1)  src files
+##        $(2)  shortname
+##        $(3)  flags
+##        $(4)  compiler
+#####################################
+define foreach_build_objs_cpp
+$(foreach cursrc,$(1),\
+$(eval $(call build_objs_cpp,$(call get_toobj,$(cursrc),\
+${PWD},$($(2)_BINDIR)),$(cursrc),$(call get_shortname,$(cursrc),$($(2)_BASEDIR)),$(call get_depname,$(cursrc),${PWD},$($(2)_BINDIR)),$(3),$(4))))
+endef
+
+#####################################
+##  input $(1)  src files
+##        $(2)  shortname
+##        $(3)  flags
+##        $(4)  compiler
+#####################################
+define foreach_build_objs_S
+$(foreach cursrc,$(1),\
+$(eval $(call build_objs_S,$(call get_toobj,$(cursrc),\
+${PWD},$($(2)_BINDIR)),$(cursrc),$(call get_shortname,$(cursrc),$($(2)_BASEDIR)),$(call get_depname,$(cursrc),${PWD},$($(2)_BINDIR)),$(3),$(4))))
+endef
+
+
+#####################################
+##  input $(1)  src files
+##        $(2)  shortname
+##        $(3)  flags
+##        $(4)  compiler
+#####################################
+define foreach_build_objs_link_c
+$(foreach cursrc,$(1),\
+$(eval $(call build_objs_link_c,$(call get_toobj,$(cursrc),\
+${PWD},$($(2)_BINDIR)),$(cursrc),$(call get_shortname,$(cursrc),$($(2)_BASEDIR)),$(call get_depname,$(cursrc),${PWD},$($(2)_BINDIR)),$(3),$(4))))
+endef
+
+#####################################
+##  input $(1)  src files
+##        $(2)  shortname
+##        $(3)  flags
+##        $(4)  compiler
+#####################################
+define foreach_build_objs_link_S
+$(foreach cursrc,$(1),\
+$(eval $(call build_objs_link_S,$(call get_toobj,$(cursrc),\
+${PWD},$($(2)_BINDIR)),$(cursrc),$(call get_shortname,$(cursrc),$($(2)_BASEDIR)),$(call get_depname,$(cursrc),${PWD},$($(2)_BINDIR)),$(3),$(4))))
+endef
+
+#####################################
+##  input $(1)  src files
+##        $(2)  shortname
+##        $(3)  flags
+##        $(4)  compiler
+#####################################
+define foreach_build_objs_link_cpp
+$(foreach cursrc,$(1),\
+$(eval $(call build_objs_link_cpp,$(call get_toobj,$(cursrc),\
+${PWD},$($(2)_BINDIR)),$(cursrc),$(call get_shortname,$(cursrc),$($(2)_BASEDIR)),$(call get_depname,$(cursrc),${PWD},$($(2)_BINDIR)),$(3),$(4))))
+endef
+
+MAKEDEPS += Makefile
+define __make_exe_whole
+$(call build_exe_only,$(1),$(call get_toobj,$($(2)_SRCS)),$($(2)_LDFLAGS),$($(2)_LIBFLAGS),$($(2)_LD))
+$(call foreach_build_objs_c,$(call get_cfile,$($(2)_SRCS)),$(2),$($(2)_CPPFLAGS),$($(2)_GCC))
+$(call foreach_build_objs_cpp,$(call get_cppfile,$($(2)_SRCS)),$(2),$($(2)_CPPFLAGS),$($(2)_GPP))
+$(call foreach_build_objs_S,$(call get_sfile,$($(2)_SRCS)),$(2),$($(2)_ASFLAGS),$($(2)_GAS))
+$(call foreach_build_objs_link_c,$(call get_lcfile,$($(2)_SRCS)),$(2),$($(2)_CFLAGS),$($(2)_GCC))
+$(call foreach_build_objs_link_S,$(call get_lsfile,$($(2)_SRCS)),$(2),$($(2)_CFLAGS),$($(2)_GAS))
+$(call foreach_build_objs_link_cpp,$(call get_lcppfile,$($(2)_SRCS)),$(2),$($(2)_CFLAGS),$($(2)_GPP))
+endef
+ifeq (${MAKELIB_NEED_DEPS},1)
+
+define make_exe_whole
+$(eval $(call __make_exe_whole,$(1),$(call get_exename,$(1))))
+endef
+
+else
+
+define make_exe_whole
+endef
+
+endif
+
+define __clean_exe_whole
+clean_$(2):
+	$(call call_exec,${RM} -f $(call get_lcppfile,$($(2)_SRCS)),"RM","$(2)_lcppfiles")
+	$(call call_exec,${RM} -f $(call get_lsfile,$($(2)_SRCS)),"RM","$(2)_lsfiles")
+	$(call call_exec,${RM} -f $(call get_lcfile,$($(2)_SRCS)),"RM","$(2)_lcfiles")
+	$(call call_exec,${RM} -f $(call get_depname,$($(2)_SRCS)),"RM","$(2)_deps")
+	$(call call_exec,${RM} -f $(call get_toobj,$($(2)_SRCS)),"RM","$(2)_objs")
+	$(call call_exec,${RM} -f $(1),"RM","$(call get_basename,$(1))")
+endef
+
+define clean_exe_whole
+$(eval $(call __clean_exe_whole,$(1),$(call get_exename,$(1))))
+endef
+
+define makefile_exe_whole
+$(eval $(call make_exe_whole,$(1)))
+$(eval $(call clean_exe_whole,$(1)))
+endef
+
+define foreach_makefile_exe_whole
+$(foreach curexe,$(1),$(eval $(call makefile_exe_whole,$(curexe))))
+endef
+
+define __simple_makefile_exe_whole
+all:$(1)
+
+$(call foreach_makefile_exe_whole,jjk main)
+
+clean:$(patsubst %,clean_%,$(1))
+endef
+
+define simple_makefile_exe_whole
+$(eval $(call __simple_makefile_exe_whole,$(1)))
+endef
+
 
 
 ## __DEPENDS_OP_MAK__ ##
