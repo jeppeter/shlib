@@ -3,8 +3,8 @@ include ../../makelib.mak
 
 TOPDIR:=$(call readlink_f,.)
 
-setjjk_SRCS = jjk.c
-setjjk_SRCS += a.c 
+setjjk_SRCS = a.c 
+setjjk_SRCS += jjk.c
 setjjk_SRCS += k.cpp
 setjjk_SRCS += ia.S ib.S
 setjjk_SRCS += f.link.c
@@ -34,8 +34,12 @@ main_ASFLAGS = -Wall -DMAIN_ASFILE=1 ${INCLUDE_FLAGS}
 #setjjk_GAS = ${TOPDIR}/gas.sh
 
 all:setjjk main
+#$(call call_all_exe,setjjk main)
 
-$(call simple_makefile_exe_whole,setjjk main)
+
+
+$(eval $(call simple_makefile_exe_whole,setjjk main))
 #$(call foreach_makefile_exe_whole,setjjk main)
 
 clean:$(patsubst %,clean_%,setjjk main)
+#$(call call_clean_exe,setjjk main)
