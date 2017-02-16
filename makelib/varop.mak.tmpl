@@ -14,9 +14,17 @@ $(if $(1),$(1),$(2))
 endef
 
 
+
 define get_shortname
 $(shell ${PERL} -e '%PERL_SHORTNAME_STR%' -- -t "$(call get_value_default,$(2),)" $(1))
 endef
+
+MAKELIB_CLEAN_GOALS:=$(filter clean%,$(MAKECMDGOALS))
+ifeq (${MAKELIB_CLEAN_GOALS},)
+MAKELIB_NEED_DEPS=1
+else
+MAKELIB_NEED_DEPS=0
+endif
 
 
 ## __VAR_OP_MAK__ ##
