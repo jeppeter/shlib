@@ -33,5 +33,8 @@ main_ASFLAGS = -Wall -DMAIN_ASFILE=1 ${INCLUDE_FLAGS}
 #jjk_GPP = ${TOPDIR}/gpp.sh
 #jjk_GAS = ${TOPDIR}/gas.sh
 
+all:jjk main
 
 $(call simple_makefile_exe_whole,jjk main)
+
+clean:$(patsubst %,clean_%,jjk main)

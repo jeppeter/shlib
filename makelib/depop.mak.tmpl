@@ -483,11 +483,7 @@ $(foreach curexe,$(1),$(eval $(call makefile_exe_whole,$(curexe))))
 endef
 
 define __simple_makefile_exe_whole
-all:$(1)
-
 $(call foreach_makefile_exe_whole,jjk main)
-
-clean:$(patsubst %,clean_%,$(1))
 endef
 
 define simple_makefile_exe_whole
