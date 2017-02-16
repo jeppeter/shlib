@@ -102,6 +102,7 @@ endef
 ##          $(6)   gcc or compiler
 #########################################
 define make_c_rules
+-include $(4)
 $(1): $(2) $$(MAKEDEPS) $$($(3)_DEPS)
 	$${Q}$$(call build_c,$$@,$$<,$(3),$(5),$(6))
 
@@ -144,6 +145,7 @@ endef
 ##          $(6)   gcc or compiler
 #########################################
 define make_link_c_rules
+-include $(4)
 $(1): $(2) $$(MAKEDEPS) $$($(3)_DEPS) $$($(3)_SRC)
 	$${Q}$$(call build_c,$$@,$$<,$(3),$(5),$(6))
 
@@ -171,6 +173,7 @@ endef
 ##          $(6)   gcc or compiler
 #########################################
 define make_link_S_rules
+-include $(4)
 $(1): $(2) $$(MAKEDEPS) $$($(3)_DEPS) $$($(3)_SRC)
 	$${Q}$$(call build_S,$$@,$$<,$(3),$(5),$(6))
 
@@ -190,6 +193,7 @@ endef
 ##          $(6)   gcc or compiler
 #########################################
 define make_S_rules
+-include $(4)
 $(1): $(2) $$(MAKEDEPS) $$($(3)_DEPS)
 	$${Q}$$(call build_S,$$@,$$<,$(3),$(5),$(6))
 
@@ -274,25 +278,8 @@ define foreach_link_S_file_shortname
 $(foreach cursrc,$(1),$(eval $(call make_link_S_rules,$(patsubst %.S,%.o,$(cursrc)),$(cursrc),$(call get_shortname,$(cursrc),$(2)),${cursrc}.d,$(3),$(4))))
 endef
 
-#########################################
-##  input : $(1)   exe file name
-##          $(2)   exe objects
-##          $(3)   ldflags
-##          $(4)   gcc or compiler
-#########################################
-define build_exe_only
-$(1) : $(2)
-	$(call call_exec,$(get_value_default $(4),${GCC}) $(get_value_default $(3),${LDFLAGS}) -o $(1) $(2),"LD","$(call get_basename,$(1))")
-endef
 
 
-#########################################
-##  input : $(1)   exe file name
-##          $(4)   gcc or compiler
-##  this defines
-#########################################
-define build_exe_whole
-endef
 
 
 ## __DEPENDS_OP_MAK__ ##

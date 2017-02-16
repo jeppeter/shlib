@@ -43,5 +43,9 @@ define get_lsfile
 $(shell ${PERL} -e '%PERL_FILTEROP_STR%' -- ${MAKELIB_VERBOSE} lsfile $(1))
 endef
 
+define get_depname
+$(shell ${PERL} -e '%PERL_GETDEP_STR%' -- ${MAKELIB_VERBOSE} --fromdir "$(2)" --todir "$(3)" $(1))
+endef
+
 ## __FILE_OP_MAK__ ##
 endif

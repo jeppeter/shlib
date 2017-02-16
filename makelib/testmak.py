@@ -496,7 +496,7 @@ class debug_testmak_case(unittest.TestCase):
 		s += self.__format_make_command('$(call call_exec,${GCC} ${%s} -o %s ${objs},"LD","%s")'%(ldflagname,mainexe,mainexe),False)
 
 		s += self.__format_make_common('')
-		s += self.__format_make_common('-include ${deps}')
+		#s += self.__format_make_common('-include ${deps}')
 		if len(cfilelist) > 0:
 			s += self.__format_make_common('')
 			s += self.__format_make_common('$(call foreach_c_file_shortname,${c_srcs},${CURDIR},${%s},${GCC})'%(cflagname))
@@ -1051,8 +1051,8 @@ class debug_testmak_case(unittest.TestCase):
 			# now we should get the output for handle
 			curidx = 0
 			curidx = self.__check_link_S_files_link_deps(outsarr,curidx,linksfiles)
-			curidx = self.__check_link_c_files_link_deps(outsarr,curidx,linkcfiles)
 			curidx = self.__check_S_files_deps(outsarr,curidx,sortedsfiles)
+			curidx = self.__check_link_c_files_link_deps(outsarr,curidx,linkcfiles)
 			curidx = self.__check_c_files_deps(outsarr,curidx,sortedcfiles)
 			curidx = self.__check_c_files_cc(outsarr,curidx,sortedcfiles)
 			curidx = self.__check_S_files_cc(outsarr,curidx,sortedsfiles)
@@ -1109,8 +1109,8 @@ class debug_testmak_case(unittest.TestCase):
 			outsarr = self.__run_make(makefile,'all')
 			curidx = 0
 			curidx = self.__check_link_S_files_link_deps(outsarr,curidx,linksfiles,affectls)
-			curidx = self.__check_link_c_files_link_deps(outsarr,curidx,linkcfiles,affectlc)
 			curidx = self.__check_S_files_deps(outsarr,curidx,checks)
+			curidx = self.__check_link_c_files_link_deps(outsarr,curidx,linkcfiles,affectlc)
 			curidx = self.__check_c_files_deps(outsarr,curidx,checkc)
 
 			compilec = checkc

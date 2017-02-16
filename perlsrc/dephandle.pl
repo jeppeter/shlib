@@ -11,8 +11,8 @@ sub Debug($)
 {
 	my ($fmt)=@_;
 	my ($fmtstr)="";
-	if ($verbose > 0) {
-		if ($verbose >= 3) {
+	if ($verbose > 0 ) {
+		if ($verbose >= 3 ) {
 			my ($p,$f,$l) = caller;
 			$fmtstr = "[$f:$l] ";
 		}
@@ -57,6 +57,7 @@ Getopt::Long::GetOptions(\%opts,"help|h",
 		${opts{"verbose"}} ++;
 	});
 
+Debug("call parse after ");
 if (defined($opts{"verbose"})) {
 	$verbose = $opts{"verbose"};
 }

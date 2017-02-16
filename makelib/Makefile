@@ -23,16 +23,17 @@ makelib.mak:basedef.mak fileop.mak varop.mak exec.mak  depop.mak makelib.mak.tmp
 		  ${PYTHON} ${TOPDIR}/insertcode -p '%FILEOP_MAK%' bashinsert ${CURDIR}/fileop.mak | \
 		  ${PYTHON} ${TOPDIR}/insertcode -p '%DEPOP_MAK%' -o $@ bashinsert ${CURDIR}/depop.mak,"MAK","$(@F)")
 
-fileop.mak:fileop.mak.tmpl check_readlink_pl check_exename_pl check_toobj_pl check_filterop_pl check_basename_pl
+fileop.mak:fileop.mak.tmpl check_readlink_pl check_exename_pl check_toobj_pl check_filterop_pl check_basename_pl check_getdep_pl
 	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode  -i $< -p '%PERL_READLINK_STR%' makestring ${TOPDIR}/perlsrc/readlink.pl | \
 			${PYTHON} ${TOPDIR}/insertcode -p '%PERL_EXENAME_STR%' makestring ${TOPDIR}/perlsrc/exename.pl | \
 			${PYTHON} ${TOPDIR}/insertcode -p '%PERL_TOOBJ_STR%' makestring ${TOPDIR}/perlsrc/toobj.pl | \
 			${PYTHON} ${TOPDIR}/insertcode -p '%PERL_FILTEROP_STR%' makestring ${TOPDIR}/perlsrc/filterop.pl | \
+			${PYTHON} ${TOPDIR}/insertcode -p '%PERL_GETDEP_STR%' makestring ${TOPDIR}/perlsrc/getdep.pl | \
 			${PYTHON} ${TOPDIR}/insertcode -p '%PERL_BASENAME_STR%' -o $@ makestring ${TOPDIR}/perlsrc/basename.pl,"MAK","$(@F)")
 
 check_readlink_pl:${TOPDIR}/perlsrc/readlink.pl
 
-
+check_getdep_pl:${TOPDIR}/perlsrc/getdep.pl
 
 
 varop.mak:varop.mak.tmpl check_shortname_pl

@@ -19,14 +19,14 @@ sub Usage($$)
 		print $fp "$fmt\n";
 	}
 
-	print $fp "$0 [OPTIONS]  [files]...\n";
+	print $fp "$0 [OPTIONS]  [dirs]...\n";
 	print $fp "[OPTIONS]\n";
 	print $fp "\t-h|--help               to give this help information\n";
 	print $fp "\t-v|--verbose            to make verbose mode\n";
 	print $fp "\t-f|--fromdir [fromdir]  to fromdir\n";
 	print $fp "\t-t|--todir   [todir]    to todir\n";
 	print $fp "\n";
-	print $fp "\t[files]                 if will give object\n";
+	print $fp "\t[dirs]                  if will give basename of it\n";
 
 	exit($ec);
 }
@@ -53,6 +53,7 @@ sub GetFullPath($)
 	my ($c) =@_;
 	return File::Spec->rel2abs($c);
 }
+
 
 my %opts;
 my ($fromdir,$todir);
@@ -94,8 +95,10 @@ foreach(@ARGV) {
 		$c =~ s/^$fromdir/$todir/;
 	}
 
-	$c =~ s/\.[cS](pp)?$/.o/;
-	Debug("in toobj[$c]");
+	if ($c =~ m/\.[cS](pp)?$/o) {
+		$c = $c.".d";
+	} 
+	Debug("in getdep[$c]");
 	if ($cnt > 0){
 		print " ";
 	}
@@ -104,6 +107,6 @@ foreach(@ARGV) {
 }
 
 if ($cnt > 0 && -t STDOUT) {
-	Debug("in toobj return");
+	Debug("in getdep return");
 	print "\n";
 }
