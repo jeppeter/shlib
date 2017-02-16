@@ -8,13 +8,25 @@ else
 Q=
 endif
 
+ifeq (${M},)
+MINNUM=3
+else
+MINNUM=${M}
+endif
+
+ifeq (${X},)
+MAXNUM=8
+else
+MAXNUM=${X}
+endif
+
 
 include ${TOPDIR}/basedef.mak
 
 all:test
 
 test:makelib.mak
-	$(call call_exec,${PYTHON} ${CURDIR}/testmak.py -f >/dev/null,"TEST","makelib")
+	$(call call_exec,${PYTHON} ${CURDIR}/testmak.py -f --minnum ${MINNUM} --maxnum ${MAXNUM} >/dev/null,"TEST","makelib")
 
 makelib.mak:basedef.mak fileop.mak varop.mak exec.mak  depop.mak makelib.mak.tmpl
 	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode -i makelib.mak.tmpl -p '%BASEDEF_MAK%' bashinsert ${CURDIR}/basedef.mak |\
@@ -23,7 +35,8 @@ makelib.mak:basedef.mak fileop.mak varop.mak exec.mak  depop.mak makelib.mak.tmp
 		  ${PYTHON} ${TOPDIR}/insertcode -p '%FILEOP_MAK%' bashinsert ${CURDIR}/fileop.mak | \
 		  ${PYTHON} ${TOPDIR}/insertcode -p '%DEPOP_MAK%' -o $@ bashinsert ${CURDIR}/depop.mak,"MAK","$(@F)")
 
-fileop.mak:fileop.mak.tmpl check_readlink_pl check_exename_pl check_toobj_pl check_filterop_pl check_basename_pl check_getdep_pl
+fileop.mak:fileop.mak.tmpl ${TOPDIR}/perlsrc/readlink.pl ${TOPDIR}/perlsrc/exename.pl  ${TOPDIR}/perlsrc/toobj.pl ${TOPDIR}/perlsrc/filterop.pl ${TOPDIR}/perlsrc/basename.pl ${TOPDIR}/perlsrc/getdep.pl
+	$(call call_exec,${MAKE} --no-print-directory -C . check_readlink_pl check_shortname_pl check_exename_pl check_toobj_pl  check_filterop_pl check_basename_pl check_getdep_pl,"CHECKPL","fileop.mak")
 	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode  -i $< -p '%PERL_READLINK_STR%' makestring ${TOPDIR}/perlsrc/readlink.pl | \
 			${PYTHON} ${TOPDIR}/insertcode -p '%PERL_EXENAME_STR%' makestring ${TOPDIR}/perlsrc/exename.pl | \
 			${PYTHON} ${TOPDIR}/insertcode -p '%PERL_TOOBJ_STR%' makestring ${TOPDIR}/perlsrc/toobj.pl | \
@@ -36,8 +49,10 @@ check_readlink_pl:${TOPDIR}/perlsrc/readlink.pl
 check_getdep_pl:${TOPDIR}/perlsrc/getdep.pl
 
 
-varop.mak:varop.mak.tmpl check_shortname_pl
+varop.mak:varop.mak.tmpl ${TOPDIR}/perlsrc/shortname.pl
+	$(call call_exec,${MAKE} --no-print-directory -C . check_shortname_pl,"CHECKPL","varop.mak")
 	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode -i $< -p '%PERL_SHORTNAME_STR%' -o $@ makestring ${TOPDIR}/perlsrc/shortname.pl,"MAK","$(@F)")
+
 
 check_shortname_pl:${TOPDIR}/perlsrc/shortname.pl
 
@@ -49,6 +64,8 @@ check_filterop_pl:${TOPDIR}/perlsrc/filterop.pl
 
 check_dephandle_pl:${TOPDIR}/perlsrc/dephandle.pl
 
+check_basename_pl:${TOPDIR}/perlsrc/basename.pl
+
 check_%_pl:${TOPDIR}/perlsrc/%.pl
 	$(call call_exec,(${PYTHON} ${TOPDIR}/insertcode -i ${TOPDIR}/echocode.tmpl -p '%REPLACE_PATTERN%' \
 		bashstring $< | ${BASH} | ${DIFF} -B - $< ) || \
@@ -58,8 +75,10 @@ check_%_pl:${TOPDIR}/perlsrc/%.pl
 ${TOPDIR}/perlsrc/%.pl:
 	$(call call_exec,${MAKE} --no-print-directory -C ${TOPDIR}/perlsrc all,"MAKE","PL")
 
-depop.mak:depop.mak.tmpl check_dephandle_pl
+depop.mak:depop.mak.tmpl ${TOPDIR}/perlsrc/dephandle.pl
+	$(call call_exec,${MAKE} --no-print-directory -C . check_dephandle_pl,"CHECKPL","depop.mak")
 	$(call call_exec,${PYTHON}  ${TOPDIR}/insertcode -i $<  -p '%PERL_DEP_HANDLE%' -o $@ makestring  ${TOPDIR}/perlsrc/dephandle.pl,"MAK","$(@F)")
+
 
 
 clean:
