@@ -16,9 +16,9 @@ jjk_SRCS += j.link.cpp
 j_link_cpp_SRC = j.cpp
 INCLUDE_FLAGS = -I${TOPDIR}/inc
 jjk_CFLAGS = -Wall -DCFILE=1 ${INCLUDE_FLAGS}
-jjk_CPPFLAGS = -Wall -DCPPFILE=1 ${INCLUDE_FLAGS}
+#jjk_CPPFLAGS = -Wall -DCPPFILE=1 ${INCLUDE_FLAGS}
 jjk_LDFLAGS = -Wall -DLDFLILE=1 ${INCLUDE_FLAGS}
-jjk_ASFLAGS = -Wall -DASFILE=1 ${INCLUDE_FLAGS}
+#jjk_ASFLAGS = -Wall -DASFILE=1 ${INCLUDE_FLAGS}
 d_link_c_SRC = d.c
 f_link_cpp_SRC = g.cpp
 

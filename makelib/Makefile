@@ -9,13 +9,13 @@ Q=
 endif
 
 ifeq (${M},)
-MINNUM=20
+MINNUM=10
 else
 MINNUM=${M}
 endif
 
 ifeq (${X},)
-MAXNUM=50
+MAXNUM=20
 else
 MAXNUM=${X}
 endif

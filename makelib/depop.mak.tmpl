@@ -437,12 +437,17 @@ ${PWD},$($(2)_BINDIR)),$(cursrc),$(call get_shortname,$(cursrc),$($(2)_BASEDIR))
 endef
 
 define __make_target_sources
-$(call foreach_build_objs_c,$(call get_cfile,$($(1)_SRCS)),$(1),$($(1)_CPPFLAGS),$($(1)_GCC))
-$(call foreach_build_objs_cpp,$(call get_cppfile,$($(1)_SRCS)),$(1),$($(1)_CPPFLAGS),$($(1)_GPP))
-$(call foreach_build_objs_S,$(call get_sfile,$($(1)_SRCS)),$(1),$($(1)_ASFLAGS),$($(1)_GAS))
-$(call foreach_build_objs_link_c,$(call get_lcfile,$($(1)_SRCS)),$(1),$($(1)_CFLAGS),$($(1)_GCC))
-$(call foreach_build_objs_link_S,$(call get_lsfile,$($(1)_SRCS)),$(1),$($(1)_CFLAGS),$($(1)_GAS))
-$(call foreach_build_objs_link_cpp,$(call get_lcppfile,$($(1)_SRCS)),$(1),$($(1)_CFLAGS),$($(1)_GPP))
+$(call foreach_build_objs_c,$(call get_cfile,$($(1)_SRCS)),$(1),$(call get_value_default,$($(1)_CFLAGS),${CFLAGS}),$($(1)_GCC))
+$(call foreach_build_objs_cpp,$(call get_cppfile,$($(1)_SRCS)),$(1),\
+$(call get_value_default_4,$($(1)_CPPFLAGS),$($(1)_CFLAGS),${CPPFLAGS},${CFLAGS}),$($(1)_GPP))
+$(call foreach_build_objs_S,$(call get_sfile,$($(1)_SRCS)),$(1),\
+$(call get_value_default_4,$($(1)_ASFLAGS),$($(1)_CFLAGS),${ASFLAGS},${CFLAGS}),$($(1)_GAS))
+$(call foreach_build_objs_link_c,$(call get_lcfile,$($(1)_SRCS)),$(1),\
+$(call get_value_default,$($(1)_CFLAGS),${CFLAGS}),$($(1)_GCC))
+$(call foreach_build_objs_link_S,$(call get_lsfile,$($(1)_SRCS)),$(1),\
+$(call get_value_default_4,$($(1)_ASFLAGS),$($(1)_CFLAGS),${ASFLAGS},${CFLAGS}),$($(1)_GAS))
+$(call foreach_build_objs_link_cpp,$(call get_lcppfile,$($(1)_SRCS)),$(1),\
+$(call get_value_default_4,$($(1)_CPPFLAGS),$($(1)_CFLAGS),${CPPFLAGS},${CFLAGS}),$($(1)_GPP))
 endef
 
 define __make_exe_whole

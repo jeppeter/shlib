@@ -43,7 +43,7 @@ sub Debug($)
 	if ($verbose > 0) {
 		if ($verbose >= 3) {
 			my ($p,$f,$l) = caller;
-			$fmtstr = "[$f:$l] ";
+			$fmtstr .= "[$f:$l] ";
 		}
 		$fmtstr .= $fmt;
 		print STDERR "$fmtstr\n";
