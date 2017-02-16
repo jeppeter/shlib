@@ -1,10 +1,10 @@
 #! /usr/bin/env perl
 
 use strict;
-use Getopt::Long;
-use File::Basename;
-use File::Spec;
 use Cwd "abs_path";
+use File::Basename;
+use Getopt::Long;
+use File::Spec;
 
 sub Usage($$)
 {
@@ -23,12 +23,14 @@ sub Usage($$)
 	print $fp "[OPTIONS]\n";
 	print $fp "\t-h|--help               to give this help information\n";
 	print $fp "\t-v|--verbose            to make verbose mode\n";
-	print $fp "\t-t|--topdir dir         to make replace dir\n";
+	print $fp "\t-f|--fromdir [fromdir]  to fromdir\n";
+	print $fp "\t-t|--todir   [todir]    to todir\n";
 	print $fp "\n";
-	print $fp "\t[dirs]                  if not set topdir ,it will get the basename\n";
+	print $fp "\t[dirs]                  if will give basename of it\n";
 
 	exit($ec);
 }
+
 
 my ($verbose)=0;
 
@@ -46,59 +48,62 @@ sub Debug($)
 	}
 }
 
+sub GetFullPath($)
+{
+	my ($c) =@_;
+	return File::Spec->rel2abs($c);
+}
+
 my %opts;
-my ($topdir);
+my ($fromdir,$todir);
+$fromdir="";
+$todir="";
 Getopt::Long::Configure("no_ignorecase","bundling");
 Getopt::Long::GetOptions(\%opts,"help|h",
 	"verbose|v" => sub {
 		if (!defined($opts{"verbose"})) {
 			$opts{"verbose"} = 0;
 		}
-		$opts{"verbose"}++;
+		${opts{"verbose"}} ++;
 	},
-	"topdir|t=s");
+	"todir|t=s",
+	"fromdir|f=s");
 
 if (defined($opts{"help"})) {
-	Usage( 0,"");
-}
-$topdir = "";
-if (defined($opts{"topdir"})) {
-	$topdir = $opts{"topdir"};
+	Usage(0,"");
 }
 
 if (defined($opts{"verbose"})) {
-	$verbose=$opts{"verbose"};
+	$verbose = $opts{"verbose"};
 }
 
-if (scalar(@ARGV) > 0) {
-	foreach (@ARGV) {
-		my ($cp) = $_;
-		if ( -l "$cp") {
-			$cp = File::Spec->rel2abs($cp);
-		} else {
-			$cp = abs_path($cp);
-		}
-		Debug("cp [$cp]");
-		if (length($topdir) > 0) {
-			$cp =~ s/$topdir//;
-			while (length($cp) > 0 ) {
-				if ($cp =~ m/^\//o || 
-					$cp =~ m/^\\/o) {
-					$cp =~ s/.//;
-				} else {
-					last;
-				}
-			}
-			Debug("change topdir[$topdir] [$cp]");
-		} else {
-			$cp = basename($cp);
-			Debug("basename");
-		}
+if (defined($opts{"fromdir"})) {
+	$fromdir=$opts{"fromdir"};
+}
 
-		$cp =~ s/\./_/g;
-		$cp =~ s/\//_/g;
-		$cp =~ s/\\/_/g;
-		print STDOUT "$cp\n";
+if (defined($opts{"todir"})) {
+	$todir = $opts{"todir"};
+}
+
+my ($cnt)=0;
+foreach(@ARGV) {
+	my ($c) = $_;
+
+	if (length($fromdir) > 0 && length($todir) > 0) {
+		$c = GetFullPath($c);
+		$c =~ s/^$fromdir/$todir/;
 	}
+
+	$c =~ s/\.[cS](pp)?$/.o/;
+	Debug("in [$c]");
+	if ($cnt > 0){
+		print " ";
+	}
+	print "$c";
+	$cnt ++;
 }
 
+if ($cnt > 0 && -t STDOUT) {
+	Debug("in toobj return");
+	print "\n";
+}

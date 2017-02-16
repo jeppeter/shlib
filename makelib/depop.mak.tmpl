@@ -13,23 +13,8 @@ __DEPENDS_OP_MAK__:=1
 ##      5        for compiler default gcc
 #########################################
 define build_c_depends
-$(call call_exec_directly,$(call get_value_default,$(5),gcc) $(call get_value_default,$(4),${CFLAGS}) $($(3)_CFLAGS) -MM $(1) | ${PERL} -e '%PERL_DEP_HANDLE%' -- $(3)_DEPS > $(2),"DEPS","$(call get_basename,$(2))")
+$(call call_exec_directly,$(call get_value_default,$(5),${GCC}) $(call get_value_default,$(4),${CFLAGS}) $($(3)_CFLAGS) -MM $(1) | ${PERL} -e '%PERL_DEP_HANDLE%' -- $(3)_DEPS > $(2),"DEPS","$(call get_basename,$(2))")
 endef
-
-#########################################
-##  build_S_depends
-##            to build S depends
-##  input value
-##      1        input S file 
-##      2        output depend file
-##      3        for shortname handle
-##      4        for common cflags
-##      5        for compiler default gcc
-#########################################
-define build_S_depends
-$(call call_exec_directly,$(call get_value_default,$(5),gcc) $(call get_value_default,$(4),${ASMFLAGS}) $($(3)_ASMFLAGS) -MM $(1) | ${PERL} -e '%PERL_DEP_HANDLE%' --  $(3)_DEPS > $(2),"DEPS","$(call get_basename,$(2))")
-endef
-
 
 #########################################
 ##  build_c
@@ -42,8 +27,56 @@ endef
 ##      5        compiler default gcc
 #########################################
 define build_c
-$(call call_exec_directly,$(call get_value_default,$(5),gcc) $(call get_value_default,$(4),${CFLAGS}) $($(3)_CFLAGS) -c $(2) -o $(1),"CC","$(call get_basename,$(1))")
+$(call call_exec_directly,$(call get_value_default,$(5),${GCC}) $(call get_value_default,$(4),${CFLAGS}) $($(3)_CFLAGS) -c $(2) -o $(1),"CC","$(call get_basename,$(1))")
 endef
+
+
+#########################################
+##  build_cpp_depends
+##            to build cpp depends
+##  input value
+##      1        input cpp file 
+##      2        output depend file
+##      3        for shortname handle
+##      4        for common cppflags
+##      5        for compiler default g++
+#########################################
+define build_cpp_depends
+$(call call_exec_directly,$(call get_value_default,$(5),${GPP}) $(call get_value_default,$(4),${CPPFLAGS}) $($(3)_CPPFLAGS) -MM $(1) | ${PERL} -e '%PERL_DEP_HANDLE%' -- $(3)_DEPS > $(2),"DEPS","$(call get_basename,$(2))")
+endef
+
+
+
+
+
+#########################################
+##  build_cpp
+##            to build cpp into o
+##  input value
+##      1        output file
+##      2        input cpp file 
+##      3        for shortname handle
+##      4        cppflags
+##      5        compiler default g++
+#########################################
+define build_cpp
+$(call call_exec_directly,$(call get_value_default,$(5),${GPP}) $(call get_value_default,$(4),${CPPFLAGS}) $($(3)_CPPFLAGS) -c $(2) -o $(1),"CPPC","$(call get_basename,$(1))")
+endef
+
+#########################################
+##  build_S_depends
+##            to build S depends
+##  input value
+##      1        input S file 
+##      2        output depend file
+##      3        for shortname handle
+##      4        asflags
+##      5        compiler default gcc
+#########################################
+define build_S_depends
+$(call call_exec_directly,$(call get_value_default,$(5),${GAS}) $(call get_value_default,$(4),${ASFLAGS}) $($(3)_ASFLAGS) -MM $(1) | ${PERL} -e '%PERL_DEP_HANDLE%' --  $(3)_DEPS > $(2),"DEPS","$(call get_basename,$(2))")
+endef
+
 
 #########################################
 ##  build_S
@@ -52,11 +85,11 @@ endef
 ##      1        output file
 ##      2        input S file 
 ##      3        for shortname handle
-##      4        cflags
+##      4        asflags
 ##      5        compiler default gcc
 #########################################
 define build_S
-$(call call_exec_directly,$(call get_value_default,$(5),gcc) $(call get_value_default,$(4),${ASMFLAGS}) $($(3)_ASMFLAGS) -c $(2) -o $(1),"CC","$(call get_basename,$(1))")
+$(call call_exec_directly,$(call get_value_default,$(5),${GAS}) $(call get_value_default,$(4),${ASFLAGS}) $($(3)_ASFLAGS) -c $(2) -o $(1),"AS","$(call get_basename,$(1))")
 endef
 
 
@@ -83,6 +116,22 @@ endef
 ##          $(2)   link file
 #########################################
 define link_c_file
+$(call call_exec_directly,if [ -e $(2) ];then ${RM} -f $(2);fi;${LN} -s $(1) $(2),"LINK","$(call get_basename,$(2))")
+endef
+
+#########################################
+##  input : $(1)   src file
+##          $(2)   link file
+#########################################
+define link_cpp_file
+$(call call_exec_directly,if [ -e $(2) ];then ${RM} -f $(2);fi;${LN} -s $(1) $(2),"LINK","$(call get_basename,$(2))")
+endef
+
+#########################################
+##  input : $(1)   src file
+##          $(2)   link file
+#########################################
+define link_S_file
 $(call call_exec_directly,if [ -e $(2) ];then ${RM} -f $(2);fi;${LN} -s $(1) $(2),"LINK","$(call get_basename,$(2))")
 endef
 

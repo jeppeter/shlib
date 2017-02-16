@@ -65,11 +65,12 @@ sub cfile_sub(@)
 			if ($cnt > 0) {
 				print " ";
 			}
-			print "\"$cp\"";
+			print "$cp";
 			$cnt ++;
 		}
 	}
-	if ($cnt > 0) {
+	if ($cnt > 0 && -t STDOUT ) {
+		Debug("in cfile return");
 		print "\n";
 	}
 	return;
@@ -86,11 +87,12 @@ sub sfile_sub(@)
 			if ($cnt > 0) {
 				print " ";
 			}
-			print "\"$cp\"";
+			print "$cp";
 			$cnt ++;
 		}
 	}
-	if ($cnt > 0) {
+	if ($cnt > 0 && -t STDOUT) {
+		Debug("in sfile return");
 		print "\n";
 	}
 	return;
@@ -107,11 +109,12 @@ sub cppfile_sub(@)
 			if ($cnt > 0) {
 				print " ";
 			}
-			print "\"$cp\"";
+			print "$cp";
 			$cnt ++;
 		}
 	}
-	if ($cnt > 0) {
+	if ($cnt > 0 && -t STDOUT) {
+		Debug("in cppfile return");
 		print "\n";
 	}
 	return;
@@ -127,11 +130,12 @@ sub lcfile_sub(@)
 			if ($cnt > 0) {
 				print " ";
 			}
-			print "\"$cp\"";
+			print "$cp";
 			$cnt ++;
 		}
 	}
-	if ($cnt > 0) {
+	if ($cnt > 0 && -t STDOUT) {
+		Debug("in lcfile return");
 		print "\n";
 	}
 	return;
@@ -147,11 +151,12 @@ sub lsfile_sub(@)
 			if ($cnt > 0) {
 				print " ";
 			}
-			print "\"$cp\"";
+			print "$cp";
 			$cnt ++;
 		}
 	}
-	if ($cnt > 0) {
+	if ($cnt > 0 && -t STDOUT) {
+		Debug("in lsfile return");
 		print "\n";
 	}
 	return;
@@ -168,11 +173,12 @@ sub lcppfile_sub(@)
 			if ($cnt > 0) {
 				print " ";
 			}
-			print "\"$cp\"";
+			print "$cp";
 			$cnt ++;
 		}
 	}
-	if ($cnt > 0) {
+	if ($cnt > 0 && -t STDOUT) {
+		Debug("in lcppfile return");
 		print "\n";
 	}
 	return;

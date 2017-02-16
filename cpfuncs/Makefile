@@ -16,34 +16,41 @@ all:cpfuncs cpin
 
 
 cpfuncs:cpfuncs.tmpl check_mountcheck_pl check_subpath_pl check_shcp_py
-	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode  -i cpfuncs.tmpl  -p '%PERL_MOUNTCHECK_STR%' bashstring ${TOPDIR}/mountcheck.pl | \
-		${PYTHON} ${TOPDIR}/insertcode -p  '%PERL_SUBPATH_STR%' bashstring subpath.pl  | \
+	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode  -i cpfuncs.tmpl  -p '%PERL_MOUNTCHECK_STR%' bashstring ${TOPDIR}/perlsrc/mountcheck.pl | \
+		${PYTHON} ${TOPDIR}/insertcode -p  '%PERL_SUBPATH_STR%' bashstring ${TOPDIR}/perlsrc/subpath.pl  | \
 		${PYTHON} ${TOPDIR}/insertcode -p  '%DEBUGSH_CODE%' bashinsert "${TOPDIR}/libs/debugsh" | \
-		${PYTHON} ${TOPDIR}/insertcode -p  '%PYTHON_SHCP_STR%' bashstring -o cpfuncs shcp.py,"GENSH","cpfuncs")
+		${PYTHON} ${TOPDIR}/insertcode -p  '%PYTHON_SHCP_STR%' bashstring -o cpfuncs ${TOPDIR}/pysrc/shcp.py,"GENSH","cpfuncs")
 
 cpin:cpin.tmpl check_dos2unix_pl
-	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode -i cpin.tmpl -o cpin -p '%PERL_DOS2UNIX_STR%'  bashstring dos2unix.pl,"GENSH","cpin")
+	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode -i cpin.tmpl -o cpin -p '%PERL_DOS2UNIX_STR%'  bashstring ${TOPDIR}/perlsrc/dos2unix.pl,"GENSH","cpin")
 
-check_dos2unix_pl:dos2unix.pl
+check_dos2unix_pl:${TOPDIR}/perlsrc/dos2unix.pl
+
+check_mountcheck_pl:${TOPDIR}/perlsrc/mountcheck.pl
+
+check_subpath_pl:${TOPDIR}/perlsrc/subpath.pl
+
+check_shcp_py:${TOPDIR}/pysrc/shcp.py
+
+check_%_pl:${TOPDIR}/perlsrc/%.pl
 	$(call call_exec,(${PYTHON} ${TOPDIR}/insertcode -i ${TOPDIR}/echocode.tmpl -p '%REPLACE_PATTERN%' \
-		bashstring dos2unix.pl | ${BASH} | ${DIFF} -B - dos2unix.pl ) || \
-		(${ECHO} "can not make dos2unix.pl right" >&2 ; exit 3),\
-		"CHECK","dos2unix.pl")
+		bashstring $< | ${BASH} | ${DIFF} -B - $< ) || \
+		(${ECHO} "can not make $< right" >&2 ; exit 3),\
+		"CHECK","$(basename $<)")
 
-check_mountcheck_pl:${TOPDIR}/mountcheck.pl
-	$(call call_exec,($(PYTHON) ${TOPDIR}/insertcode -i ${TOPDIR}/echocode.tmpl -p '%REPLACE_PATTERN%' bashstring "${TOPDIR}/mountcheck.pl" | \
-			${BASH} | ${DIFF} -B - ${TOPDIR}/mountcheck.pl) || \
-			(${ECHO} "can not change ${TOPDIR}/mountcheck.pl ok" ; exit 3),"CHECK","mountcheck.pl")
+${TOPDIR}/perlsrc/%.pl:
+	$(call call_exec,${MAKE} --no-print-directory -C ${TOPDIR}/perlsrc all,"MAKE","PL")
 
-check_subpath_pl:subpath.pl
-	$(call call_exec,($(PYTHON) ${TOPDIR}/insertcode -i ${TOPDIR}/echocode.tmpl -p '%REPLACE_PATTERN%' bashstring "${CURDIR}/subpath.pl" | \
-			${BASH} | ${DIFF} -B - ${CURDIR}/subpath.pl) || \
-			(${ECHO} "can not change ${CURDIR}/subpath.pl ok" ; exit 3),"CHECK","subpath.pl")
+${TOPDIR}/pysrc/*.py:
+	$(call call_exec,${MAKE} --no-print-directory -C ${TOPDIR}/pysrc all,"MAKE","PY")
 
-check_shcp_py:shcp.py
-	$(call call_exec,($(PYTHON) ${TOPDIR}/insertcode -i ${TOPDIR}/echocode.tmpl -p '%REPLACE_PATTERN%' bashstring "${CURDIR}/shcp.py" | \
-			${BASH} | ${DIFF} -B - ${CURDIR}/shcp.py) || \
-			(${ECHO} "can not change ${CURDIR}/shcp.py ok" ; exit 3),"CHECK","shcp.py")
+check_%_py:${TOPDIR}/pysrc/%.py
+	$(call call_exec,($(PYTHON) ${TOPDIR}/insertcode -i ${TOPDIR}/echocode.tmpl -p '%REPLACE_PATTERN%' bashstring $< | \
+			${BASH} | ${DIFF} -B - $< ) || \
+			(${ECHO} "can not change $< ok" ; exit 3),"CHECK","$(basename $<)")
+
 
 clean:
+	$(call call_exec,${MAKE} --no-print-directory -C ${TOPDIR}/perlsrc clean,"CLEAN","PL")
+	$(call call_exec,${MAKE} --no-print-directory -C ${TOPDIR}/pysrc clean,"CLEAN","PY")
 	$(call call_exec,$(RM) -rf cpin cpfuncs,"RM","cpin cpfuncs")

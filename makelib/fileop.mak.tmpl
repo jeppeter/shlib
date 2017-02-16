@@ -4,43 +4,43 @@ __FILE_OP_MAK__:=1
 
 
 define readlink_f
-$(shell ${PERL} -e '%PERL_READLINK_STR%' --  $(1) )
+$(shell ${PERL} -e '%PERL_READLINK_STR%' --  ${MAKELIB_VERBOSE} $(1) )
 endef
 
 define get_basename
-$(shell ${PERL} -e '%PERL_BASENAME_STR%' -- $(1) )
+$(shell ${PERL} -e '%PERL_BASENAME_STR%' -- ${MAKELIB_VERBOSE} $(1) )
 endef
 
 define get_exename
-$(shell ${PERL} -e '%PERL_EXENAME_STR%' -- $(1) )
+$(shell ${PERL} -e '%PERL_EXENAME_STR%' -- ${MAKELIB_VERBOSE} $(1) )
 endef
 
 define get_toobj
-$(shell ${PERL} -e '%PERL_TOOBJ_STR%' -- $(1))
+$(shell ${PERL} -e '%PERL_TOOBJ_STR%' --  ${MAKELIB_VERBOSE} --fromdir "$(2)" --todir "$(3)" $(1))
 endef
 
 define get_cfile
-$(shell ${PERL} -e '%PERL_FILTEROP_STR%' -- cfile $(1))
+$(shell ${PERL} -e '%PERL_FILTEROP_STR%' -- ${MAKELIB_VERBOSE} cfile $(1))
 endef
 
 define get_cppfile
-$(shell ${PERL} -e '%PERL_FILTEROP_STR%' -- cppfile $(1))
+$(shell ${PERL} -e '%PERL_FILTEROP_STR%' -- ${MAKELIB_VERBOSE} cppfile $(1))
 endef
 
 define get_sfile
-$(shell ${PERL} -e '%PERL_FILTEROP_STR%' -- sfile $(1))
+$(shell ${PERL} -e '%PERL_FILTEROP_STR%' -- ${MAKELIB_VERBOSE} sfile $(1))
 endef
 
 define get_lcfile
-$(shell ${PERL} -e '%PERL_FILTEROP_STR%' -- lcfile $(1))
+$(shell ${PERL} -e '%PERL_FILTEROP_STR%' -- ${MAKELIB_VERBOSE} lcfile $(1))
 endef
 
 define get_lcppfile
-$(shell ${PERL} -e '%PERL_FILTEROP_STR%' -- lcppfile $(1))
+$(shell ${PERL} -e '%PERL_FILTEROP_STR%' -- ${MAKELIB_VERBOSE} lcppfile $(1))
 endef
 
 define get_lsfile
-$(shell ${PERL} -e '%PERL_FILTEROP_STR%' -- lsfile $(1))
+$(shell ${PERL} -e '%PERL_FILTEROP_STR%' -- ${MAKELIB_VERBOSE} lsfile $(1))
 endef
 
 ## __FILE_OP_MAK__ ##

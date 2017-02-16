@@ -18,7 +18,11 @@ xbuild:xbuild.tmpl check_libs
 		"GENSH",$@)
 	$(call call_exec,${CHX} ${CURDIR}/xbuild,"CHX",$@)
 
-check_libs:
+check_libs:${TOPDIR}/libs/dependsh ${TOPDIR}/libs/debugsh
+
+${TOPDIR}/libs/%:
+	$(call call_exec,${MAKE} --no-print-directory -C ${TOPDIR}/libs all,"MAKE","SH")
 
 clean:
+	$(call call_exec,${MAKE} --no-print-directory -C ${TOPDIR}/libs clean,"CLEAN","SH")
 	$(call call_exec,${RM} -f xbuild,"RM",xbuild)

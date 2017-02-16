@@ -3,8 +3,10 @@ __VAR_OP_MAK__:=1
 
 ifeq (${V},)
 Q=@
+MAKELIB_VERBOSE=
 else
 Q=
+MAKELIB_VERBOSE=-vvvv
 endif
 
 define get_value_default

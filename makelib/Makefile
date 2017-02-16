@@ -1,6 +1,6 @@
 
-TOPDIR:=$(shell perl -e 'use Cwd "abs_path";foreach (@ARGV){print $$_."\n";}' ..)
-CURDIR:=$(shell perl -e 'use Cwd "abs_path";foreach (@ARGV){print $$_."\n";}' .)
+TOPDIR:=$(shell perl -e 'use Cwd "abs_path";print abs_path(shift);' ..)
+CURDIR:=$(shell perl -e 'use Cwd "abs_path";print abs_path(shift);' .)
 
 ifeq (${V},)
 Q=@
@@ -14,66 +14,52 @@ include ${TOPDIR}/basedef.mak
 
 all:makelib.mak
 
-
-makelib.mak:basedef.mak varop.mak exec.mak fileop.mak depop.mak makelib.mak.tmpl
+makelib.mak:basedef.mak fileop.mak varop.mak exec.mak  depop.mak makelib.mak.tmpl
 	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode -i makelib.mak.tmpl -p '%BASEDEF_MAK%' bashinsert ${CURDIR}/basedef.mak |\
 		  ${PYTHON} ${TOPDIR}/insertcode -p '%VAROP_MAK%' bashinsert ${CURDIR}/varop.mak | \
 		  ${PYTHON} ${TOPDIR}/insertcode -p '%EXEC_MAK%' bashinsert ${CURDIR}/exec.mak | \
 		  ${PYTHON} ${TOPDIR}/insertcode -p '%FILEOP_MAK%' bashinsert ${CURDIR}/fileop.mak | \
 		  ${PYTHON} ${TOPDIR}/insertcode -p '%DEPOP_MAK%' -o $@ bashinsert ${CURDIR}/depop.mak,"MAK","$(@F)")
 
-fileop.mak:fileop.mak.tmpl check_readlink_pl check_exename_pl check_toobj_pl check_filterop_pl
-	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode  -i $< -p '%PERL_READLINK_STR%' makestring ${TOPDIR}/readlink.pl | \
-			${PYTHON} ${TOPDIR}/insertcode -p '%PERL_EXENAME_STR%' makestring ${CURDIR}/exename.pl | \
-			${PYTHON} ${TOPDIR}/insertcode -p '%PERL_TOOBJ_STR%' makestring ${CURDIR}/toobj.pl | \
-			${PYTHON} ${TOPDIR}/insertcode -p '%PERL_FILTEROP_STR%' makestring ${CURDIR}/filterop.pl | \
-			${PYTHON} ${TOPDIR}/insertcode -p '%PERL_BASENAME_STR%' -o $@ makestring ${TOPDIR}/basename.pl,"MAK","$(@F)")
+fileop.mak:fileop.mak.tmpl check_readlink_pl check_exename_pl check_toobj_pl check_filterop_pl check_basename_pl
+	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode  -i $< -p '%PERL_READLINK_STR%' makestring ${TOPDIR}/perlsrc/readlink.pl | \
+			${PYTHON} ${TOPDIR}/insertcode -p '%PERL_EXENAME_STR%' makestring ${TOPDIR}/perlsrc/exename.pl | \
+			${PYTHON} ${TOPDIR}/insertcode -p '%PERL_TOOBJ_STR%' makestring ${TOPDIR}/perlsrc/toobj.pl | \
+			${PYTHON} ${TOPDIR}/insertcode -p '%PERL_FILTEROP_STR%' makestring ${TOPDIR}/perlsrc/filterop.pl | \
+			${PYTHON} ${TOPDIR}/insertcode -p '%PERL_BASENAME_STR%' -o $@ makestring ${TOPDIR}/perlsrc/basename.pl,"MAK","$(@F)")
 
-check_readlink_pl:${TOPDIR}/readlink.pl
-	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode -i ${TOPDIR}/echocode.mak.tmpl -o $@.mak.tmp makestring ${TOPDIR}/readlink.pl,"TMPMAK","$@.mak.tmp" )
-	$(call call_exec,${MAKE} --no-print-directory -f $@.mak.tmp >$@.1.tmp,"MAKE","$@.1.tmp")
-	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode  -o $@.2.tmp makeformat ${TOPDIR}/readlink.pl,"TMPMAK","$@.2.tmp")
-	$(call call_exec,${DIFF} -B $@.1.tmp $@.2.tmp  ||  (${ECHO} "$@ error" >&2; exit 3),"CHK","$@")
+check_readlink_pl:${TOPDIR}/perlsrc/readlink.pl
+
+
+
 
 varop.mak:varop.mak.tmpl check_shortname_pl
-	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode -i $< -p '%PERL_SHORTNAME_STR%' -o $@ makestring ${TOPDIR}/shortname.pl,"MAK","$(@F)")
+	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode -i $< -p '%PERL_SHORTNAME_STR%' -o $@ makestring ${TOPDIR}/perlsrc/shortname.pl,"MAK","$(@F)")
 
-check_shortname_pl:${TOPDIR}/shortname.pl
-	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode -i ${TOPDIR}/echocode.mak.tmpl -o $@.mak.tmp makestring ${TOPDIR}/shortname.pl,"TMPMAK","$@.mak.tmp" )
-	$(call call_exec,${MAKE} --no-print-directory -f $@.mak.tmp >$@.1.tmp,"MAKE","$@.1.tmp")
-	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode  -o $@.2.tmp makeformat ${TOPDIR}/shortname.pl,"TMPMAK","$@.2.tmp")
-	$(call call_exec,${DIFF} -B $@.1.tmp $@.2.tmp  ||  (${ECHO} "$@ error" >&2; exit 3),"CHK","$@")
+check_shortname_pl:${TOPDIR}/perlsrc/shortname.pl
 
-check_exename_pl:${CURDIR}/exename.pl
-	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode -i ${TOPDIR}/echocode.mak.tmpl -o $@.mak.tmp makestring $<,"TMPMAK","$@.mak.tmp" )
-	$(call call_exec,${MAKE} --no-print-directory -f $@.mak.tmp >$@.1.tmp,"MAKE","$@.1.tmp")
-	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode  -o $@.2.tmp makeformat $<,"TMPMAK","$@.2.tmp")
-	$(call call_exec,${DIFF} -B $@.1.tmp $@.2.tmp  ||  (${ECHO} "$@ error" >&2; exit 3),"CHK","$@")
+check_exename_pl:${TOPDIR}/perlsrc/exename.pl
 
+check_toobj_pl:${TOPDIR}/perlsrc/toobj.pl
 
-check_toobj_pl:${CURDIR}/toobj.pl
-	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode -i ${TOPDIR}/echocode.mak.tmpl -o $@.mak.tmp makestring $<,"TMPMAK","$@.mak.tmp" )
-	$(call call_exec,${MAKE} --no-print-directory -f $@.mak.tmp >$@.1.tmp,"MAKE","$@.1.tmp")
-	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode  -o $@.2.tmp makeformat $<,"TMPMAK","$@.2.tmp")
-	$(call call_exec,${DIFF} -B $@.1.tmp $@.2.tmp  ||  (${ECHO} "$@ error" >&2; exit 3),"CHK","$@")
+check_filterop_pl:${TOPDIR}/perlsrc/filterop.pl
 
+check_dephandle_pl:${TOPDIR}/perlsrc/dephandle.pl
 
-check_filterop_pl:${CURDIR}/filterop.pl
-	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode -i ${TOPDIR}/echocode.mak.tmpl -o $@.mak.tmp makestring $<,"TMPMAK","$@.mak.tmp" )
-	$(call call_exec,${MAKE} --no-print-directory -f $@.mak.tmp >$@.1.tmp,"MAKE","$@.1.tmp")
-	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode  -o $@.2.tmp makeformat $<,"TMPMAK","$@.2.tmp")
-	$(call call_exec,${DIFF} -B $@.1.tmp $@.2.tmp  ||  (${ECHO} "$@ error" >&2; exit 3),"CHK","$@")
+check_%_pl:${TOPDIR}/perlsrc/%.pl
+	$(call call_exec,(${PYTHON} ${TOPDIR}/insertcode -i ${TOPDIR}/echocode.tmpl -p '%REPLACE_PATTERN%' \
+		bashstring $< | ${BASH} | ${DIFF} -B - $< ) || \
+		(${ECHO} "can not make $< right" >&2 ; exit 3),\
+		"CHECK","$(basename $<)")
 
+${TOPDIR}/perlsrc/%.pl:
+	$(call call_exec,${MAKE} --no-print-directory -C ${TOPDIR}/perlsrc all,"MAKE","PL")
 
-depop.mak:depop.mak.tmpl check_dep_handle_pl
-	$(call call_exec,${PYTHON}  ${TOPDIR}/insertcode -i $<  -p '%PERL_DEP_HANDLE%' -o $@ makestring  ${CURDIR}/dephandle.pl,"MAK","$(@F)")
+depop.mak:depop.mak.tmpl check_dephandle_pl
+	$(call call_exec,${PYTHON}  ${TOPDIR}/insertcode -i $<  -p '%PERL_DEP_HANDLE%' -o $@ makestring  ${TOPDIR}/perlsrc/dephandle.pl,"MAK","$(@F)")
 
-check_dep_handle_pl:${CURDIR}/dephandle.pl
-	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode -i ${TOPDIR}/echocode.mak.tmpl -o $@.mak.tmp makestring ${CURDIR}/dephandle.pl,"TMPMAK","$@.mak.tmp" )
-	$(call call_exec,${MAKE} --no-print-directory -f $@.mak.tmp >$@.1.tmp,"MAKE","$@.1.tmp")
-	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode  -o $@.2.tmp makeformat ${CURDIR}/dephandle.pl,"TMPMAK","$@.2.tmp")
-	$(call call_exec,${DIFF} -B $@.1.tmp $@.2.tmp  ||  (${ECHO} "$@ error" >&2; exit 3),"CHK","$@")
 
 clean:
+	$(call call_exec,${MAKE} --no-print-directory -C ${TOPDIR}/perlsrc clean >/dev/null,"CLEAN","PL")
 	$(call call_exec,${RM} -f *.tmp,"RM","*.tmp")
 	$(call call_exec,${RM} -f fileop.mak varop.mak dependsop.mak,"RM","fileop.mak varop.mak dependsop.mak")
