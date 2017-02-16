@@ -29,13 +29,14 @@ sub Usage($$)
 	exit($ec);
 }
 
+my $logo="basename";
 
 my ($verbose)=0;
 
 sub Debug($)
 {
 	my ($fmt)=@_;
-	my ($fmtstr)="";
+	my ($fmtstr)="$logo ";
 	if ($verbose > 0) {
 		if ($verbose >= 3) {
 			my ($p,$f,$l) = caller;
@@ -71,6 +72,6 @@ foreach(@ARGV) {
 	} else {
 		$c = abs_path($c);
 	}
-	Debug("in basename[$c]");
+	Debug("[$c]");
 	print basename($c)."\n";
 }

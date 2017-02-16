@@ -31,13 +31,14 @@ sub Usage($$)
 	exit($ec);
 }
 
+my $logo = "toobj";
 
 my ($verbose)=0;
 
 sub Debug($)
 {
 	my ($fmt)=@_;
-	my ($fmtstr)="";
+	my ($fmtstr)="$logo ";
 	if ($verbose > 0) {
 		if ($verbose >= 3) {
 			my ($p,$f,$l) = caller;
@@ -95,7 +96,7 @@ foreach(@ARGV) {
 	}
 
 	$c =~ s/\.[cS](pp)?$/.o/;
-	Debug("in toobj[$c]");
+	Debug("[$c]");
 	if ($cnt > 0){
 		print " ";
 	}
@@ -104,6 +105,6 @@ foreach(@ARGV) {
 }
 
 if ($cnt > 0 && -t STDOUT) {
-	Debug("in toobj return");
+	Debug("return");
 	print "\n";
 }

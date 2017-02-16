@@ -7,19 +7,20 @@ my ($prog)=$0;
 my ($version)="0.0.1";
 my ($verbose)=0;
 
+my $(logo)= "mountcheck";
+
 sub Debug($)
 {
 	my ($fmt)=@_;
-	my ($p,$f,$l)=caller;
-	my ($fmtstr)="";
-	if ($verbose >= 1) {
-		if ($verbose >=3){
-			$fmtstr="[$f:$l] ";
+	my ($fmtstr)="$logo ";
+	if ($verbose > 0) {
+		if ($verbose >= 3) {
+			my ($p,$f,$l) = caller;
+			$fmtstr = "[$f:$l] ";
 		}
-		$fmtstr .= "$fmt";
+		$fmtstr .= $fmt;
 		print STDERR "$fmtstr\n";
 	}
-	return;
 }
 
 sub Usage

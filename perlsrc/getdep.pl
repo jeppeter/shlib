@@ -32,12 +32,14 @@ sub Usage($$)
 }
 
 
+my $logo = "getdep";
+
 my ($verbose)=0;
 
 sub Debug($)
 {
 	my ($fmt)=@_;
-	my ($fmtstr)="";
+	my ($fmtstr)="$logo ";
 	if ($verbose > 0) {
 		if ($verbose >= 3) {
 			my ($p,$f,$l) = caller;
@@ -98,7 +100,7 @@ foreach(@ARGV) {
 	if ($c =~ m/\.[cS](pp)?$/o) {
 		$c = $c.".d";
 	} 
-	Debug("in getdep[$c]");
+	Debug("[$c]");
 	if ($cnt > 0){
 		print " ";
 	}
@@ -107,6 +109,6 @@ foreach(@ARGV) {
 }
 
 if ($cnt > 0 && -t STDOUT) {
-	Debug("in getdep return");
+	Debug("return");
 	print "\n";
 }

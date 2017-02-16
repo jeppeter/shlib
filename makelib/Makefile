@@ -49,12 +49,15 @@ check_readlink_pl:${TOPDIR}/perlsrc/readlink.pl
 check_getdep_pl:${TOPDIR}/perlsrc/getdep.pl
 
 
-varop.mak:varop.mak.tmpl ${TOPDIR}/perlsrc/shortname.pl
-	$(call call_exec,${MAKE} --no-print-directory -C . check_shortname_pl,"CHECKPL","varop.mak")
-	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode -i $< -p '%PERL_SHORTNAME_STR%' -o $@ makestring ${TOPDIR}/perlsrc/shortname.pl,"MAK","$(@F)")
+varop.mak:varop.mak.tmpl ${TOPDIR}/perlsrc/shortname.pl ${TOPDIR}/perlsrc/defval.pl
+	$(call call_exec,${MAKE} --no-print-directory -C . check_shortname_pl check_defval_pl,"CHECKPL","varop.mak")
+	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode -i $< -p '%PERL_SHORTNAME_STR%'  makestring ${TOPDIR}/perlsrc/shortname.pl | \
+		${PYTHON} ${TOPDIR}/insertcode -p '%PERL_DEFVAL_STR%' -o $@ makestring ${TOPDIR}/perlsrc/defval.pl,"MAK","$(@F)")
 
 
 check_shortname_pl:${TOPDIR}/perlsrc/shortname.pl
+
+check_defval_pl:${TOPDIR}/perlsrc/defval.pl
 
 check_exename_pl:${TOPDIR}/perlsrc/exename.pl
 

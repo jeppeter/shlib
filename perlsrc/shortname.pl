@@ -30,12 +30,14 @@ sub Usage($$)
 	exit($ec);
 }
 
+my ($logo)="shortname";
+
 my ($verbose)=0;
 
 sub Debug($)
 {
 	my ($fmt)=@_;
-	my ($fmtstr)="";
+	my ($fmtstr)="$logo ";
 	if ($verbose > 0) {
 		if ($verbose >= 3) {
 			my ($p,$f,$l) = caller;
@@ -78,7 +80,7 @@ if (scalar(@ARGV) > 0) {
 		} else {
 			$cp = abs_path($cp);
 		}
-		Debug("cp [$cp]");
+		Debug("[$cp]");
 		if (length($topdir) > 0) {
 			$cp =~ s/$topdir//;
 			while (length($cp) > 0 ) {

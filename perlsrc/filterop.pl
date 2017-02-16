@@ -37,13 +37,14 @@ sub Usage($$)
 	exit($ec);
 }
 
+my $logo = "filterop";
 
 my ($verbose)=0;
 
 sub Debug($)
 {
 	my ($fmt)=@_;
-	my ($fmtstr)="";
+	my ($fmtstr)="$logo ";
 	if ($verbose > 0) {
 		if ($verbose >= 3) {
 			my ($p,$f,$l) = caller;

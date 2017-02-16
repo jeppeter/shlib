@@ -26,13 +26,15 @@ sub Usage($$)
 	exit($ec);
 }
 
+my ($logo)="defval";
 
 my ($verbose)=0;
+
 
 sub Debug($)
 {
 	my ($fmt)=@_;
-	my ($fmtstr)="";
+	my ($fmtstr)="$logo ";
 	if ($verbose > 0) {
 		if ($verbose >= 3) {
 			my ($p,$f,$l) = caller;
@@ -65,7 +67,7 @@ if (defined($opts{"verbose"})) {
 
 foreach(@ARGV) {
 	my ($c) = $_;
-	Debug("defval[$idx]=[$c]");
+	Debug("[$idx]=[$c]");
 	if (length($c) > 0) {
 		print "$c";
 		$cnt ++;

@@ -27,13 +27,13 @@ sub Usage($$)
 	exit($ec);
 }
 
-
+my $logo = "readlink";
 my ($verbose)=0;
 
 sub Debug($)
 {
 	my ($fmt)=@_;
-	my ($fmtstr)="";
+	my ($fmtstr)="$logo ";
 	if ($verbose > 0) {
 		if ($verbose >= 3) {
 			my ($p,$f,$l) = caller;
@@ -64,6 +64,6 @@ if (defined($opts{"verbose"})) {
 
 foreach(@ARGV) {
 	my ($c) = $_;
-	Debug("in readlink[$c]");
+	Debug("[$c]");
 	print abs_path($c)."\n";
 }

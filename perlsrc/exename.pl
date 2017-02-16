@@ -27,12 +27,14 @@ sub Usage($$)
 	exit($ec);
 }
 
+my $logo = "exename";
+
 my ($verbose)=0;
 
 sub Debug($)
 {
 	my ($fmt)=@_;
-	my ($fmtstr)="";
+	my ($fmtstr)="$logo ";
 	if ($verbose > 0) {
 		if ($verbose >= 3) {
 			my ($p,$f,$l) = caller;
@@ -64,7 +66,7 @@ if (defined($opts{"verbose"})) {
 if (scalar(@ARGV) > 0) {
 	foreach (@ARGV) {
 		my ($cp) = basename($_);
-		Debug("cp [$cp]");
+		Debug("[$cp]");
 		if ($cp =~ m/\.exe$/o) {
 			$cp =~ s/\.exe$//;
 		}

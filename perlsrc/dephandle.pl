@@ -5,14 +5,15 @@ use Getopt::Long;
 my ($replace) = "";
 my (@sarr);
 
+my $logo = "dephandle";
 my ($verbose)=0;
 
 sub Debug($)
 {
 	my ($fmt)=@_;
-	my ($fmtstr)="";
-	if ($verbose > 0 ) {
-		if ($verbose >= 3 ) {
+	my ($fmtstr)="$logo ";
+	if ($verbose > 0) {
+		if ($verbose >= 3) {
 			my ($p,$f,$l) = caller;
 			$fmtstr = "[$f:$l] ";
 		}
@@ -20,7 +21,6 @@ sub Debug($)
 		print STDERR "$fmtstr\n";
 	}
 }
-
 
 sub Usage($$)
 {
@@ -57,7 +57,6 @@ Getopt::Long::GetOptions(\%opts,"help|h",
 		${opts{"verbose"}} ++;
 	});
 
-Debug("call parse after ");
 if (defined($opts{"verbose"})) {
 	$verbose = $opts{"verbose"};
 }
