@@ -71,6 +71,6 @@ foreach(@ARGV) {
 	} else {
 		$c = abs_path($c);
 	}
-	Debug("in [$c]");
+	Debug("in basename[$c]");
 	print basename($c)."\n";
 }

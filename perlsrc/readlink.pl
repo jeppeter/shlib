@@ -64,6 +64,6 @@ if (defined($opts{"verbose"})) {
 
 foreach(@ARGV) {
 	my ($c) = $_;
-	Debug("in [$c]");
+	Debug("in readlink[$c]");
 	print abs_path($c)."\n";
 }

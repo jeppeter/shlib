@@ -95,7 +95,7 @@ foreach(@ARGV) {
 	}
 
 	$c =~ s/\.[cS](pp)?$/.o/;
-	Debug("in [$c]");
+	Debug("in toobj[$c]");
 	if ($cnt > 0){
 		print " ";
 	}

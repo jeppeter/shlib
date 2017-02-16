@@ -117,7 +117,10 @@ class debug_testmak_case(unittest.TestCase):
 		if not stdoutcatch :
 			stdoutpipe = open(os.devnull,'w')
 		if not stderrcatch:
-			stderrpipe = None
+			if 'TEST_RESERVED' in os.environ.keys():
+				stderrpipe = None
+			else:
+				stderrpipe = open(os.devnull,'w')
 		logging.debug('run (%s)'%(cmds))
 		logging.debug('PATH [%s]'%(os.environ['PATH']))
 		retcode = cmdpack.run_command_callback(cmds,read_callback,self,stdoutpipe,stderrpipe)
@@ -125,6 +128,8 @@ class debug_testmak_case(unittest.TestCase):
 		logging.debug('output (%s)'%(self.__output))
 		if stdoutpipe != subprocess.PIPE and stdoutpipe is not None:
 			stdoutpipe.close()
+		if stderrpipe != subprocess.PIPE and stderrpipe is not None:
+			stderrpipe.close()
 		stdoutpipe = None
 		stderrpipe = None
 		return self.__output
@@ -824,7 +829,7 @@ class debug_testmak_case(unittest.TestCase):
 		if len(sfiles) > 0:
 			i = 0
 			while i < len(sfiles):
-				curs = self.__format_exec_output('CC','%s'%(self.__get_to_o(sfiles[i])))
+				curs = self.__format_exec_output('AS','%s'%(self.__get_to_o(sfiles[i])))
 				logging.debug('curidx[%d][%d] [%s]'%(curidx,i,curs))
 				self.assertEqual(0,self.__check_str_value(outsarr[curidx:],curs))
 				i += 1
@@ -856,7 +861,7 @@ class debug_testmak_case(unittest.TestCase):
 				sortedlinks = sorted(affectls)
 			i = 0
 			while i < len(sortedlinks):
-				curs = self.__format_exec_output('CC','%s'%(self.__get_to_o(sortedlinks[i])))
+				curs = self.__format_exec_output('AS','%s'%(self.__get_to_o(sortedlinks[i])))
 				logging.debug('curidx[%d][%d] [%s]'%(curidx,i,curs))
 				self.assertEqual(0,self.__check_str_value(outsarr[curidx:],curs))
 				curidx += 1
@@ -1057,7 +1062,13 @@ class debug_testmak_case(unittest.TestCase):
 			outsarr = self.__run_make(makefile,'all')
 			# nothing to do any more
 			self.assertEqual(1,len(outsarr))
-			self.assertEqual(0,self.__check_str_value(outsarr,'make: Nothing to be done for `%s\'.'%('all')))
+			matchexpr = re.compile('make(\[\d+\])?: Nothing to be done for `%s\'.'%('all'))
+			ok = False
+			if matchexpr.match(outsarr[0]):
+				ok = True
+			else:
+				logging.error('outsarr (%s)'%(self.__get_array(outsarr)))
+			self.assertEqual(ok,True)
 			# now we should test for part change
 			touchincs,touchcs,touchss = self.select_touch_files(sortedhfiles,sortedcfiles,sortedsfiles,linkcfiles,linksfiles)
 			logging.debug('touchincs (%s)'%(self.__get_array(touchincs)))

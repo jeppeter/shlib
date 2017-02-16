@@ -1,16 +1,16 @@
 
 include ../../makelib.mak
 
-main_SRCS = c.c a.c b.c 
-main_SRCS += main.cpp
-main_SRCS += ia.S ib.S
-main_SRCS += ic.link.S ibb.link.S
-main_SRCS += j.link.cpp f.link.c
-ic_link_S_SRC = ic.S
-ibb_link_S_SRC = ibb.S
-j_link_cpp_SRC = j.cpp
-f_link_c_SRC = f.c
-main_CFLAGS = -Wall -DCFILE=1
+main_SRCS = c.c a.c b.c  main.c
+#main_SRCS += main.cpp
+#main_SRCS += ia.S ib.S
+#main_SRCS += ic.link.S ibb.link.S
+#main_SRCS += j.link.cpp f.link.c
+#ic_link_S_SRC = ic.S
+#ibb_link_S_SRC = ibb.S
+#j_link_cpp_SRC = j.cpp
+#f_link_c_SRC = f.c
+main_CFLAGS = -Wall -DCFILE=1 
 main_CPPFLAGS = -Wall -DCPPFILE=1
 main_LDFLAGS = -Wall -DLDFLILE=1
 main_COMPILER = gcc
@@ -19,7 +19,7 @@ f_link_cpp_SRC = g.cpp
 
 
 define ld_run_direct
-$(call call_exec,$(call get_default_value,$(5),${GCC}) $(3) -o $(2) $(1) $(4),"LD","$(call get_basename,$(1))")
+$(call call_exec,$(call get_default_value,$(5),${GPP}) $(3) -o $(2) $(1) $(4),"LD","$(call get_basename,$(1))")
 endef
 
 define build_exe_only
@@ -94,38 +94,16 @@ endef
 
 #####################################
 ##  input $(1)  src files
-##        $(2)  flags
-##        $(3)  compiler
-#####################################
-define foreach_build_objs_c
-$(foreach cursrc,$(1),$(eval $(call build_objs_c,$(call get_toobj,$(cursrc),${PWD},$($(2)_BINDIR)),$(cursrc),$(call get_shortname,$(cursrc)),$(call ),$(2),$(3))))
-endef
-
-#####################################
-##  input $(1)  src files
-##        $(2)  short name
+##        $(2)  shortname
 ##        $(3)  flags
 ##        $(4)  compiler
 #####################################
-define foreach_build_objs_cpp
-$(foreach cursrc,$(1),$(eval $(call build_objs_cpp,$(call get_toobj,$(cursrc),${PWD},$($(2)_BINDIR)),$(cursrc),$(3),$(4))))
+define foreach_build_objs_c
+$(foreach cursrc,$(1),$(eval $(call build_objs_c,$(call get_toobj,$(cursrc),${PWD},$($(2)_BINDIR)),$(cursrc),$(call get_shortname,$(cursrc),$($(2)_BASEDIR)),$(call ),$(3),$(4))))
 endef
 
 
 
-
-# all:
-# 	$(call call_exec,${ECHO},"GET","$(call get_toobj,hello.c hello.cpp hello.S main.link.cpp)")
-# 	$(call call_exec,${ECHO},"CFILE","$(call get_cfile,hello.c hello.cpp hello.S main.link.cpp)")
-# 	$(call call_exec,${ECHO},"CPPFILE","$(call get_cppfile,hello.c hello.cpp hello.S main.link.cpp)")
-# 	$(call call_exec,${ECHO},"LCPPFILE","$(call get_lcppfile,hello.c hello.cpp hello.S main.link.cpp)")
-# 	$(call call_exec,${ECHO},"LCFILE","$(call get_lcfile,hello.c hello.cpp hello.S main.link.cpp)")
-# 	$(call call_exec,${ECHO},"SFILE","$(call get_sfile,hello.c hello.cpp hello.S main.link.cpp)")
-# 	$(call call_exec,${ECHO},"LSFILE","$(call get_lsfile,hello.c hello.cpp hello.S main.link.cpp)")
-$(info "main OBJS [$(call get_toobj,$(main_SRCS))]")
-#$(call build_exe_only,main,$(call get_toobj,$(main_SRCS)),$(main_LDFLAGS),$(main_COMPILER))
-$(eval $(call build_exe_only,main,$(call get_toobj,$(main_SRCS)),$(main_LDFLAGS),$(main_COMPILER)))
-$(call foreach_build_objs_c,$(call get_cfile,$(main_SRCS)),$(main_CFLAGS),$(main_COMPILER))
-$(call foreach_build_objs_cpp,$(call get_cppfile,$(main_SRCS)),$(main_CPPFLAGS),$(main_COMPILER))
-#$(foreach cursrc,$(call get_cfile,$(main_SRCS)),$(info "$(cursrc)"))
+$(eval $(call build_exe_only,main,$(call get_toobj,$(main_SRCS)),$(main_LDFLAGS),$(main_LIBFLAGS),$(main_LD)))
+$(foreach_build_objs_c,$(call get_cfile,$(main_SRCS)),main,$(main_CFLAGS),$(main_GCC))
 
