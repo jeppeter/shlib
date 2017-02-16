@@ -436,15 +436,18 @@ $(eval $(call build_objs_link_cpp,$(call get_toobj,$(cursrc),\
 ${PWD},$($(2)_BINDIR)),$(cursrc),$(call get_shortname,$(cursrc),$($(2)_BASEDIR)),$(call get_depname,$(cursrc),${PWD},$($(2)_BINDIR)),$(3),$(4))))
 endef
 
-MAKEDEPS += Makefile
+define __make_target_sources
+$(call foreach_build_objs_c,$(call get_cfile,$($(1)_SRCS)),$(1),$($(1)_CPPFLAGS),$($(1)_GCC))
+$(call foreach_build_objs_cpp,$(call get_cppfile,$($(1)_SRCS)),$(1),$($(1)_CPPFLAGS),$($(1)_GPP))
+$(call foreach_build_objs_S,$(call get_sfile,$($(1)_SRCS)),$(1),$($(1)_ASFLAGS),$($(1)_GAS))
+$(call foreach_build_objs_link_c,$(call get_lcfile,$($(1)_SRCS)),$(1),$($(1)_CFLAGS),$($(1)_GCC))
+$(call foreach_build_objs_link_S,$(call get_lsfile,$($(1)_SRCS)),$(1),$($(1)_CFLAGS),$($(1)_GAS))
+$(call foreach_build_objs_link_cpp,$(call get_lcppfile,$($(1)_SRCS)),$(1),$($(1)_CFLAGS),$($(1)_GPP))
+endef
+
 define __make_exe_whole
 $(call build_exe_only,$(1),$(call get_toobj,$($(2)_SRCS)),$($(2)_LDFLAGS),$($(2)_LIBFLAGS),$($(2)_LD))
-$(call foreach_build_objs_c,$(call get_cfile,$($(2)_SRCS)),$(2),$($(2)_CPPFLAGS),$($(2)_GCC))
-$(call foreach_build_objs_cpp,$(call get_cppfile,$($(2)_SRCS)),$(2),$($(2)_CPPFLAGS),$($(2)_GPP))
-$(call foreach_build_objs_S,$(call get_sfile,$($(2)_SRCS)),$(2),$($(2)_ASFLAGS),$($(2)_GAS))
-$(call foreach_build_objs_link_c,$(call get_lcfile,$($(2)_SRCS)),$(2),$($(2)_CFLAGS),$($(2)_GCC))
-$(call foreach_build_objs_link_S,$(call get_lsfile,$($(2)_SRCS)),$(2),$($(2)_CFLAGS),$($(2)_GAS))
-$(call foreach_build_objs_link_cpp,$(call get_lcppfile,$($(2)_SRCS)),$(2),$($(2)_CFLAGS),$($(2)_GPP))
+$(call __make_target_sources,$(2))
 endef
 ifeq (${MAKELIB_NEED_DEPS},1)
 
