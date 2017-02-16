@@ -25,7 +25,9 @@ include ${TOPDIR}/basedef.mak
 
 all:test
 
-test:makelib.mak
+test:testmak.py
+
+testmak.py:makelib.mak
 	$(call call_exec,${PYTHON} ${CURDIR}/testmak.py -f --minnum ${MINNUM} --maxnum ${MAXNUM} >/dev/null,"TEST","makelib")
 
 makelib.mak:basedef.mak fileop.mak varop.mak exec.mak  depop.mak makelib.mak.tmpl
