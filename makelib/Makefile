@@ -9,13 +9,13 @@ Q=
 endif
 
 ifeq (${M},)
-MINNUM=3
+MINNUM=20
 else
 MINNUM=${M}
 endif
 
 ifeq (${X},)
-MAXNUM=8
+MAXNUM=50
 else
 MAXNUM=${X}
 endif
@@ -27,7 +27,7 @@ all:test
 
 test:testmak.py
 
-testmak.py:makelib.mak
+testmak.py:makelib.mak Makefile
 	$(call call_exec,${PYTHON} ${CURDIR}/testmak.py -f --minnum ${MINNUM} --maxnum ${MAXNUM} >/dev/null,"TEST","makelib")
 
 makelib.mak:basedef.mak fileop.mak varop.mak exec.mak  depop.mak makelib.mak.tmpl
