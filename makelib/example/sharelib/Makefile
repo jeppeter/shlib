@@ -27,10 +27,8 @@ de_link_cpp_SRC = di.cpp
 df_link_c_SRC = dj.c
 dh_link_S_SRC = dk.S
 
-CURDIR:= $(call readlink_f,.)
 
 
-COMMA=,
 libdyn_so_CFLAGS = -Wall -fpic -DCFILE=1 ${INCLUDES}  -I${CURDIR}/cinc
 libdyn_so_CPPFLAGS = -Wall -fpic -DCPPFILE=1 ${INCLUDES} -I${CURDIR}/cppinc
 libdyn_so_ASFLAGS = -Wall -fpic -DASFILE=1 ${INCLUDES} -I${CURDIR}/sinc

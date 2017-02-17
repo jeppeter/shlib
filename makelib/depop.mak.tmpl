@@ -213,6 +213,8 @@ define ld_run_direct
 $(call call_exec,$(call get_value_default,$(5),${GPP}) $(3) -o $(1) $(2) $(4),"LD","$(call get_basename,$(1))")
 endef
 
+
+
 define build_bintarget_only
 $(call debug_make,"target[$(1)] objs[$(2)] shortname[$(3)] ldflags[$(4)] libflags[$(5)] compiler[$(6)]")
 $(1) : $(2) $$($(3)_DEPS)
@@ -468,6 +470,58 @@ endef
 
 define simple_makefile_so_whole
 $(eval $(call __simple_makefile_so_whole,$(1)))
+endef
+
+
+define ar_run_direct
+$(call debug_make,"ar_run_direct target[$(1)] objs[$(2)] arflags[$(3)] libflags[$(4)] arbin[$(5)]")
+$(call call_exec,$(call get_value_default,$(5),${AR}) $(call get_value_default,$(3),rcs) $(1) $(2) $(4),"AR","$(call get_basename,$(1))")
+endef
+
+define build_staticlib_only
+$(call debug_make,"target[$(1)] objs[$(2)] shortname[$(3)] arflags[$(4)] libflags[$(5)] compiler[$(6)]")
+$(1) : $(2) $$($(3)_DEPS)
+	$$(call ar_run_direct,$(1),$(2),$(4),$(5),$(6))
+endef
+
+ifeq (${MAKELIB_NEED_DEPS},1)
+define __make_staticlib_whole
+$(call build_staticlib_only,$(1),$(call get_toobj,$($(2)_SRCS)),$(2),$($(2)_ARFLAGS),$($(2)_LIBFLAGS),$($(2)_AR))
+$(call __make_target_sources,$(2))
+endef
+else
+define __make_staticlib_whole
+endef
+endif
+
+
+define make_staticlib_whole
+$(call debug_make,"make_staticlib_whole[$(1)]")
+$(eval $(call __make_staticlib_whole,$(1),$(call get_shortname,$(1))))
+endef
+
+
+define clean_staticlib_whole
+$(call debug_make,"clean_staticlib_whole[$(1)]")
+$(eval $(call __clean_bintarget_whole,$(1),$(call get_shortname,$(1))))
+endef
+
+define makefile_staticlib_whole
+$(eval $(call make_staticlib_whole,$(1)))
+$(eval $(call clean_staticlib_whole,$(1)))
+endef
+
+define foreach_makefile_staticlib_whole
+$(foreach curexe,$(1),$(eval $(call makefile_staticlib_whole,$(curexe))))
+endef
+
+define __simple_makefile_staticlib_whole
+$(call foreach_makefile_staticlib_whole,$(1))
+endef
+
+
+define simple_makefile_staticlib_whole
+$(eval $(call __simple_makefile_staticlib_whole,$(1)))
 endef
 
 

@@ -18,6 +18,7 @@ PRINTF:=$(shell which printf)
 LN:=$(shell which ln)
 TRUE:=$(shell which true)
 TOUCH:=$(shell which touch)
+AR:=$(shell which ar)
 
 ## __BASE_DEF_MAKE__ ##
 endif 
