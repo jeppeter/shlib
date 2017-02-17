@@ -20,8 +20,11 @@ else
 MAXNUM=${X}
 endif
 
+TEMPLATE_MAKS = basedef.mak  fileop.mak varop.mak depop.mak makelib.mak
 
 include ${TOPDIR}/basedef.mak
+
+
 
 remake:
 	$(call call_exec,${MAKE} --no-print-directory -C ${CURDIR} -f $(firstword ${MAKEFILE_LIST}) clean,"REMAKE","CLEAN")
@@ -41,6 +44,9 @@ makelib.mak: makelib.mak.tmpl basedef.mak varop.mak exec.mak fileop.mak depop.ma
 		  ${PYTHON} ${TOPDIR}/insertcode -p '%EXEC_MAK%' bashinsert ${CURDIR}/exec.mak | \
 		  ${PYTHON} ${TOPDIR}/insertcode -p '%FILEOP_MAK%' bashinsert ${CURDIR}/fileop.mak | \
 		  ${PYTHON} ${TOPDIR}/insertcode -p '%DEPOP_MAK%' -o $@ bashinsert ${CURDIR}/depop.mak,"MAK","$(@F)")
+
+basedef.mak:basedef.mak.tmpl ${CURDIR}/VERSION
+	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode -i $< -p '%MAKELIB_VERSION%' -o $@ bashinsert ${CURDIR}/VERSION,"MAK","$(@F)") 
 
 fileop.mak:fileop.mak.tmpl ${TOPDIR}/perlsrc/readlink.pl ${TOPDIR}/perlsrc/exename.pl  \
 	${TOPDIR}/perlsrc/toobj.pl ${TOPDIR}/perlsrc/filterop.pl ${TOPDIR}/perlsrc/basename.pl ${TOPDIR}/perlsrc/getdep.pl \
@@ -98,5 +104,4 @@ depop.mak:depop.mak.tmpl ${TOPDIR}/perlsrc/dephandle.pl
 clean:
 	$(call call_exec,${MAKE} --no-print-directory -C ${TOPDIR}/perlsrc clean >/dev/null,"CLEAN","PL")
 	$(call call_exec,${RM} -f *.tmp,"RM","*.tmp")
-	$(call call_exec,${RM} -f fileop.mak varop.mak depop.mak,"RM","fileop.mak varop.mak depop.mak")
-	$(call call_exec,${RM} -f makelib.mak,"RM","makelib.mak")
+	$(call call_exec,${RM} -f ${TEMPLATE_MAKS},"RM","${TEMPLATE_MAKS}")
