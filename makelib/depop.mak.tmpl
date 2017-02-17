@@ -442,13 +442,34 @@ endef
 endif
 
 define clean_so_whole
+$(call debug_make,"clean_so_whole[$(1)]")
 $(eval $(call __clean_bintarget_whole,$(1),$(call get_soname,$(1))))
 endef
 
 
 define make_so_whole
+$(call debug_make,"make_so_whole[$(1)]")
 $(eval $(call __make_so_whole,$(1),$(call get_soname,$(1))))
 endef
+
+define makefile_so_whole
+$(eval $(call make_so_whole,$(1)))
+$(eval $(call clean_so_whole,$(1)))
+endef
+
+define foreach_makefile_so_whole
+$(foreach curexe,$(1),$(eval $(call makefile_so_whole,$(curexe))))
+endef
+
+define __simple_makefile_so_whole
+$(call foreach_makefile_so_whole,$(1))
+endef
+
+
+define simple_makefile_so_whole
+$(eval $(call __simple_makefile_so_whole,$(1)))
+endef
+
 
 ## __DEPENDS_OP_MAK__ ##
 endif
