@@ -42,13 +42,16 @@ makelib.mak: makelib.mak.tmpl basedef.mak varop.mak exec.mak fileop.mak depop.ma
 		  ${PYTHON} ${TOPDIR}/insertcode -p '%FILEOP_MAK%' bashinsert ${CURDIR}/fileop.mak | \
 		  ${PYTHON} ${TOPDIR}/insertcode -p '%DEPOP_MAK%' -o $@ bashinsert ${CURDIR}/depop.mak,"MAK","$(@F)")
 
-fileop.mak:fileop.mak.tmpl ${TOPDIR}/perlsrc/readlink.pl ${TOPDIR}/perlsrc/exename.pl  ${TOPDIR}/perlsrc/toobj.pl ${TOPDIR}/perlsrc/filterop.pl ${TOPDIR}/perlsrc/basename.pl ${TOPDIR}/perlsrc/getdep.pl
-	$(call call_exec,${MAKE} --no-print-directory -C . check_readlink_pl check_shortname_pl check_exename_pl check_toobj_pl  check_filterop_pl check_basename_pl check_getdep_pl,"CHECKPL","fileop.mak")
+fileop.mak:fileop.mak.tmpl ${TOPDIR}/perlsrc/readlink.pl ${TOPDIR}/perlsrc/exename.pl  \
+	${TOPDIR}/perlsrc/toobj.pl ${TOPDIR}/perlsrc/filterop.pl ${TOPDIR}/perlsrc/basename.pl ${TOPDIR}/perlsrc/getdep.pl \
+	${TOPDIR}/perlsrc/getsoname.pl
+	$(call call_exec,${MAKE} --no-print-directory -C . check_readlink_pl check_shortname_pl check_exename_pl check_toobj_pl  check_filterop_pl check_basename_pl check_getdep_pl check_getsoname_pl,"CHECKPL","fileop.mak")
 	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode  -i $< -p '%PERL_READLINK_STR%' makestring ${TOPDIR}/perlsrc/readlink.pl | \
 			${PYTHON} ${TOPDIR}/insertcode -p '%PERL_EXENAME_STR%' makestring ${TOPDIR}/perlsrc/exename.pl | \
 			${PYTHON} ${TOPDIR}/insertcode -p '%PERL_TOOBJ_STR%' makestring ${TOPDIR}/perlsrc/toobj.pl | \
 			${PYTHON} ${TOPDIR}/insertcode -p '%PERL_FILTEROP_STR%' makestring ${TOPDIR}/perlsrc/filterop.pl | \
 			${PYTHON} ${TOPDIR}/insertcode -p '%PERL_GETDEP_STR%' makestring ${TOPDIR}/perlsrc/getdep.pl | \
+			${PYTHON} ${TOPDIR}/insertcode -p '%PERL_GETSONAME_STR%' makestring ${TOPDIR}/perlsrc/getsoname.pl | \
 			${PYTHON} ${TOPDIR}/insertcode -p '%PERL_BASENAME_STR%' -o $@ makestring ${TOPDIR}/perlsrc/basename.pl,"MAK","$(@F)")
 
 check_readlink_pl:${TOPDIR}/perlsrc/readlink.pl
@@ -75,6 +78,8 @@ check_filterop_pl:${TOPDIR}/perlsrc/filterop.pl
 check_dephandle_pl:${TOPDIR}/perlsrc/dephandle.pl
 
 check_basename_pl:${TOPDIR}/perlsrc/basename.pl
+
+check_getsoname_pl:${TOPDIR}/perlsrc/getsoname.pl
 
 check_%_pl:${TOPDIR}/perlsrc/%.pl
 	$(call call_exec,(${PYTHON} ${TOPDIR}/insertcode -i ${TOPDIR}/echocode.tmpl -p '%REPLACE_PATTERN%' \

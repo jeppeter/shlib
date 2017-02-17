@@ -33,3 +33,19 @@ sub GetFullPath($)
 	my ($c) =@_;
 	return File::Spec->rel2abs($c);
 }
+
+sub TrimRoot($)
+{
+	my ($c) = @_;
+	my $curch;
+	while (length($c) > 0 ) {
+		$curch = substr($c,0,1);
+		if ($curch eq "/" ||
+			$curch eq "\\") {
+			$c =~ s/.//;
+		} else {
+			last;
+		}
+	}
+	return $c;
+}

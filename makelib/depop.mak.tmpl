@@ -213,7 +213,7 @@ define ld_run_direct
 $(call call_exec,$(call get_value_default,$(5),${GPP}) $(3) -o $(1) $(2) $(4),"LD","$(call get_basename,$(1))")
 endef
 
-define build_exe_only
+define build_bintarget_only
 $(call debug_make,"target[$(1)] objs[$(2)] shortname[$(3)] ldflags[$(4)] libflags[$(5)] compiler[$(6)]")
 $(1) : $(2) $$($(3)_DEPS)
 	$(call ld_run_direct,$(1),$(2),$(4),$(5),$(6))
@@ -381,7 +381,7 @@ $(call get_value_default_4,$($(1)_CPPFLAGS),$($(1)_CFLAGS),${CPPFLAGS},${CFLAGS}
 endef
 
 define __make_exe_whole
-$(call build_exe_only,$(1),$(call get_toobj,$($(2)_SRCS)),$(2),$($(2)_LDFLAGS),$($(2)_LIBFLAGS),$($(2)_LD))
+$(call build_bintarget_only,$(1),$(call get_toobj,$($(2)_SRCS)),$(2),$($(2)_LDFLAGS),$($(2)_LIBFLAGS),$($(2)_LD))
 $(call __make_target_sources,$(2))
 endef
 ifeq (${MAKELIB_NEED_DEPS},1)
@@ -397,8 +397,8 @@ endef
 
 endif
 
-define __clean_exe_whole
-$(call debug_make,"__clean_exe_whole [$(2)] DEPS[$($(2)_DEPS_CLEAN)]")
+define __clean_bintarget_whole
+$(call debug_make,"__clean_bintarget_whole [$(2)] DEPS[$($(2)_DEPS_CLEAN)]")
 clean_$(2): $$($(2)_DEPS_CLEAN)
 	$(call call_exec,${RM} -f $(call get_lcppfile,$($(2)_SRCS)),"RM","$(2)_lcppfiles")
 	$(call call_exec,${RM} -f $(call get_lsfile,$($(2)_SRCS)),"RM","$(2)_lsfiles")
@@ -409,7 +409,7 @@ clean_$(2): $$($(2)_DEPS_CLEAN)
 endef
 
 define clean_exe_whole
-$(eval $(call __clean_exe_whole,$(1),$(call get_exename,$(1))))
+$(eval $(call __clean_bintarget_whole,$(1),$(call get_exename,$(1))))
 endef
 
 define makefile_exe_whole
@@ -431,6 +431,24 @@ $(eval $(call __simple_makefile_exe_whole,$(1)))
 endef
 
 
+ifeq (${MAKELIB_NEED_DEPS},1)
+define __make_so_whole
+$(call build_bintarget_only,$(1),$(call get_toobj,$($(2)_SRCS)),$(2),$($(2)_LDFLAGS),$($(2)_LIBFLAGS),$($(2)_LD))
+$(call __make_target_sources,$(2))
+endef
+else
+define __make_so_whole
+endef
+endif
+
+define clean_so_whole
+$(eval $(call __clean_bintarget_whole,$(1),$(call get_soname,$(1))))
+endef
+
+
+define make_so_whole
+$(eval $(call __make_so_whole,$(1),$(call get_soname,$(1))))
+endef
 
 ## __DEPENDS_OP_MAK__ ##
 endif

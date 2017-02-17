@@ -1,0 +1,112 @@
+#! /usr/bin/env perl
+
+use strict;
+use Cwd "abs_path";
+use File::Basename;
+use Getopt::Long;
+use File::Spec;
+
+sub Usage($$)
+{
+	my ($ec,$fmt)=@_;
+	my ($fp)=\*STDERR;
+
+	if ($ec == 0) {
+		$fp =\*STDOUT;
+	}
+
+	if (length($fmt) > 0) {
+		print $fp "$fmt\n";
+	}
+
+	print $fp "$0 [OPTIONS]  [origname]...\n";
+	print $fp "[OPTIONS]\n";
+	print $fp "\t-h|--help               to give this help information\n";
+	print $fp "\t-v|--verbose            to make verbose mode\n";
+	print $fp "\t-f|--fromdir dir        to specified base directory\n";
+	print $fp "\n";
+	print $fp "\t[dirs]                  if will give basename of it\n";
+
+	exit($ec);
+}
+
+my $logo="getsoname";
+
+%COMMON_PL_CODE%
+
+sub TrimLastDotNumber($)
+{
+	my ($c) = @_;
+	while (length($c) > 0) {
+		if ( $c =~ m/\.[\d]+$/o) {
+			Debug("$c");
+			$c =~ s/\.[\d]+$//;
+			Debug("$c");
+		} else {
+			last;
+		}
+	}
+	Debug("$c");
+	return $c;
+}
+
+my %opts;
+my ($fromdir)="";
+Getopt::Long::Configure("no_ignorecase","bundling");
+Getopt::Long::GetOptions(\%opts,"help|h",
+	"verbose|v" => sub {
+		if (!defined($opts{"verbose"})) {
+			$opts{"verbose"} = 0;
+		}
+		${opts{"verbose"}} ++;
+	},
+	"fromdir|f=s");
+
+if (defined($opts{"help"})) {
+	Usage(0,"");
+}
+
+if (defined($opts{"verbose"})) {
+	$verbose = $opts{"verbose"};
+}
+
+Debug(" ");
+
+if (defined($opts{"fromdir"})) {
+	$fromdir=$opts{"fromdir"};
+}
+
+my ($cnt)=0;
+my ($idx)=0;
+
+foreach(@ARGV) {
+	my ($c) = $_;
+	Debug("[$idx]=$c");
+	if (length($fromdir) > 0) {
+		$c = GetFullPath($c);
+		Debug("[$c]fromdir[$fromdir]");
+		$c =~ s/^$fromdir//;
+		Debug("[$c]");
+		$c = TrimRoot($c);
+		Debug("[$c]");
+	} else {
+		$c = basename($c);
+	}
+
+	$c = TrimLastDotNumber($c);
+	$c =~ s/\./_/g;
+	$c =~ s/\\/_/g;
+	$c =~ s/\//_/g;
+
+	Debug("[$c]");
+	if (length($c) > 0) {
+		if ($cnt > 0) {
+			print " ";
+		}
+		print "$c";
+		$cnt ++;
+	}
+	$idx ++;
+}
+
+FinalOutput($cnt);
