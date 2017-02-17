@@ -209,7 +209,7 @@ class debug_testmak_case(unittest.TestCase):
 			makelibdir = os.environ['MAKELIB_DIR']
 		return makelibdir
 
-	def test_basedef_case(self):
+	def test_001_basedef_case(self):
 		testf=None
 		try:
 			makelibdir = self.__get_makelib_dir()
@@ -279,7 +279,7 @@ class debug_testmak_case(unittest.TestCase):
 		return shortname
 
 
-	def test_varop_case(self):
+	def test_002_varop_case(self):
 		testf = None
 		try:
 			makelibdir = self.__get_makelib_dir()
@@ -332,7 +332,7 @@ class debug_testmak_case(unittest.TestCase):
 		s += self.__format_make_command('$(call call_exec,${TRUE},"ECHO","%s")'%(longname),False)
 		return s
 
-	def test_exec_case(self):
+	def test_003_exec_case(self):
 		testf = None
 		longname = None
 		try:
@@ -371,7 +371,7 @@ class debug_testmak_case(unittest.TestCase):
 		s += self.__format_make_command('$(call call_exec,${TRUE},"BASE","${BASENAME}")',False)
 		return s
 
-	def test_fileop_case(self):
+	def test_004_fileop_case(self):
 		testf = None
 		longname = None
 		try:
@@ -1045,7 +1045,7 @@ class debug_testmak_case(unittest.TestCase):
 
 
 
-	def test_depop_case(self):
+	def test_005_depop_case(self):
 		random.seed(time.time())
 		basedir = None
 		longname = None
@@ -1172,6 +1172,17 @@ class debug_testmak_case(unittest.TestCase):
 				curidx = self.__check_ld_main(outsarr,curidx,mainexe)
 		finally:
 			self.__remove_file_safe(basedir)
+		return
+
+	def test_006_makelib_case(self):
+		makelibdir = self.__get_makelib_dir()
+		exampledir = os.path.join(makelibdir,'example')
+		for root,dirs,files in os.walk(exampledir):
+			for d in dirs:
+				makefile = os.path.join(root,d,'Makefile')
+				if os.path.exists(makefile):
+					self.__run_make(makefile,'clean')
+					self.__run_make(makefile,'all')
 		return
 				
 
