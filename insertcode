@@ -215,6 +215,35 @@ def makepython_handler(args,parser):
 	sys.exit(0)
 	return
 
+def __get_make_perl(args,infile):
+	s = ''
+	fin = sys.stdin
+	if infile is not None:
+		fin = open(infile,'rb')
+
+	for l in fin:
+		for c in l:
+			if c == '$':
+				s += c
+			s += c
+	if fin != sys.stdin:
+		fin.close()
+	fin = None
+	return s
+
+def get_make_perl(args):
+	s = ''
+	for infile in args.subnargs:
+		s += __get_make_perl(args,infile)
+	return s
+
+def makeperl_handler(args,parser):
+	set_log_level(args)
+	repls = get_make_perl(args)
+	replace_string(args,repls)
+	sys.exit(0)
+	return
+
 def main():
 	commandline='''
 	{
@@ -235,6 +264,9 @@ def main():
 			"$" : "*"
 		},
 		"makepython<makepython_handler>" : {
+			"$" : "*"
+		},
+		"makeperl<makeperl_handler>" : {
 			"$" : "*"
 		}
 	}
