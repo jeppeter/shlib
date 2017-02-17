@@ -1,0 +1,210 @@
+#! /usr/bin/env perl
+
+use strict;
+use Cwd "abs_path";
+use File::Basename;
+use Getopt::Long;
+use File::Spec;
+
+sub Usage($$)
+{
+	my ($ec,$fmt)=@_;
+	my ($fp)=\*STDERR;
+
+	if ($ec == 0) {
+		$fp =\*STDOUT;
+	}
+
+	if (length($fmt) > 0) {
+		print $fp "$fmt\n";
+	}
+
+	print $fp "$0 [OPTIONS] [subcommand] [file]...\n";
+	print $fp "[OPTIONS]\n";
+	print $fp "\t-h|--help               to give this help information\n";
+	print $fp "\t-v|--verbose            to make verbose mode\n";
+	print $fp "\n";
+	print $fp "\t[file]                  file to filter out\n";
+	print $fp "[subcommand]\n";
+	print $fp "\tcfile                   to filter .c file\n";
+	print $fp "\tcppfile                 to filter .cpp|.cxx file\n";
+	print $fp "\tsfile                   to filter .S  file\n";
+	print $fp "\tlcfile                  to filter .link.c file\n";
+	print $fp "\tlcppfile                to filter .link.cpp|.link.cxx file\n";
+	print $fp "\tlsfile                  to filter .link.S file\n";
+	print $fp "\n";
+
+	exit($ec);
+}
+
+my $logo = "filterop";
+
+%COMMON_PL_CODE%
+
+sub cfile_sub(@)
+{
+	my (@files) = @_;
+	my ($cnt)=0;
+	foreach (@files) {
+		my ($cp) = $_;
+		if ($cp =~ m/\.c$/o && 
+			!($cp =~ m/\.link\.c$/)) {
+			if ($cnt > 0) {
+				print " ";
+			}
+			print "$cp";
+			$cnt ++;
+		}
+	}
+	FinalOutput($cnt);
+	return;
+}
+
+sub sfile_sub(@)
+{
+	my (@files) = @_;
+	my ($cnt)=0;
+	foreach (@files) {
+		my ($cp) = $_;
+		if ($cp =~ m/\.S$/o &&
+			!($cp =~ m/\.link\.S$/o)) {
+			if ($cnt > 0) {
+				print " ";
+			}
+			print "$cp";
+			$cnt ++;
+		}
+	}
+	FinalOutput($cnt);
+	return;
+}
+
+sub cppfile_sub(@)
+{
+	my (@files) = @_;
+	my ($cnt)=0;
+	foreach (@files) {
+		my ($cp) = $_;
+		if (($cp =~ m/\.cpp$/o && !($cp =~ m/\.link\.cpp$/o)) || 
+			($cp =~ m/\.cxx/o && ! ($cp =~ m/\.link\.cxx$/o))) {
+			if ($cnt > 0) {
+				print " ";
+			}
+			print "$cp";
+			$cnt ++;
+		}
+	}
+	FinalOutput($cnt);
+	return;
+}
+
+sub lcfile_sub(@)
+{
+	my (@files) = @_;
+	my ($cnt)=0;
+	foreach (@files) {
+		my ($cp) = $_;
+		if ( ($cp =~ m/\.link\.c$/)) {
+			if ($cnt > 0) {
+				print " ";
+			}
+			print "$cp";
+			$cnt ++;
+		}
+	}
+	FinalOutput($cnt);
+	return;
+}
+
+sub lsfile_sub(@)
+{
+	my (@files) = @_;
+	my ($cnt)=0;
+	foreach (@files) {
+		my ($cp) = $_;
+		if ($cp =~ m/\.link\.S$/o) {
+			if ($cnt > 0) {
+				print " ";
+			}
+			print "$cp";
+			$cnt ++;
+		}
+	}
+	FinalOutput($cnt);
+	return;
+}
+
+sub lcppfile_sub(@)
+{
+	my (@files) = @_;
+	my ($cnt)=0;
+	foreach (@files) {
+		my ($cp) = $_;
+		if (($cp =~ m/\.link\.cpp$/o) || 
+			($cp =~ m/\.link\.cxx$/o)) {
+			if ($cnt > 0) {
+				print " ";
+			}
+			print "$cp";
+			$cnt ++;
+		}
+	}
+	FinalOutput($cnt);
+	return;
+}
+
+
+my %opts;
+my ($fromdir,$todir);
+$fromdir="";
+$todir="";
+Getopt::Long::Configure("no_ignorecase","bundling");
+Getopt::Long::GetOptions(\%opts,"help|h",
+	"verbose|v" => sub {
+		if (!defined($opts{"verbose"})) {
+			$opts{"verbose"} = 0;
+		}
+		${opts{"verbose"}} ++;
+	},
+	"todir|t=s",
+	"fromdir|f=s");
+
+if (defined($opts{"help"})) {
+	Usage(0,"");
+}
+
+if (defined($opts{"verbose"})) {
+	$verbose = $opts{"verbose"};
+}
+
+if (defined($opts{"fromdir"})) {
+	$fromdir=$opts{"fromdir"};
+}
+
+if (defined($opts{"todir"})) {
+	$todir = $opts{"todir"};
+}
+
+my ($cnt)=0;
+my $subcommand;
+if (scalar(@ARGV) == 0) {
+	Usage(3,"need subcommand");
+}
+
+$subcommand = shift @ARGV;
+
+if ($subcommand eq "cfile") {
+	cfile_sub(@ARGV);
+} elsif ($subcommand eq "cppfile") {
+	cppfile_sub(@ARGV);
+} elsif ($subcommand eq "sfile") {
+	sfile_sub(@ARGV);
+} elsif ($subcommand eq "lcfile") {
+	lcfile_sub(@ARGV);
+} elsif ($subcommand eq "lcppfile") {
+	lcppfile_sub(@ARGV);
+} elsif ($subcommand eq "lsfile") {
+	lsfile_sub(@ARGV);
+} else {
+	Usage(3,"subcommand[$subcommand] not ")
+}

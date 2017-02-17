@@ -6,21 +6,8 @@ my ($replace) = "";
 my (@sarr);
 
 my $logo = "dephandle";
-my ($verbose)=0;
 
-sub Debug($)
-{
-	my ($fmt)=@_;
-	my ($fmtstr)="$logo ";
-	if ($verbose > 0) {
-		if ($verbose >= 3) {
-			my ($p,$f,$l) = caller;
-			$fmtstr .= "[$f:$l] ";
-		}
-		$fmtstr .= $fmt;
-		print STDERR "$fmtstr\n";
-	}
-}
+%COMMON_PL_CODE%
 
 sub Usage($$)
 {
@@ -56,6 +43,10 @@ Getopt::Long::GetOptions(\%opts,"help|h",
 		}
 		${opts{"verbose"}} ++;
 	});
+
+if (defined($opts{"help"})) {
+	Usage(0,"");
+}
 
 if (defined($opts{"verbose"})) {
 	$verbose = $opts{"verbose"};

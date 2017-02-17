@@ -214,8 +214,9 @@ $(call call_exec,$(call get_value_default,$(5),${GPP}) $(3) -o $(1) $(2) $(4),"L
 endef
 
 define build_exe_only
-$(1) : $(2)
-	$(call ld_run_direct,$(1),$(2),$(3),$(4),$(5))
+$(call debug_make,"target[$(1)] objs[$(2)] shortname[$(3)] ldflags[$(4)] libflags[$(5)] compiler[$(6)]")
+$(1) : $(2) $$($(3)_DEPS)
+	$(call ld_run_direct,$(1),$(2),$(4),$(5),$(6))
 endef
 
 #$(info "cobj[$(1)] csrc[$(2)] shortname[$(3)]  deps[$(4)] cflags[$(5)] compiler[$(6)]")
@@ -380,7 +381,7 @@ $(call get_value_default_4,$($(1)_CPPFLAGS),$($(1)_CFLAGS),${CPPFLAGS},${CFLAGS}
 endef
 
 define __make_exe_whole
-$(call build_exe_only,$(1),$(call get_toobj,$($(2)_SRCS)),$($(2)_LDFLAGS),$($(2)_LIBFLAGS),$($(2)_LD))
+$(call build_exe_only,$(1),$(call get_toobj,$($(2)_SRCS)),$(2),$($(2)_LDFLAGS),$($(2)_LIBFLAGS),$($(2)_LD))
 $(call __make_target_sources,$(2))
 endef
 ifeq (${MAKELIB_NEED_DEPS},1)
@@ -397,7 +398,8 @@ endef
 endif
 
 define __clean_exe_whole
-clean_$(2):
+$(call debug_make,"__clean_exe_whole [$(2)] DEPS[$($(2)_DEPS_CLEAN)]")
+clean_$(2): $$($(2)_DEPS_CLEAN)
 	$(call call_exec,${RM} -f $(call get_lcppfile,$($(2)_SRCS)),"RM","$(2)_lcppfiles")
 	$(call call_exec,${RM} -f $(call get_lsfile,$($(2)_SRCS)),"RM","$(2)_lsfiles")
 	$(call call_exec,${RM} -f $(call get_lcfile,$($(2)_SRCS)),"RM","$(2)_lcfiles")

@@ -30,8 +30,8 @@ test:testmak.py
 testmak.py:makelib.mak Makefile
 	$(call call_exec,${PYTHON} ${CURDIR}/testmak.py -f --minnum ${MINNUM} --maxnum ${MAXNUM} >/dev/null,"TEST","makelib")
 
-makelib.mak:basedef.mak fileop.mak varop.mak exec.mak  depop.mak makelib.mak.tmpl
-	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode -i makelib.mak.tmpl -p '%BASEDEF_MAK%' bashinsert ${CURDIR}/basedef.mak |\
+makelib.mak: makelib.mak.tmpl basedef.mak varop.mak exec.mak fileop.mak depop.mak 
+	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode -i $< -p '%BASEDEF_MAK%' bashinsert ${CURDIR}/basedef.mak |\
 		  ${PYTHON} ${TOPDIR}/insertcode -p '%VAROP_MAK%' bashinsert ${CURDIR}/varop.mak | \
 		  ${PYTHON} ${TOPDIR}/insertcode -p '%EXEC_MAK%' bashinsert ${CURDIR}/exec.mak | \
 		  ${PYTHON} ${TOPDIR}/insertcode -p '%FILEOP_MAK%' bashinsert ${CURDIR}/fileop.mak | \
@@ -89,4 +89,5 @@ depop.mak:depop.mak.tmpl ${TOPDIR}/perlsrc/dephandle.pl
 clean:
 	$(call call_exec,${MAKE} --no-print-directory -C ${TOPDIR}/perlsrc clean >/dev/null,"CLEAN","PL")
 	$(call call_exec,${RM} -f *.tmp,"RM","*.tmp")
-	$(call call_exec,${RM} -f fileop.mak varop.mak dependsop.mak,"RM","fileop.mak varop.mak dependsop.mak")
+	$(call call_exec,${RM} -f fileop.mak varop.mak depop.mak,"RM","fileop.mak varop.mak depop.mak")
+	$(call call_exec,${RM} -f makelib.mak,"RM","makelib.mak")

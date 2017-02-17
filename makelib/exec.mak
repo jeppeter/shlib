@@ -20,6 +20,18 @@ define call_exec
 ${Q}$(call call_exec_directly,$(1),$(2),$(3))
 endef
 
+ifeq (${Q},)
+
+define debug_make
+$(info $(1))
+endef
+
+else
+
+define debug_make
+endef
+
+endif
 
 ## __EXEC_MAK__ ##
 endif

@@ -5,23 +5,11 @@ use Getopt::Long;
 
 my ($prog)=$0;
 my ($version)="0.0.1";
-my ($verbose)=0;
 
-my $(logo)= "mountcheck";
+my $logo= "mountcheck";
 
-sub Debug($)
-{
-	my ($fmt)=@_;
-	my ($fmtstr)="$logo ";
-	if ($verbose > 0) {
-		if ($verbose >= 3) {
-			my ($p,$f,$l) = caller;
-			$fmtstr .= "[$f:$l] ";
-		}
-		$fmtstr .= $fmt;
-		print STDERR "$fmtstr\n";
-	}
-}
+%COMMON_PL_CODE%
+
 
 sub Usage
 {

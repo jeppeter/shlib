@@ -1,9 +1,13 @@
 
+ifndef __BASEDEF_MAK__
+__BASEDEF_MAK__ := 1
+
 PRINTF:=$(shell which printf)
 OSNAME:=$(shell uname -s | tr [:upper:] [:lower:])
 ECHO:=$(shell which echo)
 MAKE:=$(shell which make)
 PYTHON:=$(shell which python)
+PERL:=$(shell which perl)
 RM:=$(shell which rm)
 BASH:=$(shell which bash)
 DIFF:=$(shell which diff)
@@ -31,3 +35,6 @@ endif
 define call_exec
 ${Q}$(call call_exec_directly,$(1),$(2),$(3))
 endef
+
+## __BASEDEF_MAK__
+endif 
