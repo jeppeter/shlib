@@ -425,23 +425,6 @@ define __simple_makefile_exe_whole
 $(call foreach_makefile_exe_whole,$(1))
 endef
 
-define __call_all_exe
-all: $(1)
-
-endef
-
-define call_all_exe
-$(eval $(call __call_all_exe,$(1)))
-endef
-
-define __call_clean_exe
-clean:$(patsubst %,clean_%,$(1))
-
-endef
-
-define call_clean_exe
-$(eval $(call __call_clean_exe,$(1)))
-endef
 
 define simple_makefile_exe_whole
 $(eval $(call __simple_makefile_exe_whole,$(1)))

@@ -23,6 +23,11 @@ endif
 
 include ${TOPDIR}/basedef.mak
 
+remake:
+	$(call call_exec,${MAKE} --no-print-directory -C ${CURDIR} -f $(firstword ${MAKEFILE_LIST}) clean,"REMAKE","CLEAN")
+	$(call call_exec,${MAKE} --no-print-directory -C ${CURDIR} -f $(firstword ${MAKEFILE_LIST}) all,"REMAKE","ALL")
+
+
 all:test
 
 test:testmak.py
@@ -83,7 +88,6 @@ ${TOPDIR}/perlsrc/%.pl:
 depop.mak:depop.mak.tmpl ${TOPDIR}/perlsrc/dephandle.pl
 	$(call call_exec,${MAKE} --no-print-directory -C . check_dephandle_pl,"CHECKPL","depop.mak")
 	$(call call_exec,${PYTHON}  ${TOPDIR}/insertcode -i $<  -p '%PERL_DEP_HANDLE%' -o $@ makestring  ${TOPDIR}/perlsrc/dephandle.pl,"MAK","$(@F)")
-
 
 
 clean:
