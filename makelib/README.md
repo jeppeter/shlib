@@ -126,6 +126,63 @@ clean:clean_post_setjjk clean_main
     LD        main
 ```
 > it will link file  for the kernel and compile it
+> 
+```shell
+.
+├── a.c
+├── a.c.d
+├── a.o
+├── b.c
+├── b.c.d
+├── b.o
+├── c.c
+├── c.c.d
+├── c.o
+├── f.c
+├── f.link.c -> f.c
+├── f.link.c.d
+├── f.link.o
+├── gas.sh
+├── gcc.sh
+├── gpp.sh
+├── ia.o
+├── ia.S
+├── ia.S.d
+├── ibb.link.o
+├── ibb.link.S -> ibb.S
+├── ibb.link.S.d
+├── ibb.S
+├── ib.o
+├── ib.S
+├── ib.S.d
+├── ic.link.o
+├── ic.link.S -> ic.S
+├── ic.link.S.d
+├── ic.S
+├── inc
+│   ├── a.h
+│   ├── b.h
+│   ├── c.h
+│   ├── f.h
+│   ├── j.h
+│   └── k.h
+├── j.cpp
+├── jjk.c
+├── jjk.c.d
+├── jjk.o
+├── j.link.cpp -> j.cpp
+├── j.link.cpp.d
+├── j.link.o
+├── k.cpp
+├── k.cpp.d
+├── k.o
+├── main
+├── main.c
+├── main.c.d
+├── main.o
+├── Makefile
+└── setjjk
+```
 
 ### HOWTO Compile
 > just goto makelib directory and make all the result file is makelib.lib
