@@ -223,9 +223,38 @@ def __get_make_perl(args,infile):
 
 	for l in fin:
 		for c in l:
-			if c == '$':
+			if c == '#':
+				s += '\\'
+				s += '#'
+			elif c == '\n':
+				s += '\\'
+				s += 'n'
+			elif c == '$':
+				s += '\\'
+				s += '\\'
+				s += '\\'
+				s += '$'
+				s += '$'
+			elif c == '"':
+				s += '\\'
+				s += '\\'
+				s += '\\'
+				s += '"'
+			elif c == '\\':
+				s += '\\'
+				s += '\\'
+				s += '\\'
+				s += '\\'
+			elif c == '`':
+				s += '\\'
+				s += '\\'
+				s += '\\'
+				s += '`'
+			elif c == '\r':
+				s += '\\'
+				s += 'r'
+			else:
 				s += c
-			s += c
 	if fin != sys.stdin:
 		fin.close()
 	fin = None
