@@ -181,21 +181,40 @@ def __get_make_python(args,infile):
 		fin = open(infile,'rb')
 
 	for l in fin:
-		l = l.replace('\r','%carriage%')
-		l = l.replace('\n','%return%')
-		l = l.replace('$','%dollar%')
-		l = l.replace('\\','%backslash%')
-		l = l.replace('\'','%singlequote%')
-		l = l.replace('"','%doublequote%')
-		l = l.replace('\t','%tab%')
-		l = l.replace('%tab%','\\t')
-		l = l.replace('%carriage%','\\r')
-		l = l.replace('%return%','\\n')
-		l = l.replace('%dollar%','$$')
-		l = l.replace('%backslash%','\\\\\\\\')
-		l = l.replace('%singlequote%','\\x27')
-		l = l.replace('%doublequote%','\\\\\\"')
-		s += l
+		for c in l:
+			# l = l.replace('\r','%carriage%')
+			# l = l.replace('\n','%return%')
+			# l = l.replace('$','%dollar%')
+			# l = l.replace('\\','%backslash%')
+			# l = l.replace('\'','%singlequote%')
+			# l = l.replace('"','%doublequote%')
+			# l = l.replace('\t','%tab%')
+			# l = l.replace('%tab%','\\t')
+			# l = l.replace('%carriage%','\\r')
+			# l = l.replace('%return%','\\n')
+			# l = l.replace('%dollar%','$$')
+			# l = l.replace('%backslash%','\\\\\\\\')
+			# l = l.replace('%singlequote%','\\x27')
+			# l = l.replace('%doublequote%','\\\\\\"')
+			if c == '\r':
+				s += '\\'
+				s += 'r'
+			elif c == '\n':
+				s += '\\'
+				s += 'n'
+			elif c == '\t':
+				s += '\\'
+				s += 't'
+			elif c == '\\':
+				s += '\\\\\\\\'
+			elif c == '\'':
+				s += '\\x27'
+			elif c == '"':
+				s += '\\\\\\"'
+			elif c == '$':
+				s += '$$'
+			else:
+				s += c
 	if fin != sys.stdin:
 		fin.close()
 	fin = None
@@ -253,6 +272,9 @@ def __get_make_perl(args,infile):
 			elif c == '\r':
 				s += '\\'
 				s += 'r'
+			elif c == '\t':
+				s += '\\'
+				s += 't'
 			else:
 				s += c
 	if fin != sys.stdin:
