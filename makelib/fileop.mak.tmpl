@@ -4,51 +4,51 @@ __FILE_OP_MAK__:=1
 
 
 define readlink_f
-$(shell ${PERL} -e '%PERL_READLINK_STR%' --  ${MAKELIB_VERBOSE} $(1) )
+$(shell ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_READLINK_STR%\";eval \$$cmd;" --  ${MAKELIB_VERBOSE} $(1) )
 endef
 
 define get_basename
-$(shell ${PERL} -e '%PERL_BASENAME_STR%' -- ${MAKELIB_VERBOSE} $(1) )
+$(shell ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_BASENAME_STR%\";eval \$$cmd;" -- ${MAKELIB_VERBOSE} $(1) )
 endef
 
 define get_exename
-$(shell ${PERL} -e '%PERL_EXENAME_STR%' -- ${MAKELIB_VERBOSE} $(1) )
+$(shell ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_EXENAME_STR%\";eval \$$cmd;" -- ${MAKELIB_VERBOSE} $(1) )
 endef
 
 define get_toobj
-$(shell ${PERL} -e '%PERL_TOOBJ_STR%' --  ${MAKELIB_VERBOSE} --fromdir "$(2)" --todir "$(3)" $(1))
+$(shell ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_TOOBJ_STR%\";eval \$$cmd;" --  ${MAKELIB_VERBOSE} --fromdir "$(2)" --todir "$(3)" $(1))
 endef
 
 define get_cfile
-$(shell ${PERL} -e '%PERL_FILTEROP_STR%' -- ${MAKELIB_VERBOSE} cfile $(1))
+$(shell ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_FILTEROP_STR%\";eval \$$cmd;" -- ${MAKELIB_VERBOSE} cfile $(1))
 endef
 
 define get_cppfile
-$(shell ${PERL} -e '%PERL_FILTEROP_STR%' -- ${MAKELIB_VERBOSE} cppfile $(1))
+$(shell ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_FILTEROP_STR%\";eval \$$cmd;" -- ${MAKELIB_VERBOSE} cppfile $(1))
 endef
 
 define get_sfile
-$(shell ${PERL} -e '%PERL_FILTEROP_STR%' -- ${MAKELIB_VERBOSE} sfile $(1))
+$(shell ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_FILTEROP_STR%\";eval \$$cmd;" -- ${MAKELIB_VERBOSE} sfile $(1))
 endef
 
 define get_lcfile
-$(shell ${PERL} -e '%PERL_FILTEROP_STR%' -- ${MAKELIB_VERBOSE} lcfile $(1))
+$(shell ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_FILTEROP_STR%\";eval \$$cmd;" -- ${MAKELIB_VERBOSE} lcfile $(1))
 endef
 
 define get_lcppfile
-$(shell ${PERL} -e '%PERL_FILTEROP_STR%' -- ${MAKELIB_VERBOSE} lcppfile $(1))
+$(shell ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_FILTEROP_STR%\";eval \$$cmd;" -- ${MAKELIB_VERBOSE} lcppfile $(1))
 endef
 
 define get_lsfile
-$(shell ${PERL} -e '%PERL_FILTEROP_STR%' -- ${MAKELIB_VERBOSE} lsfile $(1))
+$(shell ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_FILTEROP_STR%\";eval \$$cmd;" -- ${MAKELIB_VERBOSE} lsfile $(1))
 endef
 
 define get_depname
-$(shell ${PERL} -e '%PERL_GETDEP_STR%' -- ${MAKELIB_VERBOSE} --fromdir "$(2)" --todir "$(3)"  $(1))
+$(shell ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_GETDEP_STR%\";eval \$$cmd;" -- ${MAKELIB_VERBOSE} --fromdir "$(2)" --todir "$(3)"  $(1))
 endef
 
 define get_soname
-$(shell ${PERL} -e '%PERL_GETSONAME_STR%' -- ${MAKELIB_VERBOSE} --fromdir "$(2)" -- $(1))
+$(shell ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_GETSONAME_STR%\";eval \$$cmd;" -- ${MAKELIB_VERBOSE} --fromdir "$(2)" -- $(1))
 endef
 
 

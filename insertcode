@@ -275,6 +275,9 @@ def __get_make_perl(args,infile):
 			elif c == '\t':
 				s += '\\'
 				s += 't'
+			elif c == '@':
+				s += '\\'
+				s += '@'
 			else:
 				s += c
 	if fin != sys.stdin:

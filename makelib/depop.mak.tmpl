@@ -13,7 +13,7 @@ __DEPENDS_OP_MAK__:=1
 ##      5        for compiler default gcc
 #########################################
 define build_c_depends
-$(call call_exec_directly,$(call get_value_default,$(5),${GCC}) $(call get_value_default,$(4),${CFLAGS}) $($(3)_CFLAGS) -MM $(1) | ${PERL} -e '%PERL_DEP_HANDLE%' -- $(3)_DEPS > $(2),"DEPS","$(call get_basename,$(2))")
+$(call call_exec_directly,$(call get_value_default,$(5),${GCC}) $(call get_value_default,$(4),${CFLAGS}) $($(3)_CFLAGS) -MM $(1) | ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_DEP_HANDLE%\";eval \$$cmd;" -- $(3)_DEPS > $(2),"DEPS","$(call get_basename,$(2))")
 endef
 
 #########################################
@@ -42,7 +42,7 @@ endef
 ##      5        for compiler default g++
 #########################################
 define build_cpp_depends
-$(call call_exec_directly,$(call get_value_default,$(5),${GPP}) $(call get_value_default,$(4),${CPPFLAGS}) $($(3)_CPPFLAGS) -MM $(1) | ${PERL} -e '%PERL_DEP_HANDLE%' -- $(3)_DEPS > $(2),"DEPS","$(call get_basename,$(2))")
+$(call call_exec_directly,$(call get_value_default,$(5),${GPP}) $(call get_value_default,$(4),${CPPFLAGS}) $($(3)_CPPFLAGS) -MM $(1) | ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_DEP_HANDLE%\";eval \$$cmd;" -- $(3)_DEPS > $(2),"DEPS","$(call get_basename,$(2))")
 endef
 
 
@@ -74,7 +74,7 @@ endef
 ##      5        compiler default gcc
 #########################################
 define build_S_depends
-$(call call_exec_directly,$(call get_value_default,$(5),${GAS}) $(call get_value_default,$(4),${ASFLAGS}) $($(3)_ASFLAGS) -MM $(1) | ${PERL} -e '%PERL_DEP_HANDLE%' --  $(3)_DEPS > $(2),"DEPS","$(call get_basename,$(2))")
+$(call call_exec_directly,$(call get_value_default,$(5),${GAS}) $(call get_value_default,$(4),${ASFLAGS}) $($(3)_ASFLAGS) -MM $(1) | ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_DEP_HANDLE%\";eval \$$cmd;" --  $(3)_DEPS > $(2),"DEPS","$(call get_basename,$(2))")
 endef
 
 

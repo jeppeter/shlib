@@ -14,16 +14,16 @@ $(if $(1),$(1),$(2))
 endef
 
 define get_value_default_3
-$(shell ${PERL} -e '%PERL_DEFVAL_STR%' -- ${MAKELIB_VERBOSE} -- "$(1)" "$(2)" "$(3)")
+$(shell ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_DEFVAL_STR%\";eval \$$cmd;" -- ${MAKELIB_VERBOSE} -- "$(1)" "$(2)" "$(3)")
 endef
 
 define get_value_default_4
-$(shell ${PERL} -e '%PERL_DEFVAL_STR%' -- ${MAKELIB_VERBOSE} -- "$(1)" "$(2)" "$(3)" "$(4)")
+$(shell ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_DEFVAL_STR%\";eval \$$cmd;" -- ${MAKELIB_VERBOSE} -- "$(1)" "$(2)" "$(3)" "$(4)")
 endef
 
 
 define get_shortname
-$(shell ${PERL} -e '%PERL_SHORTNAME_STR%' -- -t "$(call get_value_default,$(2),)" $(1))
+$(shell ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_SHORTNAME_STR%\";eval \$$cmd;" -- -t "$(call get_value_default,$(2),)" $(1))
 endef
 
 MAKELIB_CLEAN_GOALS:=$(filter clean%,$(MAKECMDGOALS))
