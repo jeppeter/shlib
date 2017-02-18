@@ -197,22 +197,25 @@ def __get_make_python(args,infile):
 			# l = l.replace('%singlequote%','\\x27')
 			# l = l.replace('%doublequote%','\\\\\\"')
 			if c == '\r':
-				s += '\\'
+				s += '\\\\'
 				s += 'r'
 			elif c == '\n':
-				s += '\\'
+				s += '\\\\'
 				s += 'n'
 			elif c == '\t':
-				s += '\\'
+				s += '\\\\'
 				s += 't'
 			elif c == '\\':
 				s += '\\\\\\\\'
 			elif c == '\'':
-				s += '\\x27'
+				s += '\\\\\''
 			elif c == '"':
-				s += '\\\\\\"'
+				s += '\\"'
 			elif c == '$':
-				s += '$$'
+				s += '\\$$'
+			elif c == '`':
+				s += '\\'
+				s += '`'
 			else:
 				s += c
 	if fin != sys.stdin:
