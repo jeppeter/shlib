@@ -152,19 +152,48 @@ _insertcode_get_cmdname_needargs_shortopt()
 	return
 }
 
+_insertcode_get_subcommands()
+{
+	local _cmdname="$1"
+	if [ -z "$_cmdname" ]
+		then
+		echo "bashinsert"
+		echo "bashstring"
+		echo "makepython"
+		echo "makeperl"
+	elif [ -z "$_cmdname" = "bashinsert" ]
+		then
+		/bin/true
+	elif [ "$_cmdname" = "bashstring" ]
+		then
+		/bin/true
+	elif [ "$_cmdname" = "makepython" ]
+		then
+		/bin/true
+	elif [ "$_cmdname" = "makeperl" ]
+		then
+		/bin/true
+	fi
+	return
+}
+
 _parse_insertcode_cmdname()
 {
 	local _i=1
 	local _j
 	local _cmdname=""
+	local _curcmd=""
 	local _curopt=""
 	local _longoptmatch=""
 	local _optmatch=""
 	local _optlen
 	local _curo
+	local _geto
+	local _matched
 
 	while [ $_i -lt $COMP_CWORD ]
 	do
+		_matched=0
 		_curopt=${COMP_WORDS[$_i]}
 		_i=`expr $_i \+ 1`
 		if [ -z "$_curopt" ]
@@ -176,25 +205,51 @@ _parse_insertcode_cmdname()
 		_optmatch=`echo `
 		if [ -n "$_longoptmatch" ]
 			then
-			if [ $_longoptmatch = "--verbose" ] 
-				then
-			elif [ $_longoptmatch = "--input" ] || \
-				[ $_longoptmatch = "--output" ] || [ $_longoptmatch = "--pattern" ]
-				then
-				if [ $_i -lt $COMP_WORDS ]
+			for _curo in $(_insertcode_get_cmdname_needargs_longopt "$_cmdname")
+			do
+				if [ "$_longoptmatch" = "$_curo" ]
 					then
-					_i=`expr $_i \+ 1`
+					if [ $_i -lt $COMP_CWORD ]
+						then
+						_i=`expr _i \+ 1`
+					fi
+					_matched=1
+					break
 				fi
-			else
+			done
+			if [ $_matched -eq 0 ]
+				then
+				for _curo in $(_insertcode_get_cmdname_noargs_longopt "$_cmdname")
+				do
+					if [ "$_longoptmatch" = "$_curo" ]
+						then
+						_matched=1
+						break
+					fi
+				done
 			fi
+			if [ $_matched -eq 0 ]
+				then
+				# because we do not match any opt ,so just break
+				break
+			fi
+
 		elif [ -n "$_optmatch" ]
 			then
 			_optlen=`echo "$_optmatch" | wc -c | tr -d [:space:]`
 			_j=1
 			while [ $_j -lt $_optlen ]
 			do
-				_curo=`echo "$_curopt" | dd bs=1 count=1 skip=$_j 2>/dev/null`
-				if [  ]
+				_matched=0
+				_geto=`echo "$_curopt" | dd bs=1 count=1 skip=$_j 2>/dev/null`
+				for _curo in $(_insertcode_get_cmdname_needargs_shortopt "$_cmdname")
+				do
+					if [ "$_geto" = "$_curo" ]
+						then
+						if [ $_i  ]
+					fi
+				done
+				
 			done
 		fi
 
