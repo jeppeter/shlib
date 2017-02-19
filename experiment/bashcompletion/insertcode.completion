@@ -41,10 +41,115 @@ _insertcode_debug()
 	fi
 }
 
-_insertcode_get_cmdname_longopt()
+_insertcode_get_cmdname_needargs_longopt()
 {
-	
-	insertcode_longopt=()
+	local _cmdname="$1"
+	if [ -z "$_cmdname" ]
+		then
+		echo "--input"
+		echo "--output"
+		echo "--pattern"
+	elif [ "$_cmdname" = "bashinsert" ]
+		then
+		echo "--input"
+		echo "--output"
+		echo "--pattern"
+	elif [ "$_cmdname"  = "bashstring" ]
+		then
+		echo "--input"
+		echo "--output"
+		echo "--pattern"
+	elif [ "$_cmdname" = "makepython" ]
+		then
+		echo "--input"
+		echo "--output"
+		echo "--pattern"
+	elif [ "$_cmdname" = "makeperl" ]
+		then
+		echo "--input"
+		echo "--output"
+		echo "--pattern"
+	fi
+
+	return
+}
+
+_insertcode_get_cmdname_noargs_longopt()
+{
+	local _cmdname="$1"
+	if [ -z "$_cmdname" ]
+		then
+		echo "--verbose"
+	elif [ "$_cmdname" = "bashinsert" ]
+		then
+		echo "--verbose"
+	elif [ "$_cmdname"  = "bashstring" ]
+		then
+		echo "--verbose"
+	elif [ "$_cmdname" = "makepython" ]
+		then
+		echo "--verbose"
+	elif [ "$_cmdname" = "makeperl" ]
+		then
+		echo "--verbose"
+	fi
+
+	return
+}
+
+_insertcode_get_cmdname_noargs_shortopt()
+{
+	local _cmdname="$1"
+	if [ -z "$_cmdname" ]
+		then
+		echo "v"
+	elif [ "$_cmdname" = "bashinsert" ]
+		then
+		echo "v"
+	elif [ "$_cmdname" = "bashstring" ]
+		then
+		echo "v"
+	elif [ "$_cmdname" = "makepython" ]
+		then
+		echo "v"
+	elif [ "$_cmdname" = "makeperl" ]
+		then
+		echo "v"
+	fi
+	return
+}
+
+
+_insertcode_get_cmdname_needargs_shortopt()
+{
+	local _cmdname="$1"
+	if [ -z "$_cmdname" ]
+		then
+		echo "i"
+		echo "o"
+		echo "p"
+	elif [ "$_cmdname" = "bashinsert" ]
+		then
+		echo "i"
+		echo "o"
+		echo "p"
+	elif [ "$_cmdname" = "bashstring" ]
+		then
+		echo "i"
+		echo "o"
+		echo "p"
+	elif [ "$_cmdname" = "makepython" ]
+		then
+		echo "i"
+		echo "o"
+		echo "p"
+	elif [ "$_cmdname" = "makeperl" ]
+		then
+		echo "i"
+		echo "o"
+		echo "p"
+	fi
+	return
 }
 
 _parse_insertcode_cmdname()
