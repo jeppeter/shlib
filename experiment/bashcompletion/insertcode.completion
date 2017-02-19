@@ -21,13 +21,15 @@ _insertcode_debug()
         _fmtstr=""
         if [ $INSERTCODE_DEBUG -gt $INSERTCODE_INFO_LEVEL ]
                 then
-                if [ "$_osname" = "darwin" ]
+                local _funcstack=`expr $_backstack \+ 1`
+                if [ "${BASH_VERSINFO[0]}" -lt 4 ]
                         then
-                        local _filestack=`expr $_backstack \+ 1`
-                        _fmtstr="[$_osname]${BASH_SOURCE[$_filestack]}:${BASH_LINENO[$_backstack]} "
+                        local _filestack=$_backstack
+                        _fmtstr="[$_osname]${FUNCNAME[$_funcstack]}:${BASH_LINENO[$_backstack]} "
                 else
-                        _fmtstr="[$_osname]${BASH_SOURCE[$_backstack]}:${BASH_LINENO[$_backstack]} "
+                        _fmtstr="[$_osname]${FUNCNAME[$_funcstack]}:${BASH_LINENO[$_backstack]} "
                 fi
+                #echo "BASH_SOURCE [${BASH_SOURCE[@]}] BASH_LINENO [${BASH_LINENO[@]}] FUNCNAME [${FUNCNAME[@]}]" >&2
         fi 
         _fmtstr="$_fmtstr$_fmt"
         if [ "$_osname" = "darwin" ]
@@ -39,11 +41,76 @@ _insertcode_debug()
 	fi
 }
 
+_insertcode_get_cmdname_longopt()
+{
+	
+	insertcode_longopt=()
+}
+
+_parse_insertcode_cmdname()
+{
+	local _i=1
+	local _j
+	local _cmdname=""
+	local _curopt=""
+	local _longoptmatch=""
+	local _optmatch=""
+	local _optlen
+	local _curo
+
+	while [ $_i -lt $COMP_CWORD ]
+	do
+		_curopt=${COMP_WORDS[$_i]}
+		_i=`expr $_i \+ 1`
+		if [ -z "$_curopt" ]
+			then
+			continue
+		fi
+
+		_longoptmatch=`echo "$_curopt" | grep -Po -e "--(.*)"`
+		_optmatch=`echo `
+		if [ -n "$_longoptmatch" ]
+			then
+			if [ $_longoptmatch = "--verbose" ] 
+				then
+			elif [ $_longoptmatch = "--input" ] || \
+				[ $_longoptmatch = "--output" ] || [ $_longoptmatch = "--pattern" ]
+				then
+				if [ $_i -lt $COMP_WORDS ]
+					then
+					_i=`expr $_i \+ 1`
+				fi
+			else
+			fi
+		elif [ -n "$_optmatch" ]
+			then
+			_optlen=`echo "$_optmatch" | wc -c | tr -d [:space:]`
+			_j=1
+			while [ $_j -lt $_optlen ]
+			do
+				_curo=`echo "$_curopt" | dd bs=1 count=1 skip=$_j 2>/dev/null`
+				if [  ]
+			done
+		fi
+
+
+	done
+	echo "$_cmdname"
+	return
+}
+
 _insertcode()
 {
 	COMPREPLY=()
 	local _cur=${COMP_WORDS[COMP_CWORD]}
-	_insertcode_debug "_cur ${_cur}"
+	local _haslongopt=`echo "$_cur" | grep -Po -e '--.*'`
+	local _hasopt=`echo "$_cur" | grep -Po -e '-.*'`
+	_insertcode_debug "_cur [$_cur]"
+	if [ -n "$_haslongopt" ]
+		then
+	fi
+
+
 	return
 }
 
