@@ -1,0 +1,25 @@
+#! /usr/bin/env bash
+
+%DEFINESH_CODE%
+
+%DEBUGSH_CODE%
+
+caller1()
+{
+	Debug "caller 1"
+}
+
+caller2()
+{
+	caller1
+	Debug "caller 2"
+}
+
+caller3()
+{
+	caller2
+	Debug "caller 3"
+}
+
+verbose=4
+caller3

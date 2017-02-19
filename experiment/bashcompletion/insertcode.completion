@@ -1,0 +1,50 @@
+#! /bin/bash
+
+INSERTCODE_INFO_LEVEL=2
+INSERTCODE_DEBUG_LEVEL=3
+INSERTCODE_WARN_LEVEL=1
+INSERTCODE_ERROR_LEVEL=0
+
+_insertcode_debug()
+{
+	local _fmt="$1"
+	shift
+	local _backstack=0
+	local _osname=`uname -s | tr [:upper:] [:lower:]`
+	if [ $# -gt 0 ]
+		then
+		_backstack="$1"
+	fi
+	if [ -n "$INSERTCODE_DEBUG" ] && [ $INSERTCODE_DEBUG -gt 0 ]
+		then
+        
+        _fmtstr=""
+        if [ $INSERTCODE_DEBUG -gt $INSERTCODE_INFO_LEVEL ]
+                then
+                if [ "$_osname" = "darwin" ]
+                        then
+                        local _filestack=`expr $_backstack \+ 1`
+                        _fmtstr="[$_osname]${BASH_SOURCE[$_filestack]}:${BASH_LINENO[$_backstack]} "
+                else
+                        _fmtstr="[$_osname]${BASH_SOURCE[$_backstack]}:${BASH_LINENO[$_backstack]} "
+                fi
+        fi 
+        _fmtstr="$_fmtstr$_fmt"
+        if [ "$_osname" = "darwin" ]
+                then
+                echo "$_fmtstr" >&2
+        else
+                echo -e "$_fmtstr" >&2
+        fi
+	fi
+}
+
+_insertcode()
+{
+	COMPREPLY=()
+	local _cur=${COMP_WORDS[COMP_CWORD]}
+	_insertcode_debug "_cur ${_cur}"
+	return
+}
+
+complete -F _insertcode insertcode
