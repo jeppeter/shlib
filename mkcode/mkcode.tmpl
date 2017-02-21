@@ -6,6 +6,10 @@
 
 %DEPENDSH_CODE%
 
+read -r -d '' PYTHON_MD5_STR<<EOFMM
+%PYTHON_MD5_STR%
+EOFMM
+
 res=$(check_depend "extargsparse4sh")
 if [ $res -eq 0 ]
 	then
@@ -27,7 +31,7 @@ function make_header()
 {
 	local _f="$1"
 	local _basename=`${PERL} -e "$PERL_BASE_NAME" "$_f"`
-	local _postfix=`dd if=/dev/urandom bs=100 count=1 2>/dev/null | md5sum | awk '{print $1}' | tr [:lower:] [:upper:]`
+	local _postfix=`dd if=/dev/urandom bs=100 count=1 2>/dev/null | python -c "$PYTHON_MD5_STR" | awk '{print $1}' | tr [:lower:] [:upper:]`
 	local _h=`echo -n "${_basename}" | tr . _ | tr [:lower:] [:upper:] `
 	local _defcode="__${_h}_${_postfix}__"
 	Debug "_basename ${_basename} _h ${_h} _defcode ${_defcode} _postfix ${_postfix}"
