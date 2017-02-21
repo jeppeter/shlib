@@ -20,7 +20,7 @@ else
 MAXNUM=${X}
 endif
 
-TEMPLATE_MAKS = basedef.mak  fileop.mak varop.mak depop.mak makelib.mak
+TEMPLATE_MAKS = basedef.mak  fileop.mak varop.mak depop.mak makelib.mak exec.mak
 
 include ${TOPDIR}/basedef.mak
 
@@ -60,7 +60,9 @@ fileop.mak:fileop.mak.tmpl ${TOPDIR}/perlsrc/readlink.pl ${TOPDIR}/perlsrc/exena
 			${PYTHON} ${TOPDIR}/insertcode -p '%PERL_GETSONAME_STR%' makeperl ${TOPDIR}/perlsrc/getsoname.pl | \
 			${PYTHON} ${TOPDIR}/insertcode -p '%PERL_BASENAME_STR%' -o $@ makeperl ${TOPDIR}/perlsrc/basename.pl,"MAK","$(@F)")
 
-
+exec.mak:exec.mak.tmpl ${TOPDIR}/pysrc/osname.py
+	$(call call_exec,${MAKE} --no-print-directory -C ${CURDIR} check_py_osname_mak,"CHECKPY","exec.mak")
+	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode -i $< -p '%PYTHON_OSNAME_STR%' -o $@ makepython ${TOPDIR}/pysrc/osname.py,"MAK","$(@F)")
 
 varop.mak:varop.mak.tmpl ${TOPDIR}/perlsrc/shortname.pl ${TOPDIR}/perlsrc/defval.pl
 	$(call call_exec,${MAKE} --no-print-directory -C . check_pl_shortname_mak check_pl_defval_mak,"CHECKPL","varop.mak")
@@ -89,7 +91,14 @@ check_pl_defval_mak:${TOPDIR}/perlsrc/defval.pl
 check_pl_%_mak:${TOPDIR}/perlsrc/%.pl
 	$(call call_exec,(${PYTHON} ${TOPDIR}/insertcode -i  ${TOPDIR}/echocode_perl.mak.tmpl -p '%REPLACE_PATTERN%' \
 		makeperl $< | ${MAKE} -f /dev/stdin | ${DIFF} - $< ) || \
-		(${ECHO} "can not make $< right" >&2 ; exit 3),"CHECK","$(basename $<)")
+		(${ECHO} "can not make $< right" >&2 ; exit 3),"CHECK","$(<F)")
+
+check_py_osname_mak:${TOPDIR}/pysrc/osname.py
+
+check_py_%_mak:${TOPDIR}/pysrc/%.py
+	$(call call_exec,(${PYTHON} ${TOPDIR}/insertcode -i  ${TOPDIR}/echocode_python.mak.tmpl -p '%REPLACE_PATTERN%' \
+		makepython $< | ${MAKE} -f /dev/stdin | ${DIFF} - $< ) || \
+		(${ECHO} "can not make $< right" >&2 ; exit 3),"CHECK","$(<F)")
 
 ${TOPDIR}/perlsrc/%.pl:
 	$(call call_exec,${MAKE} --no-print-directory -C ${TOPDIR}/perlsrc all,"MAKE","PL")

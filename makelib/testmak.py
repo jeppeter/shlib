@@ -344,6 +344,7 @@ class debug_testmak_case(unittest.TestCase):
 		s += self.__format_make_common('all:')
 		s += self.__format_make_command('$(call call_exec,${TRUE},"ECHO","hello")',False)
 		s += self.__format_make_command('$(call call_exec,${TRUE},"ECHO","%s")'%(longname),False)
+		s += self.__format_make_command('$(call call_exec,${TRUE},"OSNAME","$(call get_osname)")',False)
 		return s
 
 	def test_003_exec_case(self):
@@ -356,15 +357,17 @@ class debug_testmak_case(unittest.TestCase):
 			testf = self.__write_tempfile(s)
 			truebin = self.__get_which('true')
 			outsarr = self.__run_make(testf,'all')
-			self.assertEqual(len(outsarr),2)
+			self.assertEqual(len(outsarr),3)
 			self.assertEqual(0,self.__check_str_value(outsarr,'    %-9s hello'%('ECHO')))
 			self.assertEqual(1,self.__check_str_value(outsarr,'    %-9s %s'%('ECHO',longname)))
+			self.assertEqual(2,self.__check_str_value(outsarr,'    %-9s %s'%('OSNAME',platform.uname()[0].lower())))
 			vardict = dict()
 			vardict['V']='1'
 			outsarr = self.__run_make(testf,'all',vardict)
-			self.assertEqual(len(outsarr),2)
+			self.assertEqual(len(outsarr),3)
 			self.assertEqual(0,self.__check_str_value(outsarr,'%s'%(truebin)))
 			self.assertEqual(0,self.__check_str_value(outsarr[1:],'%s'%(truebin)))
+			self.assertEqual(0,self.__check_str_value(outsarr[2:],'%s'%(truebin)))
 		finally:
 			self.__remove_file_safe(testf)
 			self.__remove_file_safe(longname)

@@ -33,5 +33,9 @@ endef
 
 endif
 
+define get_osname
+$(shell ${PYTHON} -c "import sys;c='%PYTHON_OSNAME_STR%';exec(c);")
+endef
+
 ## __EXEC_MAK__ ##
 endif
