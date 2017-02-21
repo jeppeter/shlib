@@ -11,6 +11,7 @@ import subprocess
 import random
 import time
 import re
+import platform
 
 
 def make_dir_safe(dname=None):
@@ -25,13 +26,15 @@ def make_dir_safe(dname=None):
 
 def make_tempdir(prefix=None,suffix=''):
 	make_dir_safe(prefix)
-	return tempfile.mkdtemp(suffix=suffix,dir=prefix)
+	d = tempfile.mkdtemp(suffix=suffix,dir=prefix)
+	return os.path.abspath(os.path.realpath(d))
 
 def make_tempfile(prefix=None,suffix=''):
 	make_dir_safe(prefix)
 	fd,result = tempfile.mkstemp(suffix=suffix,dir=prefix)
 	os.close(fd)
-	return result
+	f = os.path.abspath(os.path.realpath(result))
+	return f
 
 
 def read_callback(rl,ctx):
@@ -81,7 +84,6 @@ class debug_testmak_case(unittest.TestCase):
 		s += self.__format_varaible_echo('SUDO',echobin)
 		s += self.__format_varaible_echo('GCC',echobin)
 		s += self.__format_varaible_echo('LD',echobin)
-		s += self.__format_varaible_echo('OBJCOPY',echobin)
 		s += self.__format_varaible_echo('ECHO',echobin)
 		s += self.__format_varaible_echo('RM',echobin)
 		s += self.__format_varaible_echo('CAT',echobin)
@@ -216,20 +218,32 @@ class debug_testmak_case(unittest.TestCase):
 			s = self.__format_basedef_testmak(makelibdir)
 			testf = self.__write_tempfile(s)
 			outsarr = self.__run_make(testf,'all')
-			self.assertEqual(0,self.__check_which_bin('perl',outsarr))
-			self.assertEqual(1,self.__check_which_bin('python',outsarr))
-			self.assertEqual(2,self.__check_which_bin('sed',outsarr))
-			self.assertEqual(3,self.__check_which_bin('sudo',outsarr))
-			self.assertEqual(4,self.__check_which_bin('gcc',outsarr))
-			self.assertEqual(5,self.__check_which_bin('ld',outsarr))
-			self.assertEqual(6,self.__check_which_bin('objcopy',outsarr))
-			self.assertEqual(7,self.__check_which_bin('echo',outsarr))
-			self.assertEqual(8,self.__check_which_bin('rm',outsarr))
-			self.assertEqual(9,self.__check_which_bin('cat',outsarr))
-			self.assertEqual(10,self.__check_which_bin('printf',outsarr))
-			self.assertEqual(11,self.__check_which_bin('ln',outsarr))
-			self.assertEqual(12,self.__check_which_bin('true',outsarr))
-			self.assertEqual(13,self.__check_which_bin('touch',outsarr))
+			idx = 0
+			self.assertEqual(idx,self.__check_which_bin('perl',outsarr))
+			idx += 1
+			self.assertEqual(idx,self.__check_which_bin('python',outsarr))
+			idx += 1
+			self.assertEqual(idx,self.__check_which_bin('sed',outsarr))
+			idx += 1
+			self.assertEqual(idx,self.__check_which_bin('sudo',outsarr))
+			idx += 1
+			self.assertEqual(idx,self.__check_which_bin('gcc',outsarr))
+			idx += 1
+			self.assertEqual(idx,self.__check_which_bin('ld',outsarr))
+			idx += 1
+			self.assertEqual(idx,self.__check_which_bin('echo',outsarr))
+			idx += 1
+			self.assertEqual(idx,self.__check_which_bin('rm',outsarr))
+			idx += 1
+			self.assertEqual(idx,self.__check_which_bin('cat',outsarr))
+			idx += 1
+			self.assertEqual(idx,self.__check_which_bin('printf',outsarr))
+			idx += 1
+			self.assertEqual(idx,self.__check_which_bin('ln',outsarr))
+			idx += 1
+			self.assertEqual(idx,self.__check_which_bin('true',outsarr))
+			idx += 1
+			self.assertEqual(idx,self.__check_which_bin('touch',outsarr))
 		finally:
 			self.__remove_file_safe(testf)
 		return
@@ -1049,6 +1063,7 @@ class debug_testmak_case(unittest.TestCase):
 		random.seed(time.time())
 		basedir = None
 		longname = None
+		osname = platform.uname()[0].lower()
 		try:
 			basedir = make_tempdir()
 			headdir = make_tempdir(basedir)
@@ -1110,7 +1125,18 @@ class debug_testmak_case(unittest.TestCase):
 			logging.debug('touchss (%s)'%(self.__get_array(touchss)))
 			touchincs = self.make_header_expand(headerfiles,touchincs)			
 			checkc = self.__get_affected_cfiles(cfiles,touchincs,sortedcfiles)
+			if osname == 'darwin':
+				# in darwin gcc ,it include the original file in depends ,so we do this
+				for c in touchcs:
+					if c not in linkcfiles.values():
+						checkc.append(c)
+
 			checks = self.__get_affected_sfiles(sfiles,touchincs,sortedsfiles)
+			if osname == 'darwin':
+				for c in touchss:
+					# in darwin gcc ,it include the original file in depends ,so we do this
+					if c not in linksfiles.values():
+						checks.append(c)
 
 			allcfiles = []
 			for c in touchcs:
