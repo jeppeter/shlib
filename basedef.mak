@@ -36,5 +36,10 @@ define call_exec
 ${Q}$(call call_exec_directly,$(1),$(2),$(3))
 endef
 
+define readlink_f
+$(shell ${PERL} -e "use strict;use Cwd \"abs_path\"; print abs_path(shift);" --  $(1) )
+endef
+
+
 ## __BASEDEF_MAK__
 endif 

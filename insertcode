@@ -23,15 +23,18 @@ def __get_bash_string_file(infile):
 	logging.info('open file [%s] for string'%(infile))
 	with open(infile,'rb')  as fin:
 		for l in fin:
-			l = l.replace('$',r'%dollar%')
-			l = l.replace('\\',r'%backslash%')
-			l = l.replace('`',r'%back_address%')
-			# now replace the value
-			l = l.replace(r'%dollar%','\\$')
-			l = l.replace(r'%backslash%','\\\\')
-			l = l.replace(r'%back_address%','\\`')
-			s += l
-	logging.info('[%s] (%s)'%(infile,s))
+			curs = ''
+			for c in l:
+				if c == '$':
+					curs += '\\'
+					curs += '$'
+				elif c == '\\':
+					curs += '\\\\'
+				else:
+					curs += c
+			s += curs
+			logging.info('[%s] => [%s]'%(l,curs))
+	#logging.info('[%s] (%s)'%(infile,s))
 	return s
 
 def get_bash_string(args):
@@ -51,7 +54,7 @@ def replace_string(args,repls):
 	for l in fin:
 		chgstr = l.replace(args.pattern,repls)
 		fout.write('%s'%(chgstr))
-		logging.info('[%s] => [%s]'%(l,chgstr))
+		#logging.info('[%s] => [%s]'%(l,chgstr))
 	if fin != sys.stdin:
 		fin.close()
 	fin = None

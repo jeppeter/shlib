@@ -221,70 +221,76 @@ $(1) : $(2) $$($(3)_DEPS)
 	$(call ld_run_direct,$(1),$(2),$(4),$(5),$(6))
 endef
 
-#$(info "cobj[$(1)] csrc[$(2)] shortname[$(3)]  deps[$(4)] cflags[$(5)] compiler[$(6)]")
+#
 define build_objs_c
+$(call debug_make,"cobj[$(1)] csrc[$(2)] shortname[$(3)]  deps[$(4)] cflags[$(5)] compiler[$(6)] $(3)_DEPS_USER[$($(3)_DEPS_USER)]")
 -include $(4)
-$(1): $(2) $$(MAKEDEPS) $$($(3)_DEPS)
+$(1): $(2) $(4) $$(MAKEDEPS) $$($(3)_DEPS) $$($(3)_DEPS_USER)
 	$${Q}$$(call build_c,$$@,$$<,$(3),$(5),$(6))
 
 
-$(4): $${$(3)_DEPS} $$(MAKEDEPS)
+$(4): $$($(3)_DEPS) $$(MAKEDEPS) $$($(3)_DEPS_USER)
 	$${Q}$$(call build_c_depends,$(2),$(4),$(3),$(5),$(6))
 endef
 
 
-#$(info "cppobj[$(1)] cppsrc[$(2)] shortname[$(3)]  deps[$(4)] cppflags[$(5)] compiler[$(6)]")
+#
 define build_objs_cpp
+$(call debug_make,"cppobj[$(1)] cppsrc[$(2)] shortname[$(3)]  deps[$(4)] cppflags[$(5)] compiler[$(6)] $(3)_DEPS_USER[$($(3)_DEPS_USER)]")
 -include $(4)
-$(1): $(2) $$(MAKEDEPS) $$($(3)_DEPS)
+$(1): $(2) $(4) $$(MAKEDEPS) $$($(3)_DEPS) $$($(3)_DEPS_USER)
 	$${Q}$$(call build_cpp,$$@,$$<,$(3),$(5),$(6))
 
 
-$(4): $${$(3)_DEPS} $$(MAKEDEPS)
+$(4): $$($(3)_DEPS) $$(MAKEDEPS) $$($(3)_DEPS_USER)
 	$${Q}$$(call build_cpp_depends,$(2),$(4),$(3),$(5),$(6))
 endef
 
-#$(info "Sobj[$(1)] Ssrc[$(2)] shortname[$(3)]  deps[$(4)] sflags[$(5)] compiler[$(6)]")
+#
 define build_objs_S
+$(call debug_make,"Sobj[$(1)] Ssrc[$(2)] shortname[$(3)]  deps[$(4)] sflags[$(5)] compiler[$(6)] $(3)_DEPS_USER[$($(3)_DEPS_USER)]")
 -include $(4)
-$(1) : $(2) $(4) $$(MAKEDEPS) $$($(3)_DEPS)
+$(1) : $(2) $(4) $$(MAKEDEPS) $$($(3)_DEPS) $$($(3)_DEPS_USER)
 	$${Q}$$(call build_S,$(1),$(2),$(3),$(5),$(6))
 
-$(4) : $$($(3)_DEPS)
+$(4) : $$($(3)_DEPS) $$(MAKEDEPS) $$($(3)_DEPS_USER)
 	$${Q}$$(call build_S_depends,$(2),$(4),$(3),$(5),$(6))
 endef
 
-#$(info "cobj[$(1)] csrc[$(2)] shortname[$(3)]  deps[$(4)] cflags[$(5)] compiler[$(6)]")
+#
 define build_objs_link_c
+$(call debug_make,"link cobj[$(1)] csrc[$(2)] shortname[$(3)]  deps[$(4)] cflags[$(5)] compiler[$(6)] $(3)_DEPS_USER[$($(3)_DEPS_USER)]")
 -include $(4)
-$(1) : $(2) $(4) $$(MAKEDEPS) $$($(3)_DEPS)
+$(1) : $(2) $(4) $$(MAKEDEPS) $$($(3)_DEPS) $$($(3)_DEPS_USER)
 	$${Q}$$(call build_c,$(1),$(2),$(3),$(5),$(6))
 
-$(4) : $$($(3)_DEPS) $$($(3)_SRC)
+$(4) : $$($(3)_DEPS) $$($(3)_SRC) $$($(3)_DEPS_USER)
 	$${Q}$$(call link_c_file,$$($(3)_SRC),$(2))
 	$${Q}$$(call build_c_depends,$(2),$(4),$(3),$(5),$(6))
 endef
 
 
 
-#$(info "cppobj[$(1)] cppsrc[$(2)] shortname[$(3)]  deps[$(4)] cppflags[$(5)] compiler[$(6)]")
+#
 define build_objs_link_cpp
+$(call debug_make,"link cppobj[$(1)] cppsrc[$(2)] shortname[$(3)]  deps[$(4)] cppflags[$(5)] compiler[$(6)] $(3)_DEPS_USER[$($(3)_DEPS_USER)]")
 -include $(4)
-$(1) : $(2) $(4) $$(MAKEDEPS) $$($(3)_DEPS)
+$(1) : $(2) $(4) $$(MAKEDEPS) $$($(3)_DEPS) $$($(3)_DEPS_USER)
 	$${Q}$$(call build_cpp,$(1),$(2),$(3),$(5),$(6))
 
-$(4) : $$($(3)_DEPS) $$($(3)_SRC)
+$(4) : $$($(3)_DEPS) $$($(3)_SRC) $$($(3)_DEPS_USER)
 	$${Q}$$(call link_cpp_file,$$($(3)_SRC),$(2))
 	$${Q}$$(call build_cpp_depends,$(2),$(4),$(3),$(5),$(6))
 endef
 
-#$(info "Sobj[$(1)] Ssrc[$(2)] shortname[$(3)]  deps[$(4)] asflags[$(5)] compiler[$(6)]")
+#
 define build_objs_link_S
+$(call debug_make,"link Sobj[$(1)] Ssrc[$(2)] shortname[$(3)]  deps[$(4)] asflags[$(5)] compiler[$(6)] $(3)_DEPS_USER[$($(3)_DEPS_USER)]")
 -include $(4)
-$(1) : $(2) $(4) $$(MAKEDEPS) $$($(3)_DEPS)
+$(1) : $(2) $(4) $$(MAKEDEPS) $$($(3)_DEPS) $$($(3)_DEPS_USER)
 	$${Q}$$(call build_S,$(1),$(2),$(3),$(5),$(6))
 
-$(4) : $$($(3)_DEPS) $$($(3)_SRC)
+$(4) : $$($(3)_DEPS) $$($(3)_SRC) $$($(3)_DEPS_USER)
 	$${Q}$$(call link_S_file,$$($(3)_SRC),$(2))
 	$${Q}$$(call build_S_depends,$(2),$(4),$(3),$(5),$(6))
 endef
@@ -293,8 +299,6 @@ define build_clean_exe_only
 $(call call_exec,${RM} -f $(1),"RM","$(call get_basename,$(1))")
 endef
 
-
-
 #####################################
 ##  input $(1)  src files
 ##        $(2)  shortname
@@ -302,6 +306,7 @@ endef
 ##        $(4)  compiler
 #####################################
 define foreach_build_objs_c
+$(call debug_make,"foreach_build_objs_c files[$(1)]")
 $(foreach cursrc,$(1),\
 $(eval $(call build_objs_c,$(call get_toobj,$(cursrc),\
 ${PWD},$($(2)_BINDIR)),$(cursrc),$(call get_shortname,$(cursrc),$($(2)_BASEDIR)),$(call get_depname,$(cursrc),${PWD},$($(2)_BINDIR)),$(3),$(4))))

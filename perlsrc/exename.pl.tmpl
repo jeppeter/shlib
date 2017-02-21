@@ -32,6 +32,7 @@ my $logo = "exename";
 %COMMON_PL_CODE%
 
 my %opts;
+my $cnt=0;
 Getopt::Long::Configure("no_ignorecase","bundling");
 Getopt::Long::GetOptions(\%opts,"help|h",
 	"verbose|v" => sub {
@@ -56,6 +57,9 @@ if (scalar(@ARGV) > 0) {
 		if ($cp =~ m/\.exe$/o) {
 			$cp =~ s/\.exe$//;
 		}
+		$cp =~ s/\./_/g;
+		$cp =~ s/\\/_/g;
+		$cp =~ s/\//_/g;
 		print STDOUT "$cp\n";
 	}
 }
