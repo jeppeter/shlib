@@ -152,6 +152,33 @@ _insertcode_get_cmdname_needargs_shortopt()
 	return
 }
 
+_insertcode_longopt_step()
+{
+	local _cmdname="$1"
+	local _longopt="$2"
+	local _curopt
+
+	for _curopt in $(_insertcode_get_cmdname_needargs_longopt "$_cmdname")
+	do
+		if [ "$_curopt" = "$_longopt" ]
+			then
+			echo "1"
+			return
+		fi
+	done
+
+	for _curopt in $(_insertcode_get_cmdname_noargs_longopt "$_cmdname")
+	do
+		if [ "$_curopt" = "$_longopt" ]
+			then
+			echo "0"
+			return
+		fi
+	done
+	echo "-1"
+	return
+}
+
 _insertcode_get_subcommands()
 {
 	local _cmdname="$1"
