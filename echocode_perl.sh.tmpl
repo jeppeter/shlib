@@ -1,3 +1,5 @@
 #! /bin/sh
 
-perl -e "use strict;my (\$cmd)=\"%REPLACE_PATTERN%\";print \$cmd;"
+PERL_PRINT_STR="use strict;my (\$cmd)=\"%REPLACE_PATTERN%\";print \$cmd;"
+
+perl -e "$PERL_PRINT_STR"
