@@ -23,6 +23,7 @@ sub Usage($$)
 	print $fp "\t-v|--verbose            to make verbose mode\n";
 	print $fp "\t-T|--target target      to specify target lists\n";
 	print $fp "\t-i|--input inputfile    to specify input default (STDIN)\n";
+	print $fp "\t-s|--simple             to specify output with simple format\n";
 	print $fp "[subcommands]\n";
 	print $fp "\t[disk]                  to get information of disk\n";
 
@@ -86,6 +87,31 @@ sub disk_get($)
 	return \%diskpairs;
 }
 
+sub normal_format_disk_info($$)
+{
+	my ($k,$arrref) = @_;
+	my ($i);
+	my ($s);
+	$s = "$k:\n";
+	for ($i=0;$i < scalar(@{$arrref});$i++){
+		$s .= "    ".$arrref->[$i]."\n";
+	}
+	return $s;
+}
+
+sub simple_format_disk_info($$)
+{
+	my ($k,$arrref) = @_;
+	my ($i);
+	my ($s)="";
+	for ($i=0;$i < scalar(@{$arrref});$i++){
+		$s .= $arrref->[$i]."\n";
+	}
+	return $s;
+}
+
+
+
 my %args=();
 my @oldargv=@ARGV;
 my ($subcommand);
@@ -101,7 +127,8 @@ Getopt::Long::GetOptions(\%args,
 				$args{'verbose'} = 0;
 			}
 			$args{'verbose'} ++;
-		}) || die "can not parse [@oldargv]";
+		},
+	"simple|s") || die "can not parse [@oldargv]";
 
 
 if (scalar(@ARGV) == 0) {
@@ -135,15 +162,26 @@ if ($subcommand eq "disk") {
 	} 
 	foreach (keys(%{$diskp})) {
 		my ($curk) = $_;
-		foreach (@{$args{'target'}}) {
-			my ($cmpk) = $_;
-			my ($i,$j,$curarr);
-			if ($curk eq $cmpk) {
-				print STDOUT "$curk:\n";
-				for ($i=0;$i< scalar(@{$diskp->{$curk}});$i++) {
-					print STDOUT "    ".$diskp->{$curk}->[$i]."\n";
+		my ($i,$j,$curarr,$s);
+		if (defined($args{'target'}) && scalar(keys(@{$args{'target'}})) > 0) {
+			foreach (@{$args{'target'}}) {
+				my ($cmpk) = $_;
+				if ($curk eq $cmpk) {
+					if (defined($args{'simple'})) {
+						$s = simple_format_disk_info($curk,$diskp->{$curk});
+					} else {
+						$s = normal_format_disk_info($curk,$diskp->{$curk});
+					}
+					print STDOUT $s;
 				}
 			}
+		} else {
+			if (defined($args{'simple'})) {
+				$s = simple_format_disk_info($curk,$diskp->{$curk});
+			} else {
+				$s = normal_format_disk_info($curk,$diskp->{$curk});
+			}
+			print STDOUT $s;
 		}
 	}
 } else {

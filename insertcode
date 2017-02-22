@@ -240,6 +240,122 @@ def makeperl_handler(args,parser):
 	sys.exit(0)
 	return
 
+def __get_sh_perl(args,infile):
+	s = ''
+	fin = sys.stdin
+	if infile is not None:
+		fin = open(infile,'rb')
+
+	for l in fin:
+		for c in l:
+			if c == '#':
+				s += '\\'
+				s += '#'
+			elif c == '\n':
+				s += '\\'
+				s += 'n'
+			elif c == '$':
+				s += '\\'
+				s += '\\'
+				s += '\\'
+				s += '$'
+			elif c == '"':
+				s += '\\'
+				s += '\\'
+				s += '\\'
+				s += '"'
+			elif c == '\\':
+				s += '\\'
+				s += '\\'
+				s += '\\'
+				s += '\\'
+			elif c == '`':
+				s += '\\'
+				s += '`'
+			elif c == '\r':
+				s += '\\'
+				s += 'r'
+			elif c == '\t':
+				s += '\\'
+				s += 't'
+			elif c == '@':
+				s += '\\'
+				s += '@'
+			else:
+				s += c
+	if fin != sys.stdin:
+		fin.close()
+	fin = None
+	return s
+
+def get_sh_perl(args):
+	s = ''
+	for infile in args.subnargs:
+		s += __get_sh_perl(args,infile)
+	return s
+
+def shperl_handler(args,parser):
+	set_log_level(args)
+	repls = get_sh_perl(args)
+	replace_string(args,repls)
+	sys.exit(0)
+	return
+
+def __get_sh_python(args,infile):
+	s = ''
+	fin = sys.stdin
+	if infile is not None:
+		fin = open(infile,'rb')
+
+	for l in fin:
+		for c in l:
+			if c == '\n':
+				s += '\\'
+				s += 'n'
+			elif c == '$':
+				s += '\\'
+				s += '$'
+			elif c == '"':
+				s += '\\'
+				s += '"'
+			elif c == '\\':
+				s += '\\'
+				s += '\\'
+				s += '\\'
+				s += '\\'
+			elif c == '`':
+				s += '\\'
+				s += '`'
+			elif c == '\r':
+				s += '\\'
+				s += 'r'
+			elif c == '\t':
+				s += '\\'
+				s += 't'
+			elif c == '\'':
+				s += '\\\\'
+				s += '\''
+			else:
+				s += c
+	if fin != sys.stdin:
+		fin.close()
+	fin = None
+	return s
+
+def get_sh_python(args):
+	s = ''
+	for infile in args.subnargs:
+		s += __get_sh_python(args,infile)
+	return s
+
+def shpython_handler(args,parser):
+	set_log_level(args)
+	repls = get_sh_python(args)
+	replace_string(args,repls)
+	sys.exit(0)
+	return
+
+
 def main():
 	commandline='''
 	{
@@ -257,6 +373,12 @@ def main():
 			"$" : "*"
 		},
 		"makeperl<makeperl_handler>" : {
+			"$" : "*"
+		},
+		"shperl<shperl_handler>" : {
+			"$" : "*"
+		},
+		"shpython<shpython_handler>" : {
 			"$" : "*"
 		}
 	}
