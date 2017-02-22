@@ -56,44 +56,69 @@ if (scalar(@ARGV) > 0)  {
 	$replace = shift @ARGV;
 	Debug("replace [$replace]");
 }
+my ($depcnt)=0;
 while(<STDIN>){
 	my ($l) = $_;
+	my ($outl);
 	my ($i);
 	if ($lineno == 0){
-		if ($l =~ m/(.*:)/o) {		
-			$l =~ s/$1/$replace += /;
+		if ($l =~ m/(.*:)/o) {
+			$l =~ s/$1//;
 			chomp($l);
+			$outl = "$replace +=";
 			@sarr = split(/\s+/,$l);
-			$l = "";
 			for ($i=0;$i<scalar(@sarr);$i++) {
-				if ($i == 2 && $sarr[$i] ne "\\") {
-					Debug("[$i]=".$sarr[$i]);
+				if (length($sarr[$i]) == 0) {
+					next;
+				}
+				if ($sarr[$i] eq "\\") {
+					next;
+				}
+				$depcnt ++;
+				if ($depcnt == 1) {
+					# we omit one
 					next;
 				}
 				if ($i > 0) {
-					$l .= " ";
+					$outl .= " ";
 				}
-				$l .= $sarr[$i];
+				$outl .= $sarr[$i];
 			}
 			if ($l =~ m/\\$/o) {
 				$l =~ s/\\$//;
 				$linecont = 1;
 				Debug ("[$lineno]($l) continue");
 			}
-			$l .= "\n";
+			$outl .= "\n";
 		}
 	} elsif ($linecont > 0) {
 		$linecont = 0;
 		chomp($l);
-		$l = "$replace += $l";
+		@sarr = split(/\s+/,$l);
+		$outl = "$replace +=";
+		for ($i=0;$i < scalar(@sarr);$i++) {
+			if (length($sarr[$i]) == 0) {
+				next;
+			}
+			if ($sarr[$i] eq "\\") {
+				next;
+			}
+			$depcnt ++;
+			if ($depcnt == 1) {
+				next;
+			}
+
+			$outl .= " ";
+			$outl .= $sarr[$i];
+		}
+		$outl .= "\n";
 		Debug("[$lineno]=$l");
 		if ($l =~ m/\\$/o) {
 			$l =~ s/\\$//;
 			$linecont = 1;
 			Debug ("[$lineno]($l) continue");
 		}
-		$l .= "\n";
 	}
-	print $l;
+	print $outl;
 	$lineno ++;
 }

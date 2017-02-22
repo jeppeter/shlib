@@ -1128,18 +1128,8 @@ class debug_testmak_case(unittest.TestCase):
 			logging.debug('touchss (%s)'%(self.__get_array(touchss)))
 			touchincs = self.make_header_expand(headerfiles,touchincs)			
 			checkc = self.__get_affected_cfiles(cfiles,touchincs,sortedcfiles)
-			if osname == 'darwin':
-				# in darwin gcc ,it include the original file in depends ,so we do this
-				for c in touchcs:
-					if c not in linkcfiles.values():
-						checkc.append(c)
 
 			checks = self.__get_affected_sfiles(sfiles,touchincs,sortedsfiles)
-			if osname == 'darwin':
-				for c in touchss:
-					# in darwin gcc ,it include the original file in depends ,so we do this
-					if c not in linksfiles.values():
-						checks.append(c)
 
 			allcfiles = []
 			for c in touchcs:
