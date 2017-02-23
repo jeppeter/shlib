@@ -23,7 +23,7 @@ endef
 
 
 define get_shortname
-$(shell ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_SHORTNAME_STR%\";eval \$$cmd;" -- -t "$(call get_value_default,$(2),)" $(1))
+$(shell ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_SHORTNAME_STR%\";eval \$$cmd;" -- ${MAKELIB_VERBOSE} -t "$(call get_value_default,$(2),)" -- "$(1)")
 endef
 
 MAKELIB_CLEAN_GOALS:=$(filter clean%,$(MAKECMDGOALS))

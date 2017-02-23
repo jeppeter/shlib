@@ -3,6 +3,14 @@ include ../../makelib.mak
 
 TOPDIR:=$(call readlink_f,.)
 
+osname:=$(call get_osname)
+
+ifneq ($(patsubst cygwin_%,%,${osname}),${osname})
+exesuffix:=.exe
+else
+exesuffix:=
+endif
+
 ipxeload_elf_DEPS += pre_ipxeload_elf
 ipxeload_elf_POST += post_ipxeload_elf
 ipxeload_elf_DEPS_CLEAN = clean_pre_ipxeload_elf
@@ -38,25 +46,25 @@ MAKEDEPS += ${TOPDIR}/Makefile
 #ipxeload_elf_GPP = ${TOPDIR}/gpp.sh
 #ipxeload_elf_GAS = ${TOPDIR}/gas.sh
 
-all:post_ipxeload_elf main
+all:post_ipxeload_elf main${exesuffix}
 #$(call call_all_exe,ipxeload_elf main)
 
-post_ipxeload_elf: ${TOPDIR}/ipxeload.elf
-	$(call call_exec,${TRUE},"POST","ipxeload.elf")
+post_ipxeload_elf: ${TOPDIR}/ipxeload.elf${exesuffix}
+	$(call call_exec,${TRUE},"POST","ipxeload.elf${exesuffix}")
 
 pre_ipxeload_elf:
-	$(call call_exec,${TRUE},"PRE","ipxeload.elf")
+	$(call call_exec,${TRUE},"PRE","ipxeload.elf${exesuffix}")
 
 clean_pre_ipxeload_elf:
-	$(call call_exec,${TRUE},"CLEANPRE","ipxeload.elf")
+	$(call call_exec,${TRUE},"CLEANPRE","ipxeload.elf${exesuffix}")
 
 clean_post_ipxeload_elf:clean_ipxeload_elf
-	$(call call_exec,${TRUE},"CLEANPOST","ipxeload.elf")	
+	$(call call_exec,${TRUE},"CLEANPOST","ipxeload.elf${exesuffix}")	
 
 keygen.c:
 	$(call call_exec,${TOUCH} $@,"TOUCH","keygen.c")
 
-$(eval $(call simple_makefile_exe_whole,${TOPDIR}/ipxeload.elf main))
+$(eval $(call simple_makefile_exe_whole,${TOPDIR}/ipxeload.elf${exesuffix} main${exesuffix}))
 #$(call foreach_makefile_exe_whole,ipxeload_elf main)
 
 clean:clean_post_ipxeload_elf clean_main
