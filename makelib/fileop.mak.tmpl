@@ -4,15 +4,15 @@ __FILE_OP_MAK__:=1
 
 
 define readlink_f
-$(shell ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_READLINK_STR%\";eval \$$cmd;" --  ${MAKELIB_VERBOSE} -- $(1) )
+$(shell ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_READLINK_STR%\";eval \$$cmd;" --  ${MAKELIB_VERBOSE} -- "$(1)" )
 endef
 
 define get_basename
-$(shell ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_BASENAME_STR%\";eval \$$cmd;" -- ${MAKELIB_VERBOSE} -- $(1) )
+$(shell ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_BASENAME_STR%\";eval \$$cmd;" -- ${MAKELIB_VERBOSE} -- "$(1)" )
 endef
 
 define get_exename
-$(shell ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_EXENAME_STR%\";eval \$$cmd;" -- ${MAKELIB_VERBOSE} -- $(1) )
+$(shell ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_EXENAME_STR%\";eval \$$cmd;" -- ${MAKELIB_VERBOSE} -- "$(1)" )
 endef
 
 define get_toobj

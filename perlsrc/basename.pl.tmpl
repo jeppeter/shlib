@@ -53,11 +53,7 @@ if (defined($opts{"verbose"})) {
 
 foreach(@ARGV) {
 	my ($c) = $_;
-	if (-l "$c") {
-		$c = File::Spec->rel2abs($c);
-	} else {
-		$c = abs_path($c);
-	}
+	$c = GetFullPath($c);
 	Debug("[$c]");
 	print basename($c)."\n";
 }

@@ -60,6 +60,7 @@ if (scalar(@ARGV) > 0) {
 		$cp =~ s/\./_/g;
 		$cp =~ s/\\/_/g;
 		$cp =~ s/\//_/g;
+		Debug("out [$cp]");
 		print STDOUT "$cp\n";
 	}
 }

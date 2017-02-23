@@ -56,14 +56,14 @@ if (scalar(@ARGV) > 0) {
 	$basepath=shift @ARGV;
 }
 if ( -e "$basepath" ) {
-	$basepath = abs_path($basepath);
+	$basepath = GetFullPath($basepath);
 }
 while(<STDIN>){
 	my ($l)=$_;
 	my ($subpath)="";
 	chomp($l);
-	if ( -e "$l") { 
-		$l = abs_path($l);
+	if ( -e "$l" ) { 
+		$l = GetFullPath($l);
 	}
 	$subpath = $l;
 	$subpath =~ s/$basepath//;

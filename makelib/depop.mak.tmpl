@@ -405,7 +405,7 @@ endef
 endif
 
 define __clean_bintarget_whole
-$(call debug_make,"__clean_bintarget_whole [$(2)] DEPS[$($(2)_DEPS_CLEAN)]")
+$(call debug_make,"__clean_bintarget_whole exe[$(1)] shortname[$(2)] DEPS[$($(2)_DEPS_CLEAN)]")
 clean_$(2): $$($(2)_DEPS_CLEAN)
 	$(call call_exec,${RM} -f $(call get_lcppfile,$($(2)_SRCS)),"RM","$(2)_lcppfiles")
 	$(call call_exec,${RM} -f $(call get_lsfile,$($(2)_SRCS)),"RM","$(2)_lsfiles")

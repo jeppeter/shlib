@@ -53,5 +53,5 @@ if (defined($opts{"verbose"})) {
 foreach(@ARGV) {
 	my ($c) = $_;
 	Debug("[$c]");
-	print abs_path($c)."\n";
+	print GetFullPath($c)."\n";
 }
