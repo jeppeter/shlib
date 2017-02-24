@@ -179,6 +179,32 @@ _insertcode_longopt_step()
 	return
 }
 
+_insertcode_shortopt_step()
+{
+	local _cmdname="$1"
+	local _shortopt="$2"
+	local _curopt
+	for _curopt in $(_insertcode_get_cmdname_needargs_shortopt "$_cmdname")
+	do
+		if [ "$_curopt" = "$_shortopt" ]
+		then
+			echo "1"
+			return
+		fi
+	done
+
+	for _curopt in $(_insertcode_get_cmdname_noargs_shortopt "$_cmdname")
+	do
+		if [ "$_curopt" = "$_shortopt" ]
+		then
+			echo "0"
+			return
+		fi
+	done
+	echo "-1"
+	return
+}
+
 _insertcode_get_subcommands()
 {
 	local _cmdname="$1"
@@ -217,10 +243,13 @@ _parse_insertcode_cmdname()
 	local _curo
 	local _geto
 	local _matched
+	local _needargs
+	local _tempi
 
 	while [ $_i -lt $COMP_CWORD ]
 	do
 		_matched=0
+		_needargs=0
 		_curopt=${COMP_WORDS[$_i]}
 		_i=`expr $_i \+ 1`
 		if [ -z "$_curopt" ]
@@ -232,33 +261,17 @@ _parse_insertcode_cmdname()
 		_optmatch=`echo `
 		if [ -n "$_longoptmatch" ]
 			then
-			for _curo in $(_insertcode_get_cmdname_needargs_longopt "$_cmdname")
-			do
-				if [ "$_longoptmatch" = "$_curo" ]
-					then
-					if [ $_i -lt $COMP_CWORD ]
-						then
-						_i=`expr _i \+ 1`
-					fi
-					_matched=1
-					break
-				fi
-			done
-			if [ $_matched -eq 0 ]
-				then
-				for _curo in $(_insertcode_get_cmdname_noargs_longopt "$_cmdname")
-				do
-					if [ "$_longoptmatch" = "$_curo" ]
-						then
-						_matched=1
-						break
-					fi
-				done
-			fi
-			if [ $_matched -eq 0 ]
-				then
-				# because we do not match any opt ,so just break
+			_needargs=$(_insertcode_longopt_step "$_cmdname" "$_longoptmatch")
+			if [ $_needargs -lt 0 ]
+			then
 				break
+			fi
+			if [ $_needargs -gt 0 ]
+			then
+				_tempi=`expr $_i \+ 1`
+				if [ $_tempi -ge $COMP_CWORD ]
+				then
+				fi
 			fi
 
 		elif [ -n "$_optmatch" ]
