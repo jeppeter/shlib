@@ -10,6 +10,10 @@ ifeq (${osname},linux)
 sharesuffix=so
 endif
 
+ifneq ($(patsubst cygwin_%,%,${osname}),${osname})
+sharesuffix=dll
+endif
+
 ifeq (${sharesuffix},)
 $(error "platform ${osname} not supported")
 endif
@@ -41,6 +45,13 @@ libshare_${sharesuffix}_ASFLAGS = -Wall  -DASFILE=1 ${INCLUDES} -I${CURDIR}/sinc
 libshare_${sharesuffix}_LDFLAGS = -Wall -dynamiclib -compatibility_version 1.2 -current_version 1.2.6 -undefined suppress -flat_namespace
 endif
 
+ifneq ($(patsubst cygwin_%,%,${osname}),${osname})
+libshare_${sharesuffix}_CFLAGS = -Wall -fpic -DCFILE=1 ${INCLUDES}  -I${CURDIR}/cinc
+libshare_${sharesuffix}_CPPFLAGS = -Wall -fpic -DCPPFILE=1 ${INCLUDES} -I${CURDIR}/cppinc
+libshare_${sharesuffix}_ASFLAGS = -Wall -fpic -DASFILE=1 ${INCLUDES} -I${CURDIR}/sinc
+libshare_${sharesuffix}_LDFLAGS = -Wall -shared 
+endif
+
 libdyn_${sharesuffix}_SRCS = dc.c dd.cpp
 libdyn_${sharesuffix}_SRCS += de.link.cpp df.link.c
 libdyn_${sharesuffix}_SRCS += dg.S dh.link.S
@@ -61,6 +72,13 @@ libdyn_${sharesuffix}_CFLAGS = -Wall -DCFILE=1 ${INCLUDES}  -I${CURDIR}/cinc
 libdyn_${sharesuffix}_CPPFLAGS = -Wall -DCPPFILE=1 ${INCLUDES} -I${CURDIR}/cppinc
 libdyn_${sharesuffix}_ASFLAGS = -Wall -DASFILE=1 ${INCLUDES} -I${CURDIR}/sinc
 libdyn_${sharesuffix}_LDFLAGS = -Wall -dynamiclib -compatibility_version 1.2 -current_version 1.2.6 -undefined suppress -flat_namespace
+endif
+
+ifneq ($(patsubst cygwin_%,%,${osname}),${osname})
+libdyn_${sharesuffix}_CFLAGS = -Wall -fpic -DCFILE=1 ${INCLUDES}  -I${CURDIR}/cinc
+libdyn_${sharesuffix}_CPPFLAGS = -Wall -fpic -DCPPFILE=1 ${INCLUDES} -I${CURDIR}/cppinc
+libdyn_${sharesuffix}_ASFLAGS = -Wall -fpic -DASFILE=1 ${INCLUDES} -I${CURDIR}/sinc
+libdyn_${sharesuffix}_LDFLAGS = -Wall -shared
 endif
 
 

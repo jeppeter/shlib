@@ -3,6 +3,7 @@
 
 
 ### Release History
+* Feb 24th 2017 Release 0.1.2 for transport to osx and cygwin system
 * Feb 16th 2017 Release 0.1.0 for first usable version
 
 ### simple example
@@ -187,8 +188,27 @@ clean:clean_post_setjjk clean_main
 ### HOWTO Compile
 > just goto makelib directory and make all the result file is makelib.lib
 
-
-
-
+### special
+> simple_makefile_exe_whole  the macro to define for the exe compilation
+> simple_makefile_so_whole the macro to define for share object or dll in cygwin system compilation
+> simple_makefile_staticlib_whole the macro to define for static library compilation
+> related variables 
+> exename : exe name without exe
+> ${exename}_SRCS  : the source to compile for the exe (it is the .o file)
+> .c is normal c file compile with ${exename}_GCC default(gcc)
+> .cpp is normal c++ file Compile with ${exename}_GPP default(g++)
+> .S is normal asm file Compile with ${exename}_GAS default(gcc)
+> .link.c is link c file _link_c_SRC is the source file for this link
+> .link.cpp is link c++ file _link_cpp_SRC is the source file for this link
+> .link.S is link S file _link_S_SRC is the source file for this link
+> ${exename}_CFLAGS is the CFLAGS for .c or .link.c 
+> ${exename}_CPPFLAGS is the CPPFLAGS for .cpp or .link.cpp
+> ${exename}_ASFLAGS is the ASFLAGS for .S or .link.S
+> ${exename}_LDFLAGS is the LDFLAGS for compile ${exename}
+> ${exename}_LIBFLAGS is the library for compile ${exename}
+> ${exename}_DEPS is the preprocessor for compilation linking
+> ${exename}_POST is the successor for compilation linking
+> special file can be used with preprocessor  with _DEPS_USER
+> share object and static library with the same 
 
 
