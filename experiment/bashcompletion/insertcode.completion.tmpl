@@ -5,6 +5,9 @@ INSERTCODE_DEBUG_LEVEL=3
 INSERTCODE_WARN_LEVEL=1
 INSERTCODE_ERROR_LEVEL=0
 
+INSERTCODE_PERL_EXTRACT_STR="use strict;my (\$cmd)=\"\#! /usr/bin/perl\r\n\r\nuse strict;\r\nsub extract_string(\\\$\\\$\\\$)\r\n{\r\n    my (\\\$restr,\\\$eval,\\\$instr) = \@_;\r\n    my (\\\$outstr)=\\\"\\\";\r\n    if (\\\$instr =~ m/\\\$restr/) {\r\n        if (length(\\\$eval) > 0) {\r\n            \\\$outstr= eval \\\$eval;\r\n        } else {\r\n            \\\$outstr= \\\$instr;\r\n        }\r\n    }\r\n    return \\\$outstr;\r\n}\r\n\r\nif (scalar(\@ARGV) == 1 && \r\n    (\\\$ARGV[0] eq \\\"-h\\\" || \\\$ARGV[0] eq \\\"--help\\\")) {\r\n    print \\\"\\\$0 [restr] [evalstr] [instr]...\\\\n\\\";\r\n    exit(0);\r\n}\r\n\r\nif (scalar(\@ARGV) < 3) {\r\n    print \\\"\\\$0 [restr] [evalstr] [instr]...\\\\n\\\";\r\n    exit(3);\r\n}\r\nmy (\\\$restr) = shift \@ARGV;\r\nmy (\\\$evalstr) = shift \@ARGV;\r\nforeach (\@ARGV) {\r\n    my \\\$outstr;\r\n    \\\$outstr = extract_string(\\\$restr,\\\$evalstr,\\\$_);\r\n    print STDOUT \\\"\\\$outstr\\\\n\\\";\r\n}\";eval \$cmd;"
+
+
 _insertcode_debug()
 {
 	local _fmt="$1"
@@ -349,12 +352,22 @@ _insertcode_parse_cmdname()
 	return
 }
 
+_insertcode_get_options()
+{
+	local _cmdname="$1"
+	shift
+}
+
 
 
 _insertcode()
 {
 	local _resfile=`mktemp`
 	local _cmdname
+	local _cmdidx
+	local -a _mustpassargs
+	local _argscnt
+	local _curopt
 
 	_cmdname=$(_insertcode_parse_cmdname "$_resfile")
 	if [ "$_cmdname" = "--" ]
@@ -364,7 +377,30 @@ _insertcode()
 		return
 	fi
 	
-	_
+	_cmdidx=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" '-([\d]+)-([\w\.]+)' "\$1" "$_cmdname" )
+	if [ -n "$_cmdidx" ]
+		then
+		# if it is in the 
+		_cmdname=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" '-([\d]+)-([\w\.]+)' "\$2" "$_cmdname" )
+		_argscnt=0
+		while [ $_cmdidx -gt $COMP_CWORD ]
+		do
+			_mustpassargs[$_argscnt]=COMP_WORDS[$_cmdidx]
+			_cmdidx=`expr $_cmdidx \+ 1`
+			_argscnt=`expr $_argscnt \+ 1`
+		done
+	else
+		_argscnt=0
+		_cmdidx=`expr $COMP_CWORD - 1`
+		if [ $_cmdidx -gt 0 ]
+		then
+			_mustpassargs[$_argscnt]=COMP_WORDS[$_cmdidx]
+		fi		
+	fi
+
+	unset COMPREPLY
+	declare -a COMPREPLY
+	for _curopt in ()
 
 
 	return
