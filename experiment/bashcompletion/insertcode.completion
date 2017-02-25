@@ -230,7 +230,7 @@ _insertcode_get_subcommands()
 	return
 }
 
-_parse_insertcode_cmdname()
+_insertcode_parse_cmdname()
 {
 	local _compreplyfile="$1"
 	local _i=1
@@ -246,6 +246,7 @@ _parse_insertcode_cmdname()
 	local _shortoptargs
 	local _needargs
 	local _tempi
+	local _matchedcmd
 
 	while [ $_i -lt $COMP_CWORD ]
 	do
@@ -264,16 +265,16 @@ _parse_insertcode_cmdname()
 			then
 			_needargs=$(_insertcode_longopt_step "$_cmdname" "$_longoptmatch")
 			if [ $_needargs -lt 0 ]
-			then
+				then
 				echo "$_longoptmatch invalid options" >>$_compreplyfile
 				echo "--"
 				return
 			fi
 			if [ $_needargs -gt 0 ]
-			then
+				then
 				_tempi=`expr $_i \+ 1`
 				if [ $_tempi -ge $COMP_CWORD ]
-				then
+					then
 					break
 				fi
 				_i=$_tempi
@@ -295,7 +296,7 @@ _parse_insertcode_cmdname()
 					return
 				fi
 				if [ $_needargs -gt 0 ]
-				then
+					then
 					if [ $_shortoptargs -gt 0 ]
 					then
 						echo "[$_optmatch] not need have opt args for [$_geto]" >>$_compreplyfile
@@ -316,6 +317,30 @@ _parse_insertcode_cmdname()
 				fi
 				_i=$_tempi
 			fi
+		else
+			# now to get the subcommand ,if not matched
+			_matchedcmd=""
+			for _curcmd in $(_insertcode_get_subcommands "$_cmdname")
+			do
+				if [ "$_curcmd" = "$_curopt" ]
+				then
+					_matchedcmd="$_curcmd"
+					break
+				fi
+			done
+
+			if [ -z "$_matchedcmd" ]
+				then
+				# it means the offset and cmdname
+				_cmdname="-${_i}-${_cmdname}"
+				break
+			fi
+			if [ -z "$_cmdname" ]
+				then
+				_cmdname="${_matchedcmd}"
+			else
+				_cmdname="${_cmdname}.${_matchedcmd}"
+			fi
 		fi
 	done
 
@@ -326,13 +351,13 @@ _parse_insertcode_cmdname()
 
 _insertcode()
 {
-	COMPREPLY=()
-	local _cur=${COMP_WORDS[COMP_CWORD]}
-	local _haslongopt=`echo "$_cur" | grep -Po -e '--.*'`
-	local _hasopt=`echo "$_cur" | grep -Po -e '-.*'`
-	_insertcode_debug "_cur [$_cur]"
-	if [ -n "$_haslongopt" ]
+	local _resfile=`mktemp`
+	local _cmdname
+
+	_cmdname=$(_insertcode_parse_cmdname "$_resfile")
+	if [ "$_cmdname" = "--" ]
 		then
+		
 	fi
 
 
