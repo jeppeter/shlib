@@ -193,20 +193,20 @@ clean:clean_post_setjjk clean_main
  - simple_makefile_so_whole the macro to define for share object or dll in cygwin system compilation 
  - simple_makefile_staticlib_whole the macro to define for static library compilation
  - related variables 
- <p style="color:blue">exename : exe name without exe <br>
- ${exename}_SRCS  : the source to compile for the exe (it is the .o file)<br>
- .c is normal c file compile with ${exename}_GCC default(gcc)<br>
- .cpp is normal c++ file Compile with ${exename}_GPP default(g++)<br>
- .S is normal asm file Compile with ${exename}_GAS default(gcc)<br>
- .link.c is link c file _link_c_SRC is the source file for this link<br>
- .link.cpp is link c++ file _link_cpp_SRC is the source file for this link<br>
- .link.S is link S file _link_S_SRC is the source file for this link<br>
- ${exename}_CFLAGS is the CFLAGS for .c or .link.c <br>
- ${exename}_CPPFLAGS is the CPPFLAGS for .cpp or .link.cpp<br>
- ${exename}_ASFLAGS is the ASFLAGS for .S or .link.S<br>
- ${exename}_LDFLAGS is the LDFLAGS for compile ${exename}<br>
- ${exename}_LIBFLAGS is the library for compile ${exename}<br>
- ${exename}_DEPS is the preprocessor for compilation linking<br>
- ${exename}_POST is the successor for compilation linking<br>
- special file can be used with preprocessor  with _DEPS_USER<br>
- share object and static library with the same </p>
+  - exename : exe name without exe 
+  - ${exename}_SRCS  : the source to compile for the exe (it is the .o file)
+  - .c is normal c file compile with ${exename}_GCC default(gcc)
+  - .cpp is normal c++ file Compile with ${exename}_GPP default(g++)
+  - .S is normal asm file Compile with ${exename}_GAS default(gcc)
+  - .link.c is link c file _link_c_SRC is the source file for this link
+  - .link.cpp is link c++ file _link_cpp_SRC is the source file for this link
+  - .link.S is link S file _link_S_SRC is the source file for this link
+  - ${exename}_CFLAGS is the CFLAGS for .c or .link.c 
+  - ${exename}_CPPFLAGS is the CPPFLAGS for .cpp or .link.cpp
+  - ${exename}_ASFLAGS is the ASFLAGS for .S or .link.S
+  - ${exename}_LDFLAGS is the LDFLAGS for compile ${exename}
+  - ${exename}_LIBFLAGS is the library for compile ${exename}
+  - ${exename}_DEPS is the preprocessor for compilation linking
+  - ${exename}_POST is the successor for compilation linking
+  - special file can be used with preprocessor  with _DEPS_USER
+  - share object and static library with the same
