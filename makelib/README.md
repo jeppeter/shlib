@@ -193,7 +193,7 @@ clean:clean_post_setjjk clean_main
  - simple_makefile_so_whole the macro to define for share object or dll in cygwin system compilation 
  - simple_makefile_staticlib_whole the macro to define for static library compilation
  - related variables 
- <p>exename : exe name without exe <br>
+ <p style="italic;color:blue">exename : exe name without exe <br>
  ${exename}_SRCS  : the source to compile for the exe (it is the .o file)<br>
  .c is normal c file compile with ${exename}_GCC default(gcc)<br>
  .cpp is normal c++ file Compile with ${exename}_GPP default(g++)<br>
