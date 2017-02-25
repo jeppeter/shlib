@@ -349,6 +349,8 @@ _insertcode_parse_cmdname()
 	return
 }
 
+
+
 _insertcode()
 {
 	local _resfile=`mktemp`
@@ -357,8 +359,12 @@ _insertcode()
 	_cmdname=$(_insertcode_parse_cmdname "$_resfile")
 	if [ "$_cmdname" = "--" ]
 		then
-		
+		COMPREPLY=($(cat $_resfile))
+		rm -f $_resfile
+		return
 	fi
+	
+	_
 
 
 	return

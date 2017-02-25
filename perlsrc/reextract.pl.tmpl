@@ -1,0 +1,88 @@
+#! /usr/bin/perl
+
+use strict;
+use Getopt::Long;
+
+sub extract_string($$$)
+{
+    my ($restr,$eval,$instr) = @_;
+    my ($outstr)="";
+    if ($instr =~ m/$restr/) {
+        if (length($eval) > 0) {
+            $outstr= eval $eval;
+        } else {
+            $outstr= $instr;
+        }
+    }
+    return $outstr;
+}
+
+sub Usage
+{
+	my ($ec,$fmt);
+	my ($fp)=\*STDERR;
+	$ec=1;
+	$fmt="";
+	if (scalar(@_) > 0) {
+		$ec=shift @_;
+	}
+	if (scalar(@_) > 0) {
+		$fmt = shift @_;
+	}
+
+	if ($ec == 0) {
+		$fp = \*STDOUT;
+	}
+
+	if (length($fmt) > 0) {
+		print $fp "$fmt\n";
+	}
+
+	print $fp "$0 [OPTIONS] [restr] [instr]...\n";
+    print $fp "[OPTIONS]\n";
+    print $fp "\t-h|--help                       to display this help information\n";
+    print $fp "\t-v|--verbose                    to set verbose mode\n";
+    print $fp "\t-e|--eval [evalstr]             to make evaluate string in match\n";
+    print $fp "\n";
+    print $fp "\t[restr]                         regular expression to match\n";
+
+	exit($ec);
+}
+
+my ($logo)="reextract";
+my ($verbose)=0;
+%COMMON_PL_CODE%
+
+my (%opts);
+Getopt::Long::Configure("no_ignorecase","bundling");
+Getopt::Long::GetOptions(\%opts,"help|h",
+	"verbose|v" => sub {
+		if (!defined($opts{"verbose"})) {
+			$opts{"verbose"} = 0;
+		}
+		${opts{"verbose"}} ++;
+	},
+    "eval|e=s");
+if (defined($opts{"help"})) {
+    Usage(0,"");
+}
+
+if (defined($opts{"verbose"})) {
+    $verbose=$opts{"verbose"};
+}
+
+if (scalar(@ARGV) < 2) {
+    Usage(3,"need [restr] [instr]...");
+}
+
+my ($restr)=shift @ARGV;
+my ($outstr);
+my ($evalstr)="";
+if (defined($opts{"eval"})) {
+    $evalstr=$opts{"eval"};
+}
+foreach (@ARGV) {
+    my ($instr) = $_;
+    $outstr= extract_string($restr,$evalstr,$instr);
+    print STDOUT "$outstr\n";
+}
