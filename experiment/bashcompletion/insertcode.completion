@@ -232,6 +232,7 @@ _insertcode_get_subcommands()
 
 _parse_insertcode_cmdname()
 {
+	local _compreplyfile="$1"
 	local _i=1
 	local _j
 	local _cmdname=""
@@ -242,13 +243,13 @@ _parse_insertcode_cmdname()
 	local _optlen
 	local _curo
 	local _geto
-	local _matched
+	local _shortoptargs
 	local _needargs
 	local _tempi
 
 	while [ $_i -lt $COMP_CWORD ]
 	do
-		_matched=0
+		_shortoptargs=0
 		_needargs=0
 		_curopt=${COMP_WORDS[$_i]}
 		_i=`expr $_i \+ 1`
@@ -264,37 +265,61 @@ _parse_insertcode_cmdname()
 			_needargs=$(_insertcode_longopt_step "$_cmdname" "$_longoptmatch")
 			if [ $_needargs -lt 0 ]
 			then
-				break
+				echo "$_longoptmatch invalid options" >>$_compreplyfile
+				echo "--"
+				return
 			fi
 			if [ $_needargs -gt 0 ]
 			then
 				_tempi=`expr $_i \+ 1`
 				if [ $_tempi -ge $COMP_CWORD ]
 				then
+					break
 				fi
+				_i=$_tempi
 			fi
-
 		elif [ -n "$_optmatch" ]
 			then
+
 			_optlen=`echo "$_optmatch" | wc -c | tr -d [:space:]`
 			_j=1
 			while [ $_j -lt $_optlen ]
 			do
 				_matched=0
 				_geto=`echo "$_curopt" | dd bs=1 count=1 skip=$_j 2>/dev/null`
-				for _curo in $(_insertcode_get_cmdname_needargs_shortopt "$_cmdname")
-				do
-					if [ "$_geto" = "$_curo" ]
-						then
-						if [ $_i  ]
+				_needargs=$(_insertcode_shortopt_step "$_cmdname" "$_geto")
+				if [ $_needargs -lt 0 ]
+				then
+					echo "[$_geto] not valid in $_optmatch" >>$_compreplyfile
+					echo "--"
+					return
+				fi
+				if [ $_needargs -gt 0 ]
+				then
+					if [ $_shortoptargs -gt 0 ]
+					then
+						echo "[$_optmatch] not need have opt args for [$_geto]" >>$_compreplyfile
+						echo "--"
+						return
 					fi
-				done
-				
+					_shortoptargs=1
+				fi
+				_j=`expr $_j \+ 1`
 			done
+
+			if [ $_shortoptargs -gt 0 ]
+			then
+				_tempi=`expr $_i \+ 1`
+				if [ $_tempi -ge $COMP_CWORD ]
+				then
+					break
+				fi
+				_i=$_tempi
+			fi
 		fi
-
-
 	done
+
+	# now we should give the 
 	echo "$_cmdname"
 	return
 }
