@@ -193,7 +193,7 @@ clean:clean_post_setjjk clean_main
  - simple_makefile_so_whole the macro to define for share object or dll in cygwin system compilation 
  - simple_makefile_staticlib_whole the macro to define for static library compilation
  - related variables 
- exename : exe name without exe
+ <p>exename : exe name without exe
  ${exename}_SRCS  : the source to compile for the exe (it is the .o file)
  .c is normal c file compile with ${exename}_GCC default(gcc)
  .cpp is normal c++ file Compile with ${exename}_GPP default(g++)
@@ -209,4 +209,4 @@ clean:clean_post_setjjk clean_main
  ${exename}_DEPS is the preprocessor for compilation linking
  ${exename}_POST is the successor for compilation linking
  special file can be used with preprocessor  with _DEPS_USER
- share object and static library with the same 
+ share object and static library with the same </p>
