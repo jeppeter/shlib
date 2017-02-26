@@ -364,7 +364,220 @@ _insertcode_error_completion_function()
 {
 	local _compreplyfile="$1"
 	shift
+	local _cmd="$1"
+	shift
 	local -a _args="$@"
+	local _str=""
+	local _curopt
+	local _curidx=0
+	echo "can not parse cmd[$_cmd]" >>$_compreplyfile
+	_str="["
+	for _curopt in "$@"
+	do
+		if [ $_curidx -gt 0 ]
+			then
+			_str="${_str},"
+		fi
+		_str="${_str}${_curopt}"
+		_curidx=`expr $_curidx \+ 1`
+	done
+	_str="${_str}]"
+	echo "${_str}" >>$_compreplyfile
+	return
+}
+
+_insertcode_add_cmdname_match()
+{
+	local _compreplyfile="$1"
+	local _cmdname="$2"
+	local _matchpattern=""
+	local _matched
+	local _shortmode
+	local _longmode
+	local _singlemode
+	local _hasshortargs
+	if [ $# -gt 2 ]
+	then
+		_matchpattern="$3"
+	fi
+	_oldifs=$IFS
+	IFS=$'\n'
+	for _curopt in $(_insertcode_get_cmdname_needargs_longopt "$_cmdname")
+	do
+		IFS=$_oldifs
+		_matched="1"
+		if [ -n "$_matchpattern" ]
+			then
+			_matched=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" "${_matchpattern}.*" "" "$_curopt")
+		fi
+		if [ -n "$_matched" ]
+			then
+			echo "$_curopt" >>$_compreplyfile
+		fi
+		IFS=$'\n'
+	done
+	IFS=$_oldifs
+	IFS=$'\n'
+	for _curopt in $(_insertcode_get_cmdname_noargs_longopt "$_cmdname")
+	do
+		IFS=$_oldifs
+		_matched="1"
+		if [ -n "$_matchpattern" ]
+			then
+			_matched=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" "${_matchpattern}.*" "" "$_curopt")
+		fi
+		if [ -n "$_matched" ]
+			then
+			echo "$_curopt" >>$_compreplyfile
+		fi
+		IFS=$'\n'
+	done
+	IFS=$_oldifs
+	IFS=$'\n'
+	_shortmode=1
+	_singlemode=0
+	if [ -n "$_matchpattern" ] 
+		then
+		#########################
+		## if the last word is --longopt ,so we should not 
+		## set for short opt handle
+		#########################
+		_matched=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" "--.*" "" "$_matchpattern")
+		if [ -n "$_matched" ]
+		then
+			_shortmode=0
+		fi
+
+		if [ $_shortmode -gt 0 ]
+			then
+			################################
+			## if the last word is not startswith - so no shortmode handle
+			## if it startswith - so just single mode
+			################################
+			_matched=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" "-.*" "" "$_matchpattern")
+			if [ -z "$_matched" ]
+				then
+				_shortmode=0
+			else
+				_singlemode=`echo "$_matchpattern" | wc -c | tr -d [:space:]`
+				if [ $_singlemode -gt 1 ]
+					then
+					_singlemode=1
+				else
+					_singlemode=0
+				fi
+			fi
+		fi
+	fi
+
+	if [ $_shortmode -gt 0 ]
+	then
+		_hasshortargs=0
+		for _curopt in $(_insertcode_get_cmdname_needargs_shortopt "$_cmdname")
+		then
+			IFS=$_oldifs
+			_matched=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" "(${_curopt})" "\$1" "$_matchpattern")
+			if [ -n "$_matched" ]
+				then
+				_hasshortargs=1
+				break
+			fi
+			IFS=$'\n'
+		fi
+		IFS=$_oldifs
+
+		if [ $_hasshortargs -eq 0 ]
+			then
+			for _curopt in $(_insertcode_get_cmdname_needargs_shortopt "$_cmdname")
+			do
+				IFS=$_oldifs
+				if [ $_singlemode -gt 0 ]
+					then
+					echo "${_curopt}" >>$_compreplyfile
+				else
+					echo "-${_curopt}" >>$_compreplyfile
+				fi
+				IFS=$'\n'
+			done
+			IFS=$_oldifs
+		fi
+
+		IFS=$'\n'
+		for _curopt in $(_insertcode_get_cmdname_noargs_shortopt "$_cmdname")
+		do
+			IFS=$_oldifs
+			if [ $_singlemode -gt 0 ]
+				then
+				echo "${_curopt}" >>$_compreplyfile
+			else
+				echo "-${_curopt}" >>$_compreplyfile
+			fi
+			IFS=$'\n'
+		done
+		IFS=$_oldifs
+	fi
+
+	return	
+
+}
+
+_insertcode_completion_common_function()
+{
+	local _compreplyfile="$1"
+	shift
+	local _cmd="$1"
+	shift
+	local _curopt
+	local _oldifs
+	if [ $# -eq 0 ]
+		then
+
+	elif [ $# -eq 1 ]
+		then
+		_oldifs=$IFS
+		IFS=$'\n'
+		for _curopt in $(_insertcode_get_cmdname_needargs_longopt "$_cmdname")
+		do
+			IFS=$_oldifs
+			echo "$_curopt" >>$_compreplyfile
+			IFS=$'\n'
+		done
+		IFS=$_oldifs
+
+		IFS=$'\n'
+		for _curopt in $(_insertcode_get_cmdname_noargs_longopt "$_cmdname")
+		do
+			IFS=$_oldifs
+			echo "$_curopt" >>$_compreplyfile
+			IFS=$'\n'
+		done
+		IFS=$_oldifs
+
+		IFS=$'\n'
+		for _curopt in $(_insertcode_get_cmdname_needargs_shortopt "$_cmdname")
+		do
+			IFS=$_oldifs
+			echo "-${_curopt}" >>$_compreplyfile
+			IFS=$'\n'
+		done
+		IFS=$_oldifs
+
+		IFS=$'\n'
+		for _curopt in $(_insertcode_get_cmdname_noargs_shortopt "$_cmdname")
+		do
+			IFS=$_oldifs
+			echo "-${_curopt}" >>$_compreplyfile
+			IFS=$'\n'
+		done
+		IFS=$_oldifs
+	else
+	fi
+
+}
+
+_insertcode_main_completion_function()
+{
+	_insertcode_completion_common_function "$@"
 }
 
 _insertcode_get_compreply_func()
