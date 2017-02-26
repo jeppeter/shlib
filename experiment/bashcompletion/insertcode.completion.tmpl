@@ -5,7 +5,7 @@ INSERTCODE_DEBUG_LEVEL=3
 INSERTCODE_WARN_LEVEL=1
 INSERTCODE_ERROR_LEVEL=0
 
-INSERTCODE_PERL_EXTRACT_STR="use strict;my (\$cmd)=\"\#! /usr/bin/perl\r\n\r\nuse strict;\r\nsub extract_string(\\\$\\\$\\\$)\r\n{\r\n    my (\\\$restr,\\\$eval,\\\$instr) = \@_;\r\n    my (\\\$outstr)=\\\"\\\";\r\n    if (\\\$instr =~ m/\\\$restr/) {\r\n        if (length(\\\$eval) > 0) {\r\n            \\\$outstr= eval \\\$eval;\r\n        } else {\r\n            \\\$outstr= \\\$instr;\r\n        }\r\n    }\r\n    return \\\$outstr;\r\n}\r\n\r\nif (scalar(\@ARGV) == 1 && \r\n    (\\\$ARGV[0] eq \\\"-h\\\" || \\\$ARGV[0] eq \\\"--help\\\")) {\r\n    print \\\"\\\$0 [restr] [evalstr] [instr]...\\\\n\\\";\r\n    exit(0);\r\n}\r\n\r\nif (scalar(\@ARGV) < 3) {\r\n    print \\\"\\\$0 [restr] [evalstr] [instr]...\\\\n\\\";\r\n    exit(3);\r\n}\r\nmy (\\\$restr) = shift \@ARGV;\r\nmy (\\\$evalstr) = shift \@ARGV;\r\nforeach (\@ARGV) {\r\n    my \\\$outstr;\r\n    \\\$outstr = extract_string(\\\$restr,\\\$evalstr,\\\$_);\r\n    print STDOUT \\\"\\\$outstr\\\\n\\\";\r\n}\";eval \$cmd;"
+INSERTCODE_PERL_EXTRACT_STR="use strict;my (\$cmd)=\"%INSERTCODE_PERL_EXTRACT_STR%\";eval \$cmd;"
 
 
 _insertcode_debug()
@@ -266,6 +266,13 @@ _insertcode_parse_cmdname()
 		_optmatch=`echo `
 		if [ -n "$_longoptmatch" ]
 			then
+			if [ "$_longoptmatch" = "--" ]
+			then
+				_tempi=`expr $_i - 1`
+				_cmdname="-${_tempi}-${_cmdname}"
+				break
+			fi
+
 			_needargs=$(_insertcode_longopt_step "$_cmdname" "$_longoptmatch")
 			if [ $_needargs -lt 0 ]
 				then
@@ -335,7 +342,8 @@ _insertcode_parse_cmdname()
 			if [ -z "$_matchedcmd" ]
 				then
 				# it means the offset and cmdname
-				_cmdname="-${_i}-${_cmdname}"
+				_tempi=`expr $_i - 1`
+				_cmdname="-${_tempi}-${_cmdname}"
 				break
 			fi
 			if [ -z "$_cmdname" ]
@@ -352,12 +360,77 @@ _insertcode_parse_cmdname()
 	return
 }
 
-_insertcode_get_options()
+_insertcode_error_completion_function()
 {
-	local _cmdname="$1"
+	local _compreplyfile="$1"
 	shift
+	local -a _args="$@"
 }
 
+_insertcode_get_compreply_func()
+{
+	local _cmdname="$1"
+	local _funcname="_insertcode_error_completion_function"
+	if [ -z "$_cmdname" ]
+		then
+		_funcname="_insertcode_main_completion_function"
+	elif [ "$_cmdname" = "bashstring" ]
+		then
+		_funcname="_insertcode_bashstring_completion_function"
+	elif [ "$_cmdname" = "bashinsert" ]
+		then
+		_funcname="_insertcode_bashinsert_completion_function"
+	elif [ "$_cmdname" = "shperl" ]
+		then
+		_funcname="_insertcode_shperl_completion_function"
+	elif [ "$_cmdname" = "shpython" ]
+		then
+		_funcname="_insertcode_shpython_completion_function"
+	elif [ "$_cmdname" = "makeperl" ]
+		then
+		_funcname="_insertcode_makeperl_completion_function"
+	elif [ "$_cmdname" = "makepython" ]
+		then
+		_funcname="_insertcode_makepython_completion_function"
+	fi
+	echo "$_funcname"
+	return
+}
+
+_insertcode_get_options()
+{
+	local _compreplyfile="$1"
+	shift
+	local _cmdname="$1"
+	shift
+	local _cmdfunc
+	_cmdfunc=$(_insertcode_get_compreply_func "$_cmdname")
+
+
+
+
+}
+
+_insertcode_set_result()
+{
+	local _compreplyfile="$1"
+	local _curopt
+	local _oldifs
+	local _cnt
+	unset COMPREPLY
+	declare -g -a COMPREPLY
+	_oldifs=$IFS
+	IFS=$'\n'
+	for _curopt in $(cat "$_compreplyfile")
+	do
+		IFS=$_oldifs
+		_cnt=${#COMPREPLY[@]}
+		COMPREPLY[$_cnt]=$_curopt
+		IFS=$'\n'
+	done
+	IFS=$_oldifs
+	return
+}
 
 
 _insertcode()
@@ -372,12 +445,12 @@ _insertcode()
 	_cmdname=$(_insertcode_parse_cmdname "$_resfile")
 	if [ "$_cmdname" = "--" ]
 		then
-		COMPREPLY=($(cat $_resfile))
+		_insertcode_set_result "$_resfile"
 		rm -f $_resfile
 		return
 	fi
 	
-	_cmdidx=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" '-([\d]+)-([\w\.]+)' "\$1" "$_cmdname" )
+	_cmdidx=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" '-([\d]+)-([\w\.]+)'  "\$1" "$_cmdname" )
 	if [ -n "$_cmdidx" ]
 		then
 		# if it is in the 
@@ -397,11 +470,6 @@ _insertcode()
 			_mustpassargs[$_argscnt]=COMP_WORDS[$_cmdidx]
 		fi		
 	fi
-
-	unset COMPREPLY
-	declare -a COMPREPLY
-	for _curopt in ()
-
 
 	return
 }
