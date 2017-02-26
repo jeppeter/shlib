@@ -4,6 +4,12 @@ INSERTCODE_INFO_LEVEL=2
 INSERTCODE_DEBUG_LEVEL=3
 INSERTCODE_WARN_LEVEL=1
 INSERTCODE_ERROR_LEVEL=0
+INSERTCODE_MAX_UINT=0xffffffff
+INSERTCODE_MAX_ULONGLONG=0xffffffffffffffff
+INSERTCODE_MAX_INT=0x7ffffffff
+INSERTCODE_MIN_INT=-0x7fffffff
+INSERTCODE_MAX_LONGLONG=0x7fffffffffffffff
+INSERTCODE_MIN_LONGLONG=0x7fffffffffffffff
 
 INSERTCODE_PERL_EXTRACT_STR="use strict;my (\$cmd)=\"%INSERTCODE_PERL_EXTRACT_STR%\";eval \$cmd;"
 
@@ -518,7 +524,108 @@ _insertcode_add_cmdname_match()
 	fi
 
 	return	
+}
 
+_insertcode_completion_int_function()
+{
+	local _compreplyfile="$1"
+	shift
+	local _option="$1"
+	shift
+	local _matchpattern=""
+	local _matched=""
+	if [ $# -gt 0 ]
+		then
+		_notice="$1"
+		shift
+	fi
+	if [ -n "$_matchpattern" ]
+		then
+		_matched=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" "^([\d]+)\$" "\$1" "$_matchpattern")
+		if [ -n "$_macthed" ]
+			then
+			if [ $_matched -gt  ]
+			echo "[$_option]" >>$_compreplyfile
+			echo "int number [$_matchpattern...]" >>$_compreplyfile
+		else
+			_matched=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" "^([x|X][\da-fA-F]+)\$" "\$1" "$_matchpattern" )
+			if [ -n "$_matched" ]
+				then
+				echo "[$_option]" >>$_compreplyfile
+				echo "int number [$_matchpattern...]" >>$_compreplyfile
+			else
+				_matched=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" "^(0[x|X][\da-fA-F]+)\$" "\$1" "$_matchpattern")
+				if [ -n "$_matchpattern" ]
+					then
+					echo "[$_option]" >>$_compreplyfile
+					echo "int number [$_matchpattern...]"  >>$_compreplyfile
+				else
+					echo "[$_option]" >>$_compreplyfile
+					echo "not valid [$_matchpattern] for int number" >>$_compreplyfile
+				fi
+			fi
+		fi
+	else
+		echo "[$_option]" >>$_compreplyfile
+		echo "int number [0...]"  >>$_compreplyfile
+	fi
+	return
+}
+
+_insertcode_completion_float_function()
+{
+	local _compreplyfile="$1"
+	shift
+	local _options="$1"
+	shift
+	local _notice=""
+	if [ $# -gt 0 ]
+		then
+		_notice="$1"
+		shift
+	fi
+	if [ -n "$_notice" ]
+		then
+		echo "[$_options] $_notice" >>$_compreplyfile
+	else
+		echo "[$_options]" >>$_compreplyfile
+	fi
+	echo "float number [0.0 ...]"  >>$_compreplyfile
+	return	
+}
+
+_insertcode_completion_string_function()
+{
+	local _compreplyfile="$1"
+	shift
+	local _options="$1"
+	shift
+	local _matchpattern=""
+	if [ $# -gt 0 ]
+		then
+		_matchpattern="$1"
+		shift
+	fi
+	if [ -n "$_notice" ]
+		then
+		echo "[$_options] $_notice" >>$_compreplyfile
+	else
+		echo "[$_options]" >>$_compreplyfile
+	fi
+	echo "string values"  >>$_compreplyfile
+	return	
+}
+
+
+
+_insertcode_completion_get_pre
+
+_insertcode_completion_previous_value_function()
+{
+	local _cmdname="$1"
+	local _preopt="$2"
+
+	
 }
 
 _insertcode_completion_common_function()
