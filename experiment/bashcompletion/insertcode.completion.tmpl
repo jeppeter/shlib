@@ -50,6 +50,74 @@ _insertcode_debug()
 	fi
 }
 
+_insertcode_debug()
+{
+	local _fmt="$1"
+	shift
+	local _backstack=0
+	local _osname=`uname -s | tr [:upper:] [:lower:]`
+	if [ $# -gt 0 ]
+		then
+		_backstack="$1"
+	fi
+	if [ -n "$INSERTCODE_DEBUG" ] && [ $INSERTCODE_DEBUG -gt 0 ]
+		then
+        
+        _fmtstr=""
+        if [ $INSERTCODE_DEBUG -gt $INSERTCODE_INFO_LEVEL ]
+                then
+                local _funcstack=`expr $_backstack \+ 1`
+                if [ "${BASH_VERSINFO[0]}" -lt 4 ]
+                        then
+                        local _filestack=$_backstack
+                        _fmtstr="[$_osname]${FUNCNAME[$_funcstack]}:${BASH_LINENO[$_backstack]} "
+                else
+                        _fmtstr="[$_osname]${FUNCNAME[$_funcstack]}:${BASH_LINENO[$_backstack]} "
+                fi
+                #echo "BASH_SOURCE [${BASH_SOURCE[@]}] BASH_LINENO [${BASH_LINENO[@]}] FUNCNAME [${FUNCNAME[@]}]" >&2
+        fi 
+        _fmtstr="$_fmtstr$_fmt"
+        if [ "$_osname" = "darwin" ]
+                then
+                echo "$_fmtstr" >&2
+        else
+                echo -e "$_fmtstr" >&2
+        fi
+	fi
+}
+
+
+_insertcode_error()
+{
+	local _fmt="$1"
+	shift
+	local _backstack=0
+	local _osname=`uname -s | tr [:upper:] [:lower:]`
+	if [ $# -gt 0 ]
+		then
+		_backstack="$1"
+	fi
+        
+    _fmtstr=""
+    local _funcstack=`expr $_backstack \+ 1`
+	if [ "${BASH_VERSINFO[0]}" -lt 4 ]
+       then
+        local _filestack=$_backstack
+        _fmtstr="[$_osname]${FUNCNAME[$_funcstack]}:${BASH_LINENO[$_backstack]} "
+    else
+        _fmtstr="[$_osname]${FUNCNAME[$_funcstack]}:${BASH_LINENO[$_backstack]} "
+    fi
+    #echo "BASH_SOURCE [${BASH_SOURCE[@]}] BASH_LINENO [${BASH_LINENO[@]}] FUNCNAME [${FUNCNAME[@]}]" >&2
+   _fmtstr="$_fmtstr$_fmt"
+   if [ "$_osname" = "darwin" ]
+           then
+           echo "$_fmtstr" >&2
+   else
+           echo -e "$_fmtstr" >&2
+   fi
+}
+
+
 _insertcode_get_cmdname_needargs_longopt()
 {
 	local _cmdname="$1"
@@ -618,14 +686,239 @@ _insertcode_completion_string_function()
 
 
 
-_insertcode_completion_get_pre
-
 _insertcode_completion_previous_value_function()
 {
 	local _cmdname="$1"
 	local _preopt="$2"
+	local _funcname=""
+	local _matched=""
 
+	if [ -z "$_cmdname"  ]
+		then
+		if [ "$_preopt" = "--input" ]
+			then
+			_funcname="_insertcode_completion_option_intput_function"
+		elif [ "$_preopt" = "--output" ]
+			then
+			_funcname="_insertcode_completion_option_output_function"
+		elif [ "$_preopt" = "--pattern" ]
+			then
+			_funcname="_insertcode_completion_option_pattern_function"
+		else
+			_matched=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" '^-([^-]+)$' "\$1" "$_preopt")
+			if [ -n "$_macthed" ]
+				then
+				_matched=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" "(i)" "\$1" "$_preopt")
+				if [ -n "$_matched" ]
+					then
+					_funcname="_insertcode_completion_option_intput_function"
+				fi
+
+				_matched=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" "(o)" "\$1" "$_preopt")
+				if [ -n "$_matched" ]
+					then
+					if [ -n "$_funcname" ]
+						then
+						_insertcode_error "[$_preopt] double funcs"
+					else
+						_funcname="_insertcode_completion_option_output_function"
+					fi
+				fi
+
+				_matched=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" "(p)" "\$1" "$_preopt" )
+				if [ -n "$_matched" ]
+					then
+					if [ -n "$_funcname" ]
+						then
+						_inseertcode_error "[$_preopt] double funcs"
+					else
+						_funcname="_insertcode_completion_option_pattern_function"
+					fi
+				fi
+			fi
+		fi
+	elif [ "$_cmdname" = "bashinsert" ]
+		then
+		if [ "$_preopt" = "--input" ]
+			then
+			_funcname="_insertcode_completion_option_intput_function"
+		elif [ "$_preopt" = "--output" ]
+			then
+			_funcname="_insertcode_completion_option_output_function"
+		elif [ "$_preopt" = "--pattern" ]
+			then
+			_funcname="_insertcode_completion_option_pattern_function"
+		else
+			_matched=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" '^-([^-]+)$' "\$1" "$_preopt")
+			if [ -n "$_macthed" ]
+				then
+				_matched=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" "(i)" "\$1" "$_preopt")
+				if [ -n "$_matched" ]
+					then
+					_funcname="_insertcode_completion_option_intput_function"
+				fi
+
+				_matched=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" "(o)" "\$1" "$_preopt")
+				if [ -n "$_matched" ]
+					then
+					if [ -n "$_funcname" ]
+						then
+						_insertcode_error "[$_preopt] double funcs"
+					else
+						_funcname="_insertcode_completion_option_output_function"
+					fi
+				fi
+
+				_matched=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" "(p)" "\$1" "$_preopt" )
+				if [ -n "$_matched" ]
+					then
+					if [ -n "$_funcname" ]
+						then
+						_inseertcode_error "[$_preopt] double funcs"
+					else
+						_funcname="_insertcode_completion_option_pattern_function"
+					fi
+				fi
+			fi
+		fi
+	elif [ "$_cmdname" = "bashstring" ]
+		then
+		if [ "$_preopt" = "--input" ]
+			then
+			_funcname="_insertcode_completion_option_intput_function"
+		elif [ "$_preopt" = "--output" ]
+			then
+			_funcname="_insertcode_completion_option_output_function"
+		elif [ "$_preopt" = "--pattern" ]
+			then
+			_funcname="_insertcode_completion_option_pattern_function"
+		else
+			_matched=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" '^-([^-]+)$' "\$1" "$_preopt")
+			if [ -n "$_macthed" ]
+				then
+				_matched=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" "(i)" "\$1" "$_preopt")
+				if [ -n "$_matched" ]
+					then
+					_funcname="_insertcode_completion_option_intput_function"
+				fi
+
+				_matched=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" "(o)" "\$1" "$_preopt")
+				if [ -n "$_matched" ]
+					then
+					if [ -n "$_funcname" ]
+						then
+						_insertcode_error "[$_preopt] double funcs"
+					else
+						_funcname="_insertcode_completion_option_output_function"
+					fi
+				fi
+
+				_matched=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" "(p)" "\$1" "$_preopt" )
+				if [ -n "$_matched" ]
+					then
+					if [ -n "$_funcname" ]
+						then
+						_inseertcode_error "[$_preopt] double funcs"
+					else
+						_funcname="_insertcode_completion_option_pattern_function"
+					fi
+				fi
+			fi
+		fi
+	elif [ "$_cmdname" = "makepython" ]
+		then
+		if [ "$_preopt" = "--input" ]
+			then
+			_funcname="_insertcode_completion_option_intput_function"
+		elif [ "$_preopt" = "--output" ]
+			then
+			_funcname="_insertcode_completion_option_output_function"
+		elif [ "$_preopt" = "--pattern" ]
+			then
+			_funcname="_insertcode_completion_option_pattern_function"
+		else
+			_matched=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" '^-([^-]+)$' "\$1" "$_preopt")
+			if [ -n "$_macthed" ]
+				then
+				_matched=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" "(i)" "\$1" "$_preopt")
+				if [ -n "$_matched" ]
+					then
+					_funcname="_insertcode_completion_option_intput_function"
+				fi
+
+				_matched=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" "(o)" "\$1" "$_preopt")
+				if [ -n "$_matched" ]
+					then
+					if [ -n "$_funcname" ]
+						then
+						_insertcode_error "[$_preopt] double funcs"
+					else
+						_funcname="_insertcode_completion_option_output_function"
+					fi
+				fi
+
+				_matched=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" "(p)" "\$1" "$_preopt" )
+				if [ -n "$_matched" ]
+					then
+					if [ -n "$_funcname" ]
+						then
+						_inseertcode_error "[$_preopt] double funcs"
+					else
+						_funcname="_insertcode_completion_option_pattern_function"
+					fi
+				fi
+			fi
+		fi
+	elif [ "$_cmdname" = "makeperl" ]
+		then
+		if [ "$_preopt" = "--input" ]
+			then
+			_funcname="_insertcode_completion_option_intput_function"
+		elif [ "$_preopt" = "--output" ]
+			then
+			_funcname="_insertcode_completion_option_output_function"
+		elif [ "$_preopt" = "--pattern" ]
+			then
+			_funcname="_insertcode_completion_option_pattern_function"
+		else
+			_matched=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" '^-([^-]+)$' "\$1" "$_preopt")
+			if [ -n "$_macthed" ]
+				then
+				_matched=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" "(i)" "\$1" "$_preopt")
+				if [ -n "$_matched" ]
+					then
+					_funcname="_insertcode_completion_option_intput_function"
+				fi
+
+				_matched=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" "(o)" "\$1" "$_preopt")
+				if [ -n "$_matched" ]
+					then
+					if [ -n "$_funcname" ]
+						then
+						_insertcode_error "[$_preopt] double funcs"
+					else
+						_funcname="_insertcode_completion_option_output_function"
+					fi
+				fi
+
+				_matched=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" "(p)" "\$1" "$_preopt" )
+				if [ -n "$_matched" ]
+					then
+					if [ -n "$_funcname" ]
+						then
+						_inseertcode_error "[$_preopt] double funcs"
+					else
+						_funcname="_insertcode_completion_option_pattern_function"
+					fi
+				fi
+			fi
+		fi
+	else
+		_inseertcode_error "[$_cmdname] not valid cmdname"
+	fi
 	
+	echo "$_funcname"
+	return
 }
 
 _insertcode_completion_common_function()
