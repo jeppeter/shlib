@@ -49,3 +49,43 @@ sub TrimRoot($)
 	}
 	return $c;
 }
+
+sub format_out($$$@)
+{
+	my ($simple,$hashref,$notice,@vals)=@_;
+	my ($outstr)="";
+	my (@arr);
+	foreach (@vals) {
+		my ($curval) = $_;
+		if (defined($hashref->{$curval})) {
+			if ($simple) {
+				if (ref ($hashref->{$curval}) eq "ARRAY") {
+					@arr = @{$hashref->{$curval}};
+					foreach (@arr) {
+						$outstr .= "$_\n";	
+					}
+				} else{
+					$outstr .= $hashref->{$curval}."\n";
+				}
+			} else {
+				if (ref ($hashref->{$curval}) eq "ARRAY") {
+					@arr = @{$hashref->{$curval}};
+					foreach (@arr) {
+						$outstr .= "$_ $curval $notice\n";
+					}
+				} else {
+					$outstr .= $hashref->{$curval}." $curval $notice\n";
+				}
+			}
+		}
+	}
+	return $outstr;
+}
+
+sub trimspace($)
+{
+	my ($retl)=@_;
+	$retl =~ s/^\s+//;
+	$retl =~ s/\s+$//;
+	return $retl;
+}
