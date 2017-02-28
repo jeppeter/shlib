@@ -929,9 +929,45 @@ _insertcode_completion_common_function()
 	shift
 	local _curopt
 	local _oldifs
+	local _matched
 	if [ $# -eq 0 ]
 		then
+		# for it will give all the completion 
+		_oldifs=$IFS
+		IFS=$'\n'
+		for _curopt in $(_insertcode_get_cmdname_needargs_longopt "$_cmdname")
+		do
+			IFS=$_oldifs
+			echo "$_curopt" >>$_compreplyfile
+			IFS=$'\n'
+		done
 
+		IFS=$_oldifs
+		IFS=$'\n'
+		for _curopt in $(_insertcode_get_cmdname_noargs_longopt "$_cmdname")
+		do
+			IFS=$_oldifs
+			echo "$_curopt" >>$_compreplyfile
+			IFS=$'\n'
+		done
+		IFS=$_oldifs
+		IFS=$'\n'
+		for _curopt in $(_insertcode_get_cmdname_needargs_shortopt "$_cmdname")
+		do
+			IFS=$_oldifs
+			echo "-${_curopt}" >>$_compreplyfile
+			IFS=$'\n'
+		done
+
+		IFS=$_oldifs
+		IFS=$'\n'
+		for _curopt in $(_insertcode_get_cmdname_noargs_shortopt "$_cmdname")
+		do
+			IFS=$_oldifs
+			echo "-${_curopt}" >>$_compreplyfile
+			IFS=$'\n'
+		done
+		IFS=$_oldifs
 	elif [ $# -eq 1 ]
 		then
 		_oldifs=$IFS
@@ -972,10 +1008,9 @@ _insertcode_completion_common_function()
 		IFS=$_oldifs
 	else
 	fi
-
 }
 
-_insertcode_main_completion_function()
+_insertcode_completion_main_function()
 {
 	_insertcode_completion_common_function "$@"
 }
