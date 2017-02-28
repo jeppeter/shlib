@@ -31,6 +31,9 @@ sub FinalOutput($)
 sub GetFullPath($)
 {
 	my ($c) =@_;
+	if ( -e $c && !( -l $c) ) {
+		return abs_path($c);
+	}
 	return File::Spec->rel2abs($c);
 }
 
