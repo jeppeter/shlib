@@ -351,28 +351,29 @@ def __get_python_perl(args,infile):
         for c in l:
             if c == '\n':
                 s += '\\'
-                s += 'n'
-            elif c == '"':
                 s += '\\'
+                s += 'n'
+            elif c == '#':
+                s += '\\'
+                s += '\\'
+                s += '#'
+            elif c == '$':
+                s += '\\' * 6
+                s += '$'
+            elif c == '"':
+                s += '\\' * 6
                 s += '"'
             elif c == '\\':
-                s += '\\'
-                s += '\\'
-            elif c == '\r':
-                s += '\\'
-                s += 'r'
-            elif c == '\t':
-                s += '\\'
-                s += 't'
+                s += '\\' * 8
             elif c == '\'':
                 s += '\\'
                 s += '\''
-            elif c == '\b':
-                s += '\\'
-                s += 'b'
-            elif c == '\v':
-                s += '\\'
-                s += 'v'
+            elif c == '@':
+                s += '\\' * 2
+                s += '@'
+            elif c == '`':
+                s += '\\' * 2
+                s += '`'
             else:
                 s += c
     if fin != sys.stdin:

@@ -1,0 +1,4 @@
+#! /bin/sh
+
+ECHO_STR="use strict;my (\$cmd)=\"%REPLACE_PATTERN%\";print \$cmd;"
+perl -e "${ECHO_STR}"
