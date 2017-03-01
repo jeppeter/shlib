@@ -31,49 +31,11 @@ _insertcode_debug()
         if [ $INSERTCODE_DEBUG -gt $INSERTCODE_INFO_LEVEL ]
                 then
                 local _funcstack=`expr $_backstack \+ 1`
-                if [ "${BASH_VERSINFO[0]}" -lt 4 ]
-                        then
-                        local _filestack=$_backstack
-                        _fmtstr="[$_osname]${FUNCNAME[$_funcstack]}:${BASH_LINENO[$_backstack]} "
-                else
-                        _fmtstr="[$_osname]${FUNCNAME[$_funcstack]}:${BASH_LINENO[$_backstack]} "
+                if [ $_funcstack -ge ${#FUNCNAME[@]} ]
+                    then
+                    _funcstack=$_backstack
                 fi
-                #echo "BASH_SOURCE [${BASH_SOURCE[@]}] BASH_LINENO [${BASH_LINENO[@]}] FUNCNAME [${FUNCNAME[@]}]" >&2
-        fi 
-        _fmtstr="$_fmtstr$_fmt"
-        if [ "$_osname" = "darwin" ]
-                then
-                echo "$_fmtstr" >&2
-        else
-                echo -e "$_fmtstr" >&2
-        fi
-	fi
-}
-
-_insertcode_debug()
-{
-	local _fmt="$1"
-	shift
-	local _backstack=0
-	local _osname=`uname -s | tr [:upper:] [:lower:]`
-	if [ $# -gt 0 ]
-		then
-		_backstack="$1"
-	fi
-	if [ -n "$INSERTCODE_DEBUG" ] && [ $INSERTCODE_DEBUG -gt 0 ]
-		then
-        
-        _fmtstr=""
-        if [ $INSERTCODE_DEBUG -gt $INSERTCODE_INFO_LEVEL ]
-                then
-                local _funcstack=`expr $_backstack \+ 1`
-                if [ "${BASH_VERSINFO[0]}" -lt 4 ]
-                        then
-                        local _filestack=$_backstack
-                        _fmtstr="[$_osname]${FUNCNAME[$_funcstack]}:${BASH_LINENO[$_backstack]} "
-                else
-                        _fmtstr="[$_osname]${FUNCNAME[$_funcstack]}:${BASH_LINENO[$_backstack]} "
-                fi
+                _fmtstr="[$_osname][${FUNCNAME[$_funcstack]}:${BASH_LINENO[$_backstack]}] "
                 #echo "BASH_SOURCE [${BASH_SOURCE[@]}] BASH_LINENO [${BASH_LINENO[@]}] FUNCNAME [${FUNCNAME[@]}]" >&2
         fi 
         _fmtstr="$_fmtstr$_fmt"
@@ -97,24 +59,44 @@ _insertcode_error()
 		then
 		_backstack="$1"
 	fi
-        
+       
     _fmtstr=""
-    local _funcstack=`expr $_backstack \+ 1`
-	if [ "${BASH_VERSINFO[0]}" -lt 4 ]
-       then
-        local _filestack=$_backstack
-        _fmtstr="[$_osname]${FUNCNAME[$_funcstack]}:${BASH_LINENO[$_backstack]} "
+    if [ $INSERTCODE_DEBUG -gt $INSERTCODE_INFO_LEVEL ]
+            then
+            local _funcstack=`expr $_backstack \+ 1`
+            if [ $_funcstack -ge ${#FUNCNAME[@]} ]
+                then
+                _funcstack=$_backstack
+            fi
+            _fmtstr="[$_osname][${FUNCNAME[$_funcstack]}:${BASH_LINENO[$_backstack]}] "
+    fi 
+    _fmtstr="$_fmtstr$_fmt"
+    if [ "$_osname" = "darwin" ]
+            then
+            echo "$_fmtstr" >&2
     else
-        _fmtstr="[$_osname]${FUNCNAME[$_funcstack]}:${BASH_LINENO[$_backstack]} "
+            echo -e "$_fmtstr" >&2
     fi
-    #echo "BASH_SOURCE [${BASH_SOURCE[@]}] BASH_LINENO [${BASH_LINENO[@]}] FUNCNAME [${FUNCNAME[@]}]" >&2
-   _fmtstr="$_fmtstr$_fmt"
-   if [ "$_osname" = "darwin" ]
-           then
-           echo "$_fmtstr" >&2
-   else
-           echo -e "$_fmtstr" >&2
-   fi
+}
+
+_insertcode_format_array()
+{
+    local _str
+    local _idx=0
+    local _i
+    _str="["
+    for _i in "$@"
+    do
+        if [ $_idx -gt 0 ]
+            then
+            _str="${_str},"
+        fi
+        _str="${_str}$_i"
+        _idx=`expr $_idx \+ 1`
+    done
+    _str="${_str}]"
+    echo "$_str"
+    return
 }
 
 
@@ -324,8 +306,10 @@ _insertcode_parse_cmdname()
 	local _needargs
 	local _tempi
 	local _matchedcmd
+	local _maxcword=$COMP_CWORD
 
-	while [ $_i -lt $COMP_CWORD ]
+	_maxcword=`expr $_maxcword - 1`
+	while [ $_i -lt $_maxcword ]
 	do
 		_shortoptargs=0
 		_needargs=0
@@ -333,32 +317,38 @@ _insertcode_parse_cmdname()
 		_i=`expr $_i \+ 1`
 		if [ -z "$_curopt" ]
 			then
-			continue
+			_tempi=`$_i - 1`
+			_cmdname="+${_tempi}-${_cmdname}"
+			break
+		fi
+
+		if [ "$_curopt" = "--" ];then
+			# this is the break one
+			_tempi=$_i
+			_cmdname="+${_tempi}-${_cmdname}"
+			break
 		fi
 
 		_longoptmatch=`echo "$_curopt" | grep -Po -e "--(.*)"`
-		_optmatch=`echo `
+		_optmatch=`echo "$_curopt"  | grep -Po -e "-(.*)"`
 		if [ -n "$_longoptmatch" ]
 			then
-			if [ "$_longoptmatch" = "--" ]
-			then
-				_tempi=`expr $_i - 1`
-				_cmdname="-${_tempi}-${_cmdname}"
-				break
-			fi
 
 			_needargs=$(_insertcode_longopt_step "$_cmdname" "$_longoptmatch")
 			if [ $_needargs -lt 0 ]
 				then
-				echo "$_longoptmatch invalid options" >>$_compreplyfile
+				_tempi=`expr $_i - 1`
+				echo "[$_longoptmatch] invalid options" >>$_compreplyfile
+				echo "at [$_tempi]" >>$_compreplyfile
 				echo "--"
 				return
 			fi
 			if [ $_needargs -gt 0 ]
 				then
 				_tempi=`expr $_i \+ 1`
-				if [ $_tempi -ge $COMP_CWORD ]
+				if [ $_tempi -ge $_maxcword ]
 					then
+					_cmdname="+${_tempi}-${_cmdname}"
 					break
 				fi
 				_i=$_tempi
@@ -375,6 +365,8 @@ _insertcode_parse_cmdname()
 				_needargs=$(_insertcode_shortopt_step "$_cmdname" "$_geto")
 				if [ $_needargs -lt 0 ]
 				then
+					_tempi=`expr $_i - 1`
+					echo "at [$_tempi] [$_optmatch]" >>$_compreplyfile
 					echo "[$_geto] not valid in $_optmatch" >>$_compreplyfile
 					echo "--"
 					return
@@ -383,7 +375,9 @@ _insertcode_parse_cmdname()
 					then
 					if [ $_shortoptargs -gt 0 ]
 					then
-						echo "[$_optmatch] not need have opt args for [$_geto]" >>$_compreplyfile
+						_tempi=`expr $_i - 1`
+						echo "at [$_tempi] [$_optmatch]" >>$_compreplyfile
+						echo "more than one opt args for [$_geto]" >>$_compreplyfile
 						echo "--"
 						return
 					fi
@@ -395,8 +389,9 @@ _insertcode_parse_cmdname()
 			if [ $_shortoptargs -gt 0 ]
 			then
 				_tempi=`expr $_i \+ 1`
-				if [ $_tempi -ge $COMP_CWORD ]
+				if [ $_tempi -ge $_maxcword ]
 				then
+					_cmdname="+${_tempi}-${_cmdname}"
 					break
 				fi
 				_i=$_tempi
@@ -417,7 +412,7 @@ _insertcode_parse_cmdname()
 				then
 				# it means the offset and cmdname
 				_tempi=`expr $_i - 1`
-				_cmdname="-${_tempi}-${_cmdname}"
+				_cmdname="+${_tempi}-${_cmdname}"
 				break
 			fi
 			if [ -z "$_cmdname" ]
@@ -434,16 +429,19 @@ _insertcode_parse_cmdname()
 	return
 }
 
-_insertcode_error_completion_function()
+_insertcode_completion_error_function()
 {
 	local _compreplyfile="$1"
 	shift
 	local _cmd="$1"
 	shift
+	local _cmdidx="$1"
+	shift
 	local -a _args="$@"
 	local _str=""
 	local _curopt
 	local _curidx=0
+	local _oldifs
 	echo "can not parse cmd[$_cmd]" >>$_compreplyfile
 	_str="["
 	for _curopt in "$@"
@@ -1018,10 +1016,10 @@ _insertcode_completion_main_function()
 _insertcode_get_compreply_func()
 {
 	local _cmdname="$1"
-	local _funcname="_insertcode_error_completion_function"
+	local _funcname="_insertcode_completion_error_function"
 	if [ -z "$_cmdname" ]
 		then
-		_funcname="_insertcode_main_completion_function"
+		_funcname="_insertcode_completion_main_function"
 	elif [ "$_cmdname" = "bashstring" ]
 		then
 		_funcname="_insertcode_bashstring_completion_function"
@@ -1089,6 +1087,8 @@ _insertcode()
 	local -a _mustpassargs
 	local _argscnt
 	local _curopt
+	local _funcname
+	local _startidx
 
 	_cmdname=$(_insertcode_parse_cmdname "$_resfile")
 	if [ "$_cmdname" = "--" ]
@@ -1098,20 +1098,20 @@ _insertcode()
 		return
 	fi
 	
-	_cmdidx=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" '-([\d]+)-([\w\.]+)'  "\$1" "$_cmdname" )
+	_cmdidx=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" '^\+([\d]+)-([\w\.]+)'  "\$1" "$_cmdname" )
 	if [ -n "$_cmdidx" ]
 		then
 		# if it is in the 
-		_cmdname=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" '-([\d]+)-([\w\.]+)' "\$2" "$_cmdname" )
+		_cmdname=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" '^\+([\d]+)-([\w\.]+)' "\$2" "$_cmdname" )
 		_argscnt=0
-		while [ $_cmdidx -gt $COMP_CWORD ]
+		_startidx=$_cmdidx
+		while [ $_startidx -lt $COMP_CWORD ]
 		do
-			_mustpassargs[$_argscnt]=COMP_WORDS[$_cmdidx]
-			_cmdidx=`expr $_cmdidx \+ 1`
-			_argscnt=`expr $_argscnt \+ 1`
+			_argscnt=${#_mustpassargs[@]}
+			_mustpassargs[$_argscnt]=COMP_WORDS[$_startidx]
+			_startidx=`expr $_startidx \+ 1`
 		done
 	else
-		_argscnt=0
 		_cmdidx=`expr $COMP_CWORD - 1`
 		if [ $_cmdidx -gt 0 ]
 		then
@@ -1119,6 +1119,16 @@ _insertcode()
 		fi		
 	fi
 
+	_funcname=$(_insertcode_get_compreply_func "$_cmdname")
+	if [ -z "$_funcname" ]
+		then
+		_insertcode_error "insertcode [$_cmdname] get funcname [$_funcname]"
+		COMPREPLY=()
+	else
+		eval "$_funcname" "$_resfile" "$_cmdname" "$_cmdidx" "${_mustpassargs[@]}"
+		_insertcode_set_result "$_resfile"
+	fi
+	rm -f "$_resfile"
 	return
 }
 
