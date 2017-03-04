@@ -5,7 +5,7 @@ import extargsparse
 import logging
 import re
 import sys
-import tempfile
+
 
 def read_file(infile=None):
     s = ''
@@ -18,6 +18,26 @@ def read_file(infile=None):
         fin.close()
     fin = None
     return s
+
+def write_retfile(file,lines):
+    s = ''
+    if file is not None:
+        with open(file,'ab') as f:
+            for l in lines:
+                f.write('%s\n'%(l))
+    for l in lines:
+        s += '%s\n'%(l)
+    return s
+
+def output_string(s,outfile=None):
+    fout = sys.stdout
+    if outfile is not None:
+        fout = open(outfile,'wb')
+    fout.write('%s'%(s))
+    if fout != sys.stdout:
+        fout.close()
+    fout = None
+    return
 
 def __get_argsopt_opt(args,argsopt,subcmdname=None,needargs=True,shortopt=False):
     optret=[]
@@ -131,15 +151,6 @@ def get_argsopt_noargs_shortopt(args,argsopt,cmdname=None):
 def get_argsopt_subcommand(args,argsopt,cmdname=None):
     return argsopt.get_subcommands(cmdname)
 
-def write_retfile(file,lines):
-    s = ''
-    if file is not None:
-        with open(file,'ab') as f:
-            for l in lines:
-                f.write('%s\n'%(l))
-    for l in lines:
-        s += '%s\n'%(l)
-    return s
 
 def get_command_name(args,argsopt,resfile,cmds):
     i=1
@@ -202,10 +213,6 @@ def remove_file(args,infile):
         os.remove(infile)
     return
 
-def make_tempfile(dirn=None,suffix=''):
-    temf,fd= tempfile.mkstemp(suffix,dir=dirn)
-    os.close(fd)
-    return tempf
 
 def __get_argsopt_optfunc_opt(args,argsopt,opt,cmdname=None,shortflag=False):
     optfunc = None
@@ -427,9 +434,11 @@ def format_completion(args,argsopt,resfile,cmdidx,cmdname,leftargs,totalargs):
                 return write_retfile(resfile,['cmdname [%s] more than %d'%(cmdname,argscnt),'please use -h|--help to see help'])
         return basic_common_completion_withoutopt(args,argsopt,cmdidx,cmdname,leftargs,totalargs)
 
-
-
-
+##############################
+##  this is the code for extended ,so
+##  we should make this ok
+##############################
+extended_opt_code=''
 
 def completion_format(args):
     s = ''
@@ -437,7 +446,6 @@ def completion_format(args):
         args.jsonstr = read_file()
     argsopt = extargsparse.ExtArgsParse(None,priority=[])
     argsopt.load_command_line_string(args.jsonstr)
-    #tempf = make_tempfile()
     tempf = None
     cmdname ,errors = get_command_name(args,argsopt,tempf,args.args)
     if cmdname == '--':
@@ -460,15 +468,6 @@ def completion_format(args):
     return s
     
 
-def output_string(s,outfile=None):
-    fout = sys.stdout
-    if outfile is not None:
-        fout = open(outfile,'wb')
-    fout.write('%s'%(s))
-    if fout != sys.stdout:
-        fout.close()
-    fout = None
-    return
 
 
 def get_full_trace_back(trback,tabs=1,cnt=0):
@@ -507,7 +506,7 @@ def main():
         "$" : "*"
     }
     '''
-    parser = extargsparse.ExtArgsParse(options=None,priority=[])
+    parser = extargsparse.ExtArgsParse(None,[])
     parser.load_command_line_string(commandline)
     args = parser.parse_command_line()
     set_log_level(args)
