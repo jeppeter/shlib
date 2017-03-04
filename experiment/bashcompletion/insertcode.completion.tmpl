@@ -308,7 +308,13 @@ _insertcode_parse_cmdname()
 	local _matchedcmd
 	local _maxcword=$COMP_CWORD
 
-	_maxcword=`expr $_maxcword - 1`
+	if [ $_maxcword -gt 1 ]
+		then
+		# we should pass already set command line
+		# and the last one ,will handled more
+		_maxcword=`expr $_maxcword - 1`
+	fi
+	_i=1
 	while [ $_i -lt $_maxcword ]
 	do
 		_shortoptargs=0
@@ -410,7 +416,7 @@ _insertcode_parse_cmdname()
 
 			if [ -z "$_matchedcmd" ]
 				then
-				# it means the offset and cmdname
+				# it means we have found things not handled
 				_tempi=`expr $_i - 1`
 				_cmdname="+${_tempi}-${_cmdname}"
 				break
@@ -437,14 +443,15 @@ _insertcode_completion_error_function()
 	shift
 	local _cmdidx="$1"
 	shift
-	local -a _args="$@"
+	local -a _args=($@)
 	local _str=""
 	local _curopt
 	local _curidx=0
 	local _oldifs
-	echo "can not parse cmd[$_cmd]" >>$_compreplyfile
+	echo "can not parse cmd[$_cmd] [$_cmdidx]" >>$_compreplyfile
 	_str="["
-	for _curopt in "$@"
+	_curidx=0
+	for _curopt in "${_args[@]}"
 	do
 		if [ $_curidx -gt 0 ]
 			then
@@ -919,15 +926,100 @@ _insertcode_completion_previous_value_function()
 	return
 }
 
+_insertcode_command_args_cnt()
+{
+	local _cmdname="$1"
+	local _argscnt="*"
+	echo "$_argscnt"
+	return
+}
+
 _insertcode_completion_common_function()
 {
 	local _compreplyfile="$1"
 	shift
 	local _cmd="$1"
 	shift
+	local _cmdidx="$1"
+	shift
+	local -a _args=($@)
+	local _argscnt=$(_insertcode_command_args_cnt "$_cmdname")
 	local _curopt
 	local _oldifs
 	local _matched
+	local _passed
+	local _filteropt=""
+	local _matchexpr
+
+	_passed=0
+	if [ "$_argscnt" = "*"  ] || [ "$_argscnt" = "+" ]
+		then
+		_passed=1
+	elif [ "$_argscnt" = "?" ]
+		then
+		if [ ${#_args[@]} -le 1 ]
+			then
+			_passed=1
+		fi
+	else
+		# it must be the cnt number
+		_matched=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" "^([\d]+)$") "\$1" "$_argscnt")
+		if [ -z "$_matched" ]
+			then
+			_insertcode_error "[$_cmdname] argscnt [$_argscnt] not valid"
+		else
+			if [ $_argscnt -le $_argscnt ]
+				then
+				_passed=1
+			fi
+		if
+	fi
+
+
+	if [ $_passed -gt 0 ]
+		then
+		_argscnt=${#_args[@]}
+		if [ $_argscnt -gt 0 ]
+			then
+			_argscnt=`expr $_argscnt - 1`
+			_filteropt=${_args[$_argscnt]}
+		fi
+
+		if [ -n "$_filteropt" ]
+			then
+			_matchexpr="^${_filteropt}.*"
+		fi
+
+		for _curopt in $(_insertcode_get_cmdname_needargs_longopt "$_cmdname")
+		do
+			if [ -z "$_filteropt" ]
+				then
+				echo "$_curopt" >>$_compreplyfile
+			else
+				_matched=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" "${_matchexpr}" "" "$_curopt")
+				if [ -n "$_matched" ]
+					then
+					echo "$_curopt" >>$_compreplyfile
+				fi
+			fi
+		done
+
+		for _curopt in $(_insertcode_get_cmdname_noargs_longopt "$_cmdname")
+		do
+			if [ -z "$_filteropt" ]
+				then
+				echo "$_curopt" >>$_compreplyfile
+			else
+				_matched=$(perl -e "$INSERTCODE_PERL_EXTRACT_STR" "${_matchexpr}" "" "$_curopt")
+				if [ -n "$_matched" ]
+					then
+					echo "$_curopt" >>$_compreplyfile
+				fi
+			fi
+		done
+		
+	fi
+
 	if [ $# -eq 0 ]
 		then
 		# for it will give all the completion 
@@ -1038,24 +1130,14 @@ _insertcode_get_compreply_func()
 	elif [ "$_cmdname" = "makepython" ]
 		then
 		_funcname="_insertcode_makepython_completion_function"
+	elif [ "$_cmdname" = "pythonperl" ]
+		then
+		_funcname="_insertcode_pythonperl_completion_function"
 	fi
 	echo "$_funcname"
 	return
 }
 
-_insertcode_get_options()
-{
-	local _compreplyfile="$1"
-	shift
-	local _cmdname="$1"
-	shift
-	local _cmdfunc
-	_cmdfunc=$(_insertcode_get_compreply_func "$_cmdname")
-
-
-
-
-}
 
 _insertcode_set_result()
 {
@@ -1113,6 +1195,7 @@ _insertcode()
 		done
 	else
 		_cmdidx=`expr $COMP_CWORD - 1`
+		_argscnt=0
 		if [ $_cmdidx -gt 0 ]
 		then
 			_mustpassargs[$_argscnt]=COMP_WORDS[$_cmdidx]
