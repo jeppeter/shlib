@@ -27,7 +27,7 @@ def make_tempfile(prefix=None,suffix=''):
     return f
 
 
-class debug_bashcomlete_case(unittest.TestCase
+class debug_bashcomlete_case(unittest.TestCase):
     def setUp(self):
         return
 
@@ -42,10 +42,38 @@ class debug_bashcomlete_case(unittest.TestCase
     def tearDownClass(cls):
         return
 
+    def __write_tempfile(self,s):
+    	tempf = make_tempfile()
+
     def test_A001(self):
     	commandline='''
-    	{
-    		"verbose|v" : "+",
-    	}
+		{
+		    "verbose|v": "+",
+		    "input|i##default (stdin)##": null,
+		    "output|o##default (stdout)##": null,
+		    "pattern|p": "%REPLACE_PATTERN%",
+		    "bashinsert<bashinsert_handler>": {
+		        "$": "*"
+		    },
+		    "bashstring<bashstring_handler>": {
+		        "$": "*"
+		    },
+		    "makepython<makepython_handler>": {
+		        "$": "*"
+		    },
+		    "makeperl<makeperl_handler>": {
+		        "$": "*"
+		    },
+		    "shperl<shperl_handler>": {
+		        "$": "*"
+		    },
+		    "shpython<shpython_handler>": {
+		        "$": "*"
+		    },
+		    "pythonperl<pythonperl_handler>": {
+		        "$": "*"
+		    }
+		}
     	'''
+
     	return
