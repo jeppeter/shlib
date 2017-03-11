@@ -6,6 +6,8 @@ import extargsparse
 import logging
 import os
 import tempfile
+import bz2
+import base64
 
 def make_dir_safe(dname=None):
     if dname is not None:
@@ -144,6 +146,7 @@ def output_handler(args,parser):
         raise Exception('please specified release')
     if args.jsonstr is None:
         args.jsonstr = read_file()
+    args.pattern = "extended_opt_code=''"
     extrastr = ''
     for c in args.args:
         extrastr += read_file(c)
@@ -178,14 +181,64 @@ def output_handler(args,parser):
     write_file(bash_complete_string,args.output)
     return
 
+def bzip2_base64_encode(instr):
+    encstr = bz2.compress(instr)
+    b64str = base64.b64encode(encstr)
+    outs = ''
+    c = 0
+    while c < len(b64str):
+        if c > 0:
+            outs += '\n'
+        cnt = 80
+        if len(b64str) < (c + cnt):
+            cnt = len(b64str) - c
+        outs +=  b64str[c:(c+cnt)]
+        c += cnt
+    return outs
+
+def outstr_repls(repls,pattern,infile=None,outfile=None):
+    fout = sys.stdout
+    fin = sys.stdin
+    if infile is not None:
+        fin = open(infile,'rb')
+
+    if outfile is not None:
+        fout = open(outfile,'wb')
+
+    for l in fin:
+        l = l.replace(pattern,repls)
+        fout.write('%s'%(l))
+
+    if fin != sys.stdin:
+        fin.close()
+    fin = None
+
+    if fout != sys.stdout:
+        fout.close()
+    fout = None
+    return
+
+
+
+def release_handler(args,parser):
+    set_log_level(args)
+    if args.basefile is None:
+        raise Exception('please specified basefile by [--basefile|-B]')
+    basestr = read_file(args.basefile)
+    logging.info('basestring (%s)'%(basestr))
+    basestr = bzip2_base64_encode(basestr)
+    logging.info('basestring (%s)'%(basestr))
+    outstr_repls(basestr,'%BASH_COMPLETE_STRING%',args.input,args.output)
+    sys.exit(0)
+    return
 
 def main():
     commandline_fmt='''
     {
         "verbose|v" : "+",
-        "jsonstr|j" : null,
+        "jsonstr|j##jsonstr to read  none read from input or stdin##" : null,
+        "input|i" : null,
         "output|o" : null,
-        "pattern|P" : "extended_opt_code=''",
         "prefix|p" : null,
         "basefile|b" : "%s",
         "output<output_handler>" : {

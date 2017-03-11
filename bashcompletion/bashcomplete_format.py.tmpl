@@ -1,9 +1,93 @@
-#! /usr/bin/env python
+#! /usr/bin/python
 
+import extargsparse
+import sys
 import extargsparse
 import logging
 import os
-import sys
+import tempfile
+import bz2
+import base64
+
+def make_dir_safe(dname=None):
+    if dname is not None:
+        if not os.path.isdir(dname):
+            try:
+                os.makedirs(dname)
+            except:
+                pass
+            if not os.path.isdir(dname):
+                raise Exception('can not make [%s]'%(dname))
+
+
+def make_tempfile(prefix=None,suffix=''):
+    make_dir_safe(prefix)
+    fd,result = tempfile.mkstemp(suffix=suffix,dir=prefix)
+    os.close(fd)
+    f = os.path.abspath(os.path.realpath(result))
+    return f
+
+
+def read_file(infile=None):
+    s = ''
+    fin = sys.stdin
+    if infile is not None:
+        fin = open(infile,'rb')
+    for l in fin:
+        s += l
+    if fin != sys.stdin:
+        fin.close()
+    fin = None
+    return s
+
+def write_file(s,outfile=None):
+    fout = sys.stdout
+    if outfile is not None:
+        fout = open(outfile,'wb')
+    fout.write('%s'%(s))
+    if fout != sys.stdout:
+        fout.close()
+    fout = None
+    return 
+
+def replace_outputs(s,pattern,instrs=None):
+    rets = ''
+    rets += instrs.replace(pattern,s)
+    return rets
+
+def __get_sh_python(args,ins):
+    s = ''
+    for l in ins:
+        for c in l:
+            if c == '\n':
+                s += '\\'
+                s += 'n'
+            elif c == '$':
+                s += '\\'
+                s += '$'
+            elif c == '"':
+                s += '\\'
+                s += '"'
+            elif c == '\\':
+                s += '\\'
+                s += '\\'
+                s += '\\'
+                s += '\\'
+            elif c == '`':
+                s += '\\'
+                s += '`'
+            elif c == '\r':
+                s += '\\'
+                s += 'r'
+            elif c == '\t':
+                s += '\\'
+                s += 't'
+            elif c == '\'':
+                s += '\\\\'
+                s += '\''
+            else:
+                s += c
+    return s
 
 def set_log_level(args):
     loglvl= logging.ERROR
@@ -17,42 +101,63 @@ def set_log_level(args):
     logging.basicConfig(level=loglvl,format='%(asctime)s:%(filename)s:%(funcName)s:%(lineno)d\t%(message)s')
     return
 
-def read_file(infile=None):
-	s = ''
-	fin = sys.stdin
-	if infile is not None:
-		fin = open(infile,'rb')
-	for l in fin:
-		s += l
+def __format_tab_line(s,tabs=0):
+    outs = ' ' * tabs * 4
+    outs += '%s\n'%(s)
+    return outs
 
-	if fin != sys.stdin:
-		fin.close()
-	fin = None
-	return s
+def get_bash_complete_string(args,newargspattern):
+    hprefix = args.prefix.upper()
+    lprefix = args.prefix.lower()
+    s = ''
+    s += __format_tab_line('#! /bin/bash')
+    s += __format_tab_line('read -r -d \'\' %s_COMMAND_JSON_OPTIONS<<%s_EOFMM'%(hprefix,newargspattern))
+    s += __format_tab_line(args.jsonstr)
+    s += __format_tab_line('%s_EOFMM'%(newargspattern))
+    s += __format_tab_line('')
+    s += __format_tab_line('%s_PYTHON_COMPLETE_STR="c=\'%%%s%%\';exec(c);"'%(hprefix,newargspattern))
+    s += __format_tab_line('')
+    s += __format_tab_line('_%s_complete()'%(lprefix))
+    s += __format_tab_line('{')
+    s += __format_tab_line('local _verbosemode=""',1)
+    s += __format_tab_line('if [ -n "$%s_DEBUG_MODE" ] && [ $%s_DEBUG_MODE -gt 0 ]'%(hprefix,hprefix),1)
+    s += __format_tab_line('then',2)
+    s += __format_tab_line('_verbosemode="-vvvv"',2)
+    s += __format_tab_line('fi',1)
+    s += __format_tab_line('',1)
+    s += __format_tab_line('COMPREPLY=($(echo -n "$%s_COMMAND_JSON_OPTIONS" | python -c "$%s_PYTHON_COMPLETE_STR" $_verbosemode --  "${COMP_WORDS[@]}"))'%(hprefix,hprefix),1)
+    s += __format_tab_line('}')
+    s += __format_tab_line('complete -F _%s_complete %s'%(lprefix,args.prefix))
+    return s
 
-def write_file(s,outfile=None):
-	fout = sys.stdout
-	if outfile is not None:
-		fout = open(outfile,'wb')
-	fout.write('%s'%(s))
+def get_temp_value():
+    while True:
+        newfile = make_tempfile()
+        newargspattern = '%s'%(os.path.basename(newfile).replace('.','_'))
+        os.remove(newfile)
+        if (newargspattern[0] >= 'a' and newargspattern[0] <= 'z' ) or \
+            (newargspattern[0] >= 'A' and newargspattern[0] <= 'Z'):
+            break
+    return newargspattern
 
-	if fout != sys.stdout:
-		fout.close()
-	fout = None
-	return
+def unzip_format_string(instr):
+    instr = instr.replace('\r',b'')
+    instr = instr.replace('\n',b'')
+    encstr = base64.b64decode(instr)
+    return bz2.decompress(encstr)
 
-def 
-
-
-def format_handler(args,parser):
+def output_handler(args,parser):
+    global BASH_COMPLETE_STRING
+    set_log_level(args)
     if args.prefix is None:
         raise Exception('please specified release')
     if args.jsonstr is None:
-        args.jsonstr = read_file()
+        args.jsonstr = read_file(args.input)
+    args.pattern = "extended_opt_code=''"
     extrastr = ''
     for c in args.args:
         extrastr += read_file(c)
-    base_string = read_file(args.basefile)
+    base_string = unzip_format_string(BASH_COMPLETE_STRING)
     logging.info('base_string (%d)'%(len(base_string)))
     python_string = replace_outputs(extrastr,args.pattern,base_string)
     newargspattern = 'REPLACE_PATTERN'
@@ -81,23 +186,30 @@ def format_handler(args,parser):
     bash_complete_string = replace_outputs(shpython_string,'%%%s%%'%(newargspattern),bash_base_string)
     bash_complete_string = bash_complete_string.replace('\r','')
     write_file(bash_complete_string,args.output)
-	return
+    return
+
 
 def main():
-	commandline='''
-	{
-		"verbose|v" : "+",
-		"output|o" : null,
-		"format<format_handler>" : {
-			"$": "*"
-		}
-	}
-	'''
-	parser = extargsparse.ExtArgsParse(None,priority=[])
-	parser.load_command_line_string(commandline)
-	parser.parse_command_line(None,parser)
-	return
+    commandline='''
+    {
+        "verbose|v" : "+",
+        "input|i" : null,
+        "jsonstr|j##jsonstr to read  none read from input or stdin##" : null,
+        "output|o" : null,
+        "prefix|p" : null,
+        "output<output_handler>" : {
+            "$" : "*"
+        }
+    }
+    '''
+    parser = extargsparse.ExtArgsParse(None,priority=[])
+    parser.load_command_line_string(commandline)
+    parser.parse_command_line(None,parser)
+    return
 
-BASH_COMPLETION_COMMAND_STRING='''
-%BASH_COMPLETION_COMMAND_STRING%
-'''
+if __name__ == '__main__':
+    main()
+
+BASH_COMPLETE_STRING='''
+%BASH_COMPLETE_STRING%
+''' 
