@@ -138,7 +138,8 @@ def get_temp_value():
             break
     return newargspattern
 
-def output_release(args):
+def output_handler(args,parser):
+    set_log_level(args)
     if args.prefix is None:
         raise Exception('please specified release')
     if args.jsonstr is None:
@@ -187,7 +188,12 @@ def main():
         "pattern|P" : "extended_opt_code=''",
         "prefix|p" : null,
         "basefile|b" : "%s",
-        "$" : "*"
+        "output<output_handler>" : {
+            "$" : "*"
+        },
+        "release<release_handler>" : {
+            "$" : "*"
+        }
     }
     '''
     curdir=os.path.dirname(os.path.abspath(__file__))
@@ -196,9 +202,7 @@ def main():
     commandline=commandline_fmt%(basefile)
     parser = extargsparse.ExtArgsParse(None,priority=[])
     parser.load_command_line_string(commandline)
-    args = parser.parse_command_line()
-    set_log_level(args)
-    output_release(args)
+    parser.parse_command_line(None,parser)
     return
 
 if __name__ == '__main__':
