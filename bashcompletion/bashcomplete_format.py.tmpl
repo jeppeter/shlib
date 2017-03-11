@@ -149,6 +149,8 @@ def unzip_format_string(instr):
 def output_handler(args,parser):
     global BASH_COMPLETE_STRING
     set_log_level(args)
+    if args.basefile is None:
+        raise Exception('can not handle basefile ok')
     if args.prefix is None:
         raise Exception('please specified release')
     if args.jsonstr is None:

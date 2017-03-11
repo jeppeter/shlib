@@ -34,7 +34,10 @@ def read_file(infile=None):
     if infile is not None:
         fin = open(infile,'rb')
     for l in fin:
-        s += l
+        if sys.version[0] == '2':
+            s += l
+        else:
+            s += l.decode(encoding='UTF-8')
     if fin != sys.stdin:
         fin.close()
     fin = None
@@ -44,7 +47,10 @@ def write_file(s,outfile=None):
     fout = sys.stdout
     if outfile is not None:
         fout = open(outfile,'wb')
-    fout.write('%s'%(s))
+    if sys.version[0] == '2':
+        fout.write('%s'%(s))
+    else:
+        fout.write(s.encode(encoding='UTF-8'))
     if fout != sys.stdout:
         fout.close()
     fout = None
@@ -142,13 +148,15 @@ def get_temp_value():
 
 def output_handler(args,parser):
     set_log_level(args)
+    if args.basefile is None:
+        raise Exception('can not handle basefile ok')
     if args.prefix is None:
         raise Exception('please specified release')
     if args.jsonstr is None:
         args.jsonstr = read_file()
     args.pattern = "extended_opt_code=''"
     extrastr = ''
-    for c in args.args:
+    for c in args.subnargs:
         extrastr += read_file(c)
     base_string = read_file(args.basefile)
     logging.info('base_string (%d)'%(len(base_string)))
@@ -232,6 +240,22 @@ def release_handler(args,parser):
     sys.exit(0)
     return
 
+def debug_handler(args,parser):
+    set_log_level(args)
+    if args.basefile is None:
+        raise Exception('can not handle basefile ok')
+    args.pattern = "extended_opt_code=''"
+    extrastr = ''
+    for c in args.subnargs:
+        extrastr += read_file(c)
+    base_string = read_file(args.basefile)
+    logging.info('base_string (%d)'%(len(base_string)))
+    python_string = replace_outputs(extrastr,args.pattern,base_string)
+    write_file(python_string,args.output)
+    sys.exit(0)
+    return
+
+
 def main():
     commandline_fmt='''
     {
@@ -246,6 +270,9 @@ def main():
         },
         "release<release_handler>" : {
             "$" : "*"
+        },
+        "debug<debug_handler>" : {
+            "$" : "*"
         }
     }
     '''
@@ -256,6 +283,7 @@ def main():
     parser = extargsparse.ExtArgsParse(None,priority=[])
     parser.load_command_line_string(commandline)
     parser.parse_command_line(None,parser)
+    raise Exception('can not run here without specified subcommand')
     return
 
 if __name__ == '__main__':
