@@ -39,6 +39,27 @@ def output_string(s,outfile=None):
     fout = None
     return
 
+class _OptionAccess(object):
+    def __init__(self):
+        self.__accessed__ = dict()
+        return
+
+    def __setattr__(self,k,v):
+        if k.startswith('_'):
+            self.__dict__[k]=v
+            return
+        self.__accessed__[k] = True
+        return
+
+    def __getattr__(self,k,defv=None):
+        if k.startswith('_'):
+            if k not in self.__dict__.keys():
+                return defv
+            return self.__dict__[k]
+        if k not in self.__accessed__.keys():
+            return False
+        return True
+
 def __get_argsopt_opt(args,argsopt,subcmdname=None,needargs=True,shortopt=False):
     optret=[]
     opts = argsopt.get_cmdopts(subcmdname)
@@ -151,8 +172,16 @@ def get_argsopt_noargs_shortopt(args,argsopt,cmdname=None):
 def get_argsopt_subcommand(args,argsopt,cmdname=None):
     return argsopt.get_subcommands(cmdname)
 
+def set_argsopt_optattr(args,argsopt,optname,cmdname,optattr):
+    opt = get_argsopt_optattr(args,argsopt,optname,cmdname)
+    if opt is not None and opt.type != 'list':
+        setattr(optattr,opt.optdest,True)
+        if opt.shortflag is not None:
+            setattr(optattr,opt.shortflag,True)
+    return optattr
 
-def get_command_name(args,argsopt,resfile,cmds):
+
+def get_command_name(args,argsopt,resfile,optattr,cmds):
     i=1
     maxwords = len(cmds) - 1
     retcmd=''
@@ -166,8 +195,9 @@ def get_command_name(args,argsopt,resfile,cmds):
         if curcmd.startswith('--'):
             if curcmd in get_argsopt_needargs_longopt(args,argsopt,retcmd):
                 i += 1
+                set_argsopt_optattr(args,argsopt,curcmd,retcmd,optattr)
             elif curcmd in get_argsopt_noargs_longopt(args,argsopt,retcmd):
-                pass
+                set_argsopt_optattr(args,argsopt,curcmd,retcmd,optattr)
             else:
                 logging.info('[%d][%s] not valid opts'%(i,curcmd))
                 retcmd='--'
@@ -185,8 +215,9 @@ def get_command_name(args,argsopt,resfile,cmds):
                         errors += write_retfile(resfile,['[%d][%s] multiple need args defined'%(i,curcmd),'please check for options use -h|--help'])
                         break
                     shortstep += 1
+                    set_argsopt_optattr(args,argsopt,curcmd,retcmd,optattr)
                 elif curch in get_argsopt_noargs_shortopt(args,argsopt,retcmd):
-                    pass
+                    set_argsopt_optattr(args,argsopt,curcmd,retcmd,optattr)
                 else:
                     retcmd='--'
                     logging.info('[%d][%d][%s] not defined shortopt'%(i,j,curch))
@@ -271,14 +302,14 @@ def get_argsopt_cmdfunc(args,argsopt,cmdname=None):
                     break
     return cmdfunc
 
-def call_optfunc(funcname,args,argsopt,resfile,cmdidx,cmdname,leftargs,totalargs):
+def call_optfunc(funcname,args,argsopt,resfile,cmdidx,cmdname,optattr,totalargs):
     s = ''
     m = importlib.import_module('__main__')
     if m is not None:
         funcptr = getattr(m,funcname,None)
         if funcptr is not None or not hasattr(funcptr,'__call__'):
             raise Exception('%s not defined '%(funcname))
-        s = funcptr(args,argsopt,resfile,cmdidx,cmdname,leftargs,totalargs)
+        s = funcptr(args,argsopt,resfile,cmdidx,cmdname,optattr,totalargs)
     return s
 
 def file_filter(p):
@@ -313,7 +344,7 @@ def all_file_completion(args,argsopt,resfile,cmdidx,cmdname,leftargs,totalargs):
     logging.info('retfiles (%s)'%(retfiles))
     return write_retfile(resfile,retfiles)
 
-def basic_common_completion_opt(longopt,args,argsopt,resfile,cmdidx,cmdname,leftargs,totalargs):
+def basic_common_completion_opt(longopt,args,argsopt,resfile,cmdidx,cmdname,optattr,totalargs):
     s = ''
     optattr = get_argsopt_optattr(args,argsopt,longopt,cmdname)
     if optattr is None:
@@ -345,14 +376,18 @@ def basic_common_completion_option(args,argsopt,resfile,cmdidx,cmdname,leftargs,
         lastarg = totalargs[-1]
     logging.info('start need args longopt')
     for c in get_argsopt_needargs_longopt(args,argsopt,cmdname):
-        if  len(lastarg) == 0 or c.startswith(lastarg):
-            logging.info('add [%s]'%(c))
-            outputargs.append(c)
+        if  (len(lastarg) == 0 or c.startswith(lastarg)):
+            opta = get_argsopt_optattr(args,argsopt,c,cmdname)
+            if opta is not None and  not getattr(optattr,opta.optdest,False):
+                logging.info('add [%s]'%(c))
+                outputargs.append(c)
     logging.info('start no args longopt')
     for c in get_argsopt_noargs_longopt(args,argsopt,cmdname):
         if len(lastarg) == 0 or c.startswith(lastarg):
-            logging.info('add [%s]'%(c))
-            outputargs.append(c)
+            opta = get_argsopt_optattr(args,argsopt,c,cmdname)
+            if opta is not None and not getattr(optattr,opta.optdest,False):
+                logging.info('add [%s]'%(c))
+                outputargs.append(c)
     if len(lastarg) == 0 or (lastarg.startswith('-') and not lastarg.startswith('--')):
         shortstep = 0
         j = 1
@@ -367,20 +402,24 @@ def basic_common_completion_option(args,argsopt,resfile,cmdidx,cmdname,leftargs,
         if shortstep == 0:
             logging.info('start need args shortopt')
             for c in get_argsopt_needargs_shortopt(args,argsopt,cmdname):
+                opta = get_argsopt_optattr(args,argsopt,c,cmdname)
+                if opta is not None and not getattr(optattr,opta.optdest,False):
+                    if lastarg.startswith('-'):
+                        logging.info('add [%s]'%(c))
+                        outputargs.append('%s'%(c))
+                    else:
+                        logging.info('add [-%s]'%(c))
+                        outputargs.append('-%s'%(c))
+        logging.info('start no args shortopt')
+        for c in get_argsopt_noargs_shortopt(args,argsopt,cmdname):
+            opta = get_argsopt_optattr(args,argsopt,c,cmdname)
+            if opta is not None and not getattr(optattr,opta.optdest,False):
                 if lastarg.startswith('-'):
                     logging.info('add [%s]'%(c))
                     outputargs.append('%s'%(c))
                 else:
                     logging.info('add [-%s]'%(c))
                     outputargs.append('-%s'%(c))
-        logging.info('start no args shortopt')
-        for c in get_argsopt_noargs_shortopt(args,argsopt,cmdname):
-            if lastarg.startswith('-'):
-                logging.info('add [%s]'%(c))
-                outputargs.append('%s'%(c))
-            else:
-                logging.info('add [-%s]'%(c))
-                outputargs.append('-%s'%(c))
     return write_retfile(resfile,outputargs),True
 
 def basic_common_completion(args,argsopt,resfile,cmdidx,cmdname,leftargs,totalargs):
@@ -392,7 +431,7 @@ def basic_common_completion(args,argsopt,resfile,cmdidx,cmdname,leftargs,totalar
     s += basic_common_completion_withoutopt(args,argsopt,resfile,cmdidx,cmdname,leftargs,totalargs)
     return s
 
-def format_completion(args,argsopt,resfile,cmdidx,cmdname,leftargs,totalargs):
+def format_completion(args,argsopt,resfile,cmdidx,cmdname,optattr,totalargs):
     prevopt = None
     if len(totalargs) > 2:
         prevopt = totalargs[-2]
@@ -403,8 +442,8 @@ def format_completion(args,argsopt,resfile,cmdidx,cmdname,leftargs,totalargs):
                 for prevopt in get_argsopt_needargs_longopt(args,argsopt,cmdname):
                     optfunc = get_argsopt_optfunc_longopt(args,argsopt,prevopt,cmdname)
                     if optfunc is not None:
-                        return call_optfunc(optfunc,args,argsopt,resfile,cmdidx,cmdname,leftargs,totalargs)
-                    return basic_common_completion_opt(prevopt,args,argsopt,resfile,cmdidx,cmdname,leftargs,totalargs)
+                        return call_optfunc(optfunc,args,argsopt,resfile,cmdidx,cmdname,optattr,totalargs)
+                    return basic_common_completion_opt(prevopt,args,argsopt,resfile,cmdidx,cmdname,optattr,totalargs)
             elif prevopt.startswith('-'):
                 totallen = len(prevopt)
                 j = 1
@@ -413,11 +452,11 @@ def format_completion(args,argsopt,resfile,cmdidx,cmdname,leftargs,totalargs):
                     if curch in get_argsopt_needargs_shortopt(args,argsopt,cmdname):
                         optfunc = get_argsopt_optfunc_shortopt(args,argsopt,curch,cmdname)
                         if optfunc is not None:
-                            return call_optfunc(optfunc,args,argsopt,resfile,cmdidx,cmdname,leftargs,totalargs)
-                        return basic_common_completion_opt(curch,args,argsopt,resfile,cmdidx,cmdname,leftargs,totalargs)
+                            return call_optfunc(optfunc,args,argsopt,resfile,cmdidx,cmdname,optattr,totalargs)
+                        return basic_common_completion_opt(curch,args,argsopt,resfile,cmdidx,cmdname,optattr,totalargs)
                     j += 1
         # now we should 
-        return basic_common_completion(args,argsopt,resfile,cmdidx,cmdname,leftargs,totalargs)
+        return basic_common_completion(args,argsopt,resfile,cmdidx,cmdname,optattr,totalargs)
     else:
         # this is the 
         subcmds = argsopt.get_subcommands(cmdname)
@@ -432,7 +471,7 @@ def format_completion(args,argsopt,resfile,cmdidx,cmdname,leftargs,totalargs):
             argscnt = int(argsattr.nargs)
             if argscnt > (len(totalargs) - cmdidx - 1):
                 return write_retfile(resfile,['cmdname [%s] more than %d'%(cmdname,argscnt),'please use -h|--help to see help'])
-        return basic_common_completion_withoutopt(args,argsopt,cmdidx,cmdname,leftargs,totalargs)
+        return basic_common_completion_withoutopt(args,argsopt,cmdidx,cmdname,optattr,totalargs)
 
 ##############################
 ##  this is the code for extended ,so
@@ -448,7 +487,8 @@ def completion_format(args):
     argsopt = extargsparse.ExtArgsParse(None,priority=[])
     argsopt.load_command_line_string(args.jsonstr)
     tempf = None
-    cmdname ,errors = get_command_name(args,argsopt,tempf,args.args)
+    optattr = _OptionAccess()
+    cmdname ,errors = get_command_name(args,argsopt,tempf,optattr,args.args)
     if cmdname == '--':
         s += errors
         remove_file(args,tempf)
@@ -460,11 +500,9 @@ def completion_format(args):
             raise Exception('(%s) not valid startswith +'%(cmdname))
         cmdidx = int(mg[0][0])
         cmdname = mg[0][1]
-        leftargs = args.args[cmdidx:]
     else:
         cmdidx = len(args.args) - 1
-        leftargs = args.args[cmdidx:]
-    s += format_completion(args,argsopt,tempf,cmdidx,cmdname,leftargs,args.args)
+    s += format_completion(args,argsopt,tempf,cmdidx,cmdname,optattr,args.args)
     remove_file(args,tempf)
     return s
     
