@@ -50,7 +50,11 @@ def write_file(s,outfile=None):
     if sys.version[0] == '2':
         fout.write('%s'%(s))
     else:
-        fout.write(s.encode(encoding='UTF-8'))
+        bs = s.encode(encoding='UTF-8')
+        if fout == sys.stdout:
+            fout.write(s)
+        else:
+            fout.write(bs)
     if fout != sys.stdout:
         fout.close()
     fout = None
@@ -153,7 +157,7 @@ def output_handler(args,parser):
     if args.prefix is None:
         raise Exception('please specified release')
     if args.jsonstr is None:
-        args.jsonstr = read_file()
+        args.jsonstr = read_file(args.input)
     args.pattern = "extended_opt_code=''"
     extrastr = ''
     for c in args.subnargs:
@@ -187,11 +191,20 @@ def output_handler(args,parser):
     bash_complete_string = replace_outputs(shpython_string,'%%%s%%'%(newargspattern),bash_base_string)
     bash_complete_string = bash_complete_string.replace('\r','')
     write_file(bash_complete_string,args.output)
+    sys.exit(0)
     return
 
 def bzip2_base64_encode(instr):
+    logging.debug('instr type(%s)'%(type(instr)))
+    if sys.version[0] == '2':
+        instr = instr
+    else:
+        instr = instr.encode(encoding='UTF-8')
     encstr = bz2.compress(instr)
     b64str = base64.b64encode(encstr)
+    logging.info('b64str type(%s)'%(type(b64str)))
+    if sys.version[0] == '3':
+        b64str = b64str.decode(encoding='UTF-8')
     outs = ''
     c = 0
     while c < len(b64str):
@@ -214,8 +227,13 @@ def outstr_repls(repls,pattern,infile=None,outfile=None):
         fout = open(outfile,'wb')
 
     for l in fin:
-        l = l.replace(pattern,repls)
-        fout.write('%s'%(l))
+        if sys.version[0] == '2':
+            bl = l.replace(pattern,repls)
+        else:
+            bl = l.decode(encoding='UTF-8')
+            bl = bl.replace(pattern,repls)
+            bl = bl.encode(encoding='UTF-8')
+        fout.write(bl)
 
     if fin != sys.stdin:
         fin.close()
@@ -236,7 +254,7 @@ def release_handler(args,parser):
     logging.info('basestring (%s)'%(basestr))
     basestr = bzip2_base64_encode(basestr)
     logging.info('basestring (%s)'%(basestr))
-    outstr_repls(basestr,'%BASH_COMPLETE_STRING%',args.input,args.output)
+    outstr_repls(basestr,args.pattern,args.input,args.output)
     sys.exit(0)
     return
 
@@ -263,8 +281,9 @@ def main():
         "jsonstr|j##jsonstr to read  none read from input or stdin##" : null,
         "input|i" : null,
         "output|o" : null,
-        "prefix|p" : null,
         "basefile|b" : "%s",
+        "prefix|p" : null,
+        "pattern|P" : null,
         "output<output_handler>" : {
             "$" : "*"
         },

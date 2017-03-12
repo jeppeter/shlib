@@ -52,6 +52,10 @@ def write_file(s,outfile=None):
 
 def replace_outputs(s,pattern,instrs=None):
     rets = ''
+    if type(instrs) == 'bytes' and sys.version[0] == '3':
+        instrs = instrs.decode(encoding='UTF-8')
+    if type(s) == 'bytes' and sys.version[0] == '3':
+        s = s.decode(encoding='UTF-8')
     rets += instrs.replace(pattern,s)
     return rets
 
@@ -141,23 +145,26 @@ def get_temp_value():
     return newargspattern
 
 def unzip_format_string(instr):
-    instr = instr.replace('\r',b'')
-    instr = instr.replace('\n',b'')
+    if type(instr) == 'bytes' and sys.version[0] == '3':
+        instr = instr.decode(encoding='UTF-8')
+    instr = instr.replace('\r','')
+    instr = instr.replace('\n','')
     encstr = base64.b64decode(instr)
     return bz2.decompress(encstr)
 
+BASH_COMPLETE_STRING='''
+%BASH_COMPLETE_STRING%
+'''
 def output_handler(args,parser):
     global BASH_COMPLETE_STRING
     set_log_level(args)
-    if args.basefile is None:
-        raise Exception('can not handle basefile ok')
     if args.prefix is None:
         raise Exception('please specified release')
     if args.jsonstr is None:
         args.jsonstr = read_file(args.input)
     args.pattern = "extended_opt_code=''"
     extrastr = ''
-    for c in args.args:
+    for c in args.subnargs:
         extrastr += read_file(c)
     base_string = unzip_format_string(BASH_COMPLETE_STRING)
     logging.info('base_string (%d)'%(len(base_string)))
@@ -212,6 +219,4 @@ def main():
 if __name__ == '__main__':
     main()
 
-BASH_COMPLETE_STRING='''
-%BASH_COMPLETE_STRING%
-''' 
+ 

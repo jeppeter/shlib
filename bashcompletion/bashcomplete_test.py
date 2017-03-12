@@ -132,12 +132,19 @@ class debug_bashcomlete_case(unittest.TestCase):
             basedir = os.path.dirname(pathext)
         if len(basedir) == 0:
             basedir = '.'
+            appenddir = ''
+        else:
+            appenddir = basedir
+
         logging.debug('cd (%s)'%(basedir))
         try:
             for l in os.listdir(basedir):
-                ll = os.path.join(basedir,l)
+                if len(appenddir) == 0:
+                    ll = l
+                else:
+                    ll = os.path.join(basedir,l)
                 logging.debug('l %s pathext(%s)'%(ll,pathext))
-                if ll.startswith(pathext):
+                if len(pathext) == 0 or ll.startswith(pathext):
                     retd.append(ll)
         except:
             pass
@@ -145,8 +152,6 @@ class debug_bashcomlete_case(unittest.TestCase):
         return retd
 
     def __check_completion_output_add_files(self,jsonstr,inputargs,outputlines,pathset='',additioncode=None):
-        if pathset == '':
-            pathset= '.'
         outputlines.extend(self.__get_list_dir(pathset))
         logging.debug('outputlines (%s)'%(outputlines))
         self.__check_completion_output(jsonstr,inputargs,outputlines,additioncode)
@@ -194,8 +199,59 @@ class debug_bashcomlete_case(unittest.TestCase):
         # the subcommand
         outputlines.extend(['bashinsert','bashstring','makeperl','makepython','pythonperl','shperl','shpython'])
         self.__check_completion_output_add_files(commandline,['insertcode'],outputlines)
+        outputlines = []
+        # this is need long opt args
+        outputlines.extend(['--input','--json','--output','--pattern'])
+        outputlines.extend(['--help','--verbose'])
+        # short flag for need args
+        outputlines.extend(['-i','-o','-p'])
+        # short flag for no args 
+        outputlines.extend(['-h','-v'])
+        # the subcommand
+        outputlines.extend(['bashinsert','bashstring','makeperl','makepython','pythonperl','shperl','shpython'])
+        self.__check_completion_output_add_files(commandline,['insertcode',''],outputlines)
         return
 
+    def test_A002(self):
+        commandline='''
+        {
+            "verbose|v": "+",
+            "input|i##default (stdin)##": null,
+            "output|o##default (stdout)##": null,
+            "pattern|p": "%REPLACE_PATTERN%",
+            "bashinsert<bashinsert_handler>": {
+                "$": "*"
+            },
+            "bashstring<bashstring_handler>": {
+                "$": "*"
+            },
+            "makepython<makepython_handler>": {
+                "$": "*"
+            },
+            "makeperl<makeperl_handler>": {
+                "$": "*"
+            },
+            "shperl<shperl_handler>": {
+                "$": "*"
+            },
+            "shpython<shpython_handler>": {
+                "$": "*"
+            },
+            "pythonperl<pythonperl_handler>": {
+                "$": "*"
+            }
+        }
+        '''
+        outputlines = []
+        # this is need long opt args
+        outputlines.extend(['--input','--json','--output','--pattern'])
+        outputlines.extend(['--help','--verbose'])
+        # short flag for need args
+        outputlines.extend(['i','o','p'])
+        # short flag for no args 
+        outputlines.extend(['h','v'])
+        self.__check_completion_output(commandline,['insertcode','-'],outputlines)
+        return
 
 def set_log_level(args):
     loglvl= logging.ERROR
