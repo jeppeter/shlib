@@ -105,6 +105,7 @@ class debug_bashcomlete_case(unittest.TestCase):
             cmds.append(codef)
         logging.debug('format command (%s)'%(cmds))
         cmdpack.run_cmd_wait(cmds)
+        logging.debug('format over')
         cmds = []
         cmds.append('%s'%(sys.executable))
         cmds.append(runfile)
@@ -115,13 +116,9 @@ class debug_bashcomlete_case(unittest.TestCase):
         logging.debug('run (%s)'%(cmds))
         idx = 0
         for l in cmdpack.run_cmd_output(cmds):
-            if sys.version[0] == '2':
-                l = l.rstrip('\r\n')
-            elif sys.version[0] == '3':
-                bl = l.decode(encoding='UTF-8')
-                l = bl.rstrip('\r\n')
+            l = l.rstrip('\r\n')
             logging.debug('[%d][%s][%d]'%(idx,l,len(outputlines)))
-            #self.assertTrue( idx < len(outputlines) )
+            self.assertTrue( idx < len(outputlines) )
             self.assertEqual(l,outputlines[idx])
             idx += 1
         self.assertEqual(idx,len(outputlines))
@@ -218,6 +215,7 @@ def main():
     {
         "verbose|v" : "+",
         "failfast|f" : false,
+        "reserved|r" : false,
         "$" : "*"
     }
     '''
@@ -225,6 +223,11 @@ def main():
     parser.load_command_line_string(commandline)
     args = parser.parse_command_line(None,parser)
     set_log_level(args)
+    if args.reserved:
+        os.environ['TEST_RESERVED'] = '1'
+    else:
+        if 'TEST_RESERVED' in os.environ.keys():
+            del os.environ['TEST_RESERVED']
     newargs = []
     if args.verbose > 0:
         vflags = '-'
