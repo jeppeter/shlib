@@ -152,16 +152,13 @@ def unzip_format_string(instr):
     encstr = base64.b64decode(instr)
     return bz2.decompress(encstr)
 
-BASH_COMPLETE_STRING='''
-%BASH_COMPLETE_STRING%
-'''
 def output_handler(args,parser):
-    global BASH_COMPLETE_STRING
     set_log_level(args)
     if args.prefix is None:
         raise Exception('please specified release')
     if args.jsonstr is None:
         args.jsonstr = read_file(args.input)
+    logging.info('jsonstr (%s)'%(args.jsonstr))
     args.pattern = "extended_opt_code=''"
     extrastr = ''
     for c in args.subnargs:
@@ -215,6 +212,11 @@ def main():
     parser.load_command_line_string(commandline)
     parser.parse_command_line(None,parser)
     return
+
+BASH_COMPLETE_STRING='''
+%BASH_COMPLETE_STRING%
+'''
+
 
 if __name__ == '__main__':
     main()

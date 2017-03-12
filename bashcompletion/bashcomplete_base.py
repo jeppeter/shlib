@@ -9,6 +9,12 @@ import tempfile
 import bz2
 import base64
 
+
+##debugoutstart
+
+
+##debugoutend
+
 def make_dir_safe(dname=None):
     if dname is not None:
         if not os.path.isdir(dname):
@@ -150,10 +156,27 @@ def get_temp_value():
             break
     return newargspattern
 
+def unzip_format_string(instr):
+    if type(instr) == 'bytes' and sys.version[0] == '3':
+        instr = instr.decode(encoding='UTF-8')
+    instr = instr.replace('\r','')
+    instr = instr.replace('\n','')
+    encstr = base64.b64decode(instr)
+    return bz2.decompress(encstr)
+
+def base_get_base_string(args):
+    if args.basefile is None:
+        raise Exception('please specified basefile by [--basefile|-B]')
+    return read_file(args.basefile)
+
+def format_get_base_string():
+    return unzip_format_string(BASH_COMPLETE_STRING)
+
+def get_base_string(args):
+    return base_get_base_string(args)
+
 def output_handler(args,parser):
     set_log_level(args)
-    if args.basefile is None:
-        raise Exception('can not handle basefile ok')
     if args.prefix is None:
         raise Exception('please specified release')
     if args.jsonstr is None:
@@ -244,8 +267,6 @@ def outstr_repls(repls,pattern,infile=None,outfile=None):
     fout = None
     return
 
-
-
 def release_handler(args,parser):
     set_log_level(args)
     if args.basefile is None:
@@ -273,8 +294,7 @@ def debug_handler(args,parser):
     sys.exit(0)
     return
 
-
-def main():
+def base_main():
     commandline_fmt='''
     {
         "verbose|v" : "+",
@@ -292,6 +312,9 @@ def main():
         },
         "debug<debug_handler>" : {
             "$" : "*"
+        },
+        "test<test_handler>" : {
+            "$" : "*"
         }
     }
     '''
@@ -304,6 +327,32 @@ def main():
     parser.parse_command_line(None,parser)
     raise Exception('can not run here without specified subcommand')
     return
+
+def format_main():
+    commandline='''
+    {
+        "verbose|v" : "+",
+        "input|i" : null,
+        "jsonstr|j##jsonstr to read  none read from input or stdin##" : null,
+        "output|o" : null,
+        "prefix|p" : null,
+        "output<output_handler>" : {
+            "$" : "*"
+        }
+    }
+    '''
+    parser = extargsparse.ExtArgsParse(None,priority=[])
+    parser.load_command_line_string(commandline)
+    parser.parse_command_line(None,parser)
+    return
+
+def main():
+    base_main()
+    return
+
+BASH_COMPLETE_STRING='''
+%BASH_COMPLETE_STRING%
+'''
 
 if __name__ == '__main__':
     main()

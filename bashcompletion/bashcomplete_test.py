@@ -31,7 +31,7 @@ def make_tempfile(prefix=None,suffix=''):
     return f
 
 
-class debug_bashcomlete_case(unittest.TestCase):
+class debug_bashcomplete_case(unittest.TestCase):
     def setUp(self):
         self.__tempfiles = []
         return
@@ -84,6 +84,7 @@ class debug_bashcomlete_case(unittest.TestCase):
             else:
                 f.write(s.encode(encoding='UTF-8'))
         self.__tempfiles.append(tempf)
+        logging.debug('write (%s) [%s]'%(s,tempf))
         return tempf
 
     def __check_completion_output(self,jsonstr,inputargs,outputlines,additioncode=None):
