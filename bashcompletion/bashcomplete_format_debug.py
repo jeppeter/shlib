@@ -294,16 +294,14 @@ def debug_handler(args,parser):
     sys.exit(0)
     return
 
-def base_main():
-    commandline_fmt='''
+def main():
+    commandline='''
     {
         "verbose|v" : "+",
         "jsonstr|j##jsonstr to read  none read from input or stdin##" : null,
         "input|i" : null,
         "output|o" : null,
-        "basefile|b" : "%s",
         "prefix|p" : null,
-        "pattern|P" : null,
         "output<output_handler>" : {
             "$" : "*"
         },
@@ -312,43 +310,15 @@ def base_main():
         },
         "debug<debug_handler>" : {
             "$" : "*"
-        },
-        "test<test_handler>" : {
-            "$" : "*"
         }
     }
     '''
-    curdir=os.path.dirname(os.path.abspath(__file__))
-    basefile = os.path.join(curdir,'bashcomplete.py.tmpl')
-    basefile = basefile.replace('\\','\\\\')
-    commandline=commandline_fmt%(basefile)
     parser = extargsparse.ExtArgsParse(None,priority=[])
     parser.load_command_line_string(commandline)
     parser.parse_command_line(None,parser)
     raise Exception('can not run here without specified subcommand')
     return
 
-def format_main():
-    commandline='''
-    {
-        "verbose|v" : "+",
-        "input|i" : null,
-        "jsonstr|j##jsonstr to read  none read from input or stdin##" : null,
-        "output|o" : null,
-        "prefix|p" : null,
-        "output<output_handler>" : {
-            "$" : "*"
-        }
-    }
-    '''
-    parser = extargsparse.ExtArgsParse(None,priority=[])
-    parser.load_command_line_string(commandline)
-    parser.parse_command_line(None,parser)
-    return
-
-def main():
-    base_main()
-    return
 
 BASH_COMPLETE_STRING='''
 %BASH_COMPLETE_STRING%
