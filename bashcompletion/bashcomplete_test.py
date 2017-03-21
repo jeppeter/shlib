@@ -76,14 +76,17 @@ class debug_bashcomplete_case(unittest.TestCase):
     def tearDownClass(cls):
         return
 
-    def __write_tempfile(self,s):
-        tempf = make_tempfile()
+    def __write_tempfile(self,s,infile=None):
+        if infile is None:
+            tempf = make_tempfile()
+            self.__tempfiles.append(tempf)
+        else:
+            tempf = infile
         with open(tempf,'wb') as f:
             if sys.version[0] == '2':
                 f.write('%s'%(s))
             else:
                 f.write(s.encode(encoding='UTF-8'))
-        self.__tempfiles.append(tempf)
         logging.debug('write (%s) [%s]'%(s,tempf))
         return tempf
 
