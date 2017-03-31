@@ -289,15 +289,9 @@ def main():
         if 'TEST_RESERVED' in os.environ.keys():
             del os.environ['TEST_RESERVED']
     newargs = []
-    if args.verbose > 0:
-        vflags = '-'
-        vflags += 'v' * args.verbose
-        newargs.append(vflags)
-    if args.failfast:
-        newargs.append('--failfast')
     newargs.extend(args.args)
     sys.argv[1:]=newargs
-    unittest.main()
+    unittest.main(verbosity=args.verbose,failfast=args.failfast)
     return
 
 if __name__ == '__main__':

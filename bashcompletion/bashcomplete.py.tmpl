@@ -506,8 +506,11 @@ def completion_format(args):
     s = ''
     if args.jsonstr is None:
         args.jsonstr = read_file(args.input)
+    if args.optfile is not None:
+        args.options = read_file(args.optfile)
     logging.info('jsonstr (%s)'%(args.jsonstr))
-    argsopt = extargsparse.ExtArgsParse(None,priority=[])
+    extoptions = extargsparse.ExtArgOptions(args.options)
+    argsopt = extargsparse.ExtArgsParse(extoptions,priority=[])
     argsopt.load_command_line_string(args.jsonstr)
     tempf = None
     optattr = _OptionAccess()
@@ -566,6 +569,8 @@ def main():
         "reserved|R##to reserve temp file##" : false,
         "jsonparse|j##if not set ,input json string from stdin##" : null,
         "output|o" : null,
+        "options|O" : null,
+        "optfile|F" : null,
         "$" : "*"
     }
     '''
