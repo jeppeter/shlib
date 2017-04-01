@@ -63,6 +63,123 @@ class _OptionAccess(object):
             return False
         return True
 
+class CompleteExtArgs(extargsparse.ExtArgsParse):
+    def __init__(self,options=None,priority=None):
+        super(CompleteExtArgs,self).__init__(options,priority)
+        self.options = option
+        if self.options is None:
+            self.options = extargsparse.ExtArgOptions()
+        if self.options.longprefix is None:
+            raise Exception('can not be longprefix null')
+        self.priority = priority
+        if priority is None:
+            self.priority = [extargsparse.SUB_COMMAND_JSON_SET,extargsparse.COMMAND_JSON_SET,\
+                extargsparse.ENVIRONMENT_SET,extargsparse.ENV_SUB_COMMAND_JSON_SET,\
+                extargsparse.ENV_COMMAND_JSON_SET]
+        self.optaccess = _OptionAccess()
+        self.leftargs = []
+        self.__step_functions = {
+            'string' : self.__string_step,
+            'unicode' : self.__string_step,
+            'int' : self.__int_step,
+            'long' : self.__int_step,
+            'float' : self.__float_step,
+            'list' : self.__list_step,
+            'bool' : self.__bool_step,
+            'args' : self.__args_step,
+            'command' : self.__command_step,
+            'prefix' : self.__prefix_step,
+            'count': self.__count_step,
+            'help' : self.__help_step,
+            'jsonfile' : self.__jsonfile_step
+        }
+        return
+
+    def warn_override(self,keycls):
+        accessed = getattr(self.optaccess,keycls.optdest,None)
+        if accessed is not None:
+            warns = ''
+            warns += '[%s'%(keycls.longopt)
+            if keycls.shortopt is not None:
+                warns += '|%s'%(keycls.shortopt)
+            warns += '] will be override'
+            logging.warn('%s'%(warns))
+        return
+
+    def set_access(self,keycls):
+        setattr(self.optaccess,keycls.optdest,True)
+        return
+
+    def __string_step(self,validx,keycls,params):
+        self.warn_override(keycls)
+        self.set_access(keycls)
+        return 1        
+
+    def __int_step(self,validx,keycls,params):
+        self.warn_override(keycls)
+        self.set_access(keycls)
+        return 1
+
+    def __long_step(self,validx,keycls,params):
+        self.warn_override(keycls)
+        self.set_access(keycls)
+        return 1
+
+
+    def __float_step(self,validx,keycls,params):
+        self.warn_override(keycls)
+        self.set_access(keycls)
+        return 1
+
+    def __list_step(self,validx,keycls,params):
+        self.set_access(keycls)
+        return 1
+
+    def __bool_step(self,validx,keycls,params):
+        self.warn_override(keycls)
+        self.set_access(keycls)
+        return 0
+
+    def __args_step(self,validx,keycls,params):
+        self.leftargs.append(params[validx])
+        return 1
+
+    def __command_step(self,validx,keycls,params):
+        return 0
+
+    def __prefix_step(self,validx,keycls,params):
+        return 0
+
+    def __count_step(self,validx,keycls,params):
+        self.set_access(keycls)
+        return 0
+
+    def __jsonfile_step(self,validx,keycls,params):
+        self.warn_override(keycls)
+        if validx < len(params)-1:
+            if os.path.isfile(params[validx]):
+                warns = ''
+                warns += '[%s'%(keycls.longopt)
+                if keycls.shortopt is not None:
+                    warns += '|%s'%(keycls.shortopt)
+                warns += '] set [%s] not valid file'%(params[validx])
+                logging.warn('%s'%(warns))
+        self.set_access(keycls)
+        return 1
+
+
+    def __help_step(self,validx,keycls,params):
+        return -1
+
+    def 
+
+
+    def step_completes(self,args=[]):
+        self.optaccess = _OptionAccess()
+        # now we should give the 
+
+
+
 def __get_argsopt_opt(args,argsopt,subcmdname=None,needargs=True,shortopt=False):
     optret=[]
     opts = argsopt.get_cmdopts(subcmdname)
@@ -195,17 +312,19 @@ def get_command_name(args,argsopt,resfile,optattr,cmds):
         if curcmd == '--':
             retcmd='+%d-%s'%((i-1),retcmd)
             break
-        if curcmd.startswith('--'):
-            if curcmd in get_argsopt_needargs_longopt(args,argsopt,retcmd):
-                i += 1
-                set_argsopt_optattr(args,argsopt,curcmd,retcmd,optattr)
-            elif curcmd in get_argsopt_noargs_longopt(args,argsopt,retcmd):
-                set_argsopt_optattr(args,argsopt,curcmd,retcmd,optattr)
-            else:
-                logging.info('[%d][%s] not valid opts'%(i,curcmd))
-                retcmd='--'
-                errors += write_retfile(resfile,['[%d] not valid [%s]'%((i-1),curcmd),'please check opt'])
-                break
+        if argsopt.options.shortprefix is None or \
+            args.options.shortprefix != args.options.longprefix:
+            if curcmd.startswith(argsopt.options.longprefix):
+                if curcmd in get_argsopt_needargs_longopt(args,argsopt,retcmd):
+                    i += 1
+                    set_argsopt_optattr(args,argsopt,curcmd,retcmd,optattr)
+                elif curcmd in get_argsopt_noargs_longopt(args,argsopt,retcmd):
+                    set_argsopt_optattr(args,argsopt,curcmd,retcmd,optattr)
+                else:
+                    logging.info('[%d][%s] not valid opts'%(i,curcmd))
+                    retcmd='--'
+                    errors += write_retfile(resfile,['[%d] not valid [%s]'%((i-1),curcmd),'please check opt'])
+                    break
         elif curcmd.startswith('-'):
             j = 1
             shortstep = 0
@@ -502,6 +621,30 @@ def format_completion(args,argsopt,resfile,cmdidx,cmdname,optattr,totalargs):
 ##############################
 extended_opt_code=''
 
+def __get_priority(inputprior):
+    priority = None
+    if len(inputprior) == 0 or (len(inputprior) == 1 and inputprior[0] == 'NONE'):
+        pass
+    else:
+        priority = []
+        for c in inputprior:
+            if c == 'SUBCMD_JSON' :
+                priority.append(extargsparse.SUB_COMMAND_JSON_SET)
+            elif c == 'CMD_JSON' :
+                priority.append(extargsparse.COMMAND_JSON_SET)
+            elif c == 'ENV_SUBCMD_JSON' :
+                priority.append(extargsparse.ENV_SUB_COMMAND_JSON_SET)
+            elif c == 'ENV_CMD_JSON':
+                priority.append(extargsparse.ENV_COMMAND_JSON_SET)
+            elif c == 'ENV_CMD' :
+                priority.append(extargsparse.ENVIRONMENT_SET)
+            elif c == 'NONE':
+                break
+            else:
+                raise Exception('unknown priority (%s)'%(c))
+    return priority
+
+
 def completion_format(args):
     s = ''
     if args.jsonstr is None:
@@ -510,7 +653,10 @@ def completion_format(args):
         args.options = read_file(args.optfile)
     logging.info('jsonstr (%s)'%(args.jsonstr))
     extoptions = extargsparse.ExtArgOptions(args.options)
-    argsopt = extargsparse.ExtArgsParse(extoptions,priority=[])
+    priority = None
+    if extoptions.priority is not None:
+        priority = __get_priority(extoptions.priority)
+    argsopt = CompleteExtArgs(extoptions,priority)
     argsopt.load_command_line_string(args.jsonstr)
     tempf = None
     optattr = _OptionAccess()
@@ -556,8 +702,38 @@ def set_log_level(args):
         loglvl = logging.INFO
     elif args.verbose >= 1 :
         loglvl = logging.WARN
+    if logging.root is not None and len(logging.root.handlers) > 0:
+        logging.root.handlers = []
     # we delete old handlers ,and set new handler
     logging.basicConfig(level=loglvl,format='%(asctime)s:%(filename)s:%(funcName)s:%(lineno)d\t%(message)s')
+    return
+
+def get_ver_tuple(ver):
+    sarr = re.split('\.',ver)
+    i = 0
+    while i < len(sarr):
+        sarr[i] = int(sarr[i])
+        i += 1
+    return sarr
+
+def check_extargs_version(verleast):
+    try:
+        vernum = extargsparse.__version__
+        leasttuple = get_ver_tuple(verleast)
+        vertuple = get_ver_tuple(vernum)
+        ok = True
+        if vertuple[0] < leasttuple[0]:
+            ok = False
+        elif vertuple[0] == leasttuple[0]:
+            if vertuple[1] < leasttuple[1]:
+                ok = False
+            elif vertuple[1] == leasttuple[1]:
+                if vertuple[2] < leasttuple[2]:
+                    ok = False              
+        if not ok :
+            raise Exception('version %s < %s'%(vernum,verleast))
+    except:
+        raise Exception('must at lease %s version of extargsparse'%(verleast))
     return
 
 
@@ -574,6 +750,7 @@ def main():
         "$" : "*"
     }
     '''
+    check_extargs_version('1.0.0')
     parser = extargsparse.ExtArgsParse(None,[])
     parser.load_command_line_string(commandline)
     args = parser.parse_command_line()
