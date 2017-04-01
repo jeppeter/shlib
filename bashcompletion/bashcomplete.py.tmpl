@@ -44,14 +44,14 @@ def output_string(s,outfile=None):
 
 class _OptionAccess(object):
     def __init__(self):
-        self.__accessed__ = dict()
+        self.__accessed = dict()
         return
 
     def __setattr__(self,k,v):
         if k.startswith('_'):
             self.__dict__[k]=v
             return
-        self.__accessed__[k] = True
+        self.__accessed[k] = True
         return
 
     def __getattr__(self,k,defv=None):
@@ -59,25 +59,86 @@ class _OptionAccess(object):
             if k not in self.__dict__.keys():
                 return defv
             return self.__dict__[k]
-        if k not in self.__accessed__.keys():
+        if k not in self.__accessed.keys():
             return False
         return True
+
+    def __format(self):
+        s = '['
+        for k in self.__accessed.keys():
+            s += '%s;'%(k)
+        s += ']'
+        return s
+
+    def __str__(self):
+        return self.__format()
+
+    def __repr__(self):
+        return self.__format()
+
+class ResultAttr(object):
+    def __init__(self):
+        self.__objs = dict()
+        return
+
+    def __setattr__(self,k,v):
+        if k.startswith('_'):
+            self.__dict__[k]=v
+            return
+        self.__objs[k] = v
+        return
+
+    def __getattr__(self,k,defv=None):
+        if k.startswith('_'):
+            if k not in self.__dict__.keys():
+                return defv
+            return self.__dict__[k]
+        if k  in self.__objs.keys():
+            return self.__objs[k]
+        return defv
+
+    def __format(self):
+        s = '['
+        for k in self.__objs.keys():
+            s += '%s=%s;'%(k,self.__objs[k])
+        s += ']'
+        return s
+
+    def __str__(self):
+        return self.__format()
+
+    def __repr__(self):
+        return self.__format()
 
 class CompleteExtArgs(extargsparse.ExtArgsParse):
     def __init__(self,options=None,priority=None):
         super(CompleteExtArgs,self).__init__(options,priority)
-        self.options = option
+        self.options = options
         if self.options is None:
             self.options = extargsparse.ExtArgOptions()
         if self.options.longprefix is None:
             raise Exception('can not be longprefix null')
+        if self.options.shortprefix is not None and self.options.shortprefix == self.options.longprefix:
+            self.options.bundled = False
+        else:
+            self.options.bundled = True
         self.priority = priority
         if priority is None:
             self.priority = [extargsparse.SUB_COMMAND_JSON_SET,extargsparse.COMMAND_JSON_SET,\
                 extargsparse.ENVIRONMENT_SET,extargsparse.ENV_SUB_COMMAND_JSON_SET,\
                 extargsparse.ENV_COMMAND_JSON_SET]
         self.optaccess = _OptionAccess()
+
         self.leftargs = []
+        self.__ended = 0
+        self.__curidx = 1
+        self.__validx = -1
+        self.__curcharidx = -1
+        self.__longstep = -1
+        self.__shortstep = -1
+
+        self.__laststepopts = []
+
         self.__step_functions = {
             'string' : self.__string_step,
             'unicode' : self.__string_step,
@@ -95,9 +156,9 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
         }
         return
 
-    def warn_override(self,keycls):
+    def warn_override(self,keycls,firstcheck):
         accessed = getattr(self.optaccess,keycls.optdest,None)
-        if accessed is not None:
+        if accessed is not None and firstcheck:
             warns = ''
             warns += '[%s'%(keycls.longopt)
             if keycls.shortopt is not None:
@@ -110,52 +171,52 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
         setattr(self.optaccess,keycls.optdest,True)
         return
 
-    def __string_step(self,validx,keycls,params):
+    def __string_step(self,validx,keycls,params,firstcheck):
         self.warn_override(keycls)
         self.set_access(keycls)
         return 1        
 
-    def __int_step(self,validx,keycls,params):
+    def __int_step(self,validx,keycls,params,firstcheck):
         self.warn_override(keycls)
         self.set_access(keycls)
         return 1
 
-    def __long_step(self,validx,keycls,params):
-        self.warn_override(keycls)
+    def __long_step(self,validx,keycls,params,firstcheck):
+        self.warn_override(keycls,firstcheck)
         self.set_access(keycls)
         return 1
 
 
-    def __float_step(self,validx,keycls,params):
-        self.warn_override(keycls)
+    def __float_step(self,validx,keycls,params,firstcheck):
+        self.warn_override(keycls,firstcheck)
         self.set_access(keycls)
         return 1
 
-    def __list_step(self,validx,keycls,params):
+    def __list_step(self,validx,keycls,params,firstcheck):
         self.set_access(keycls)
         return 1
 
-    def __bool_step(self,validx,keycls,params):
-        self.warn_override(keycls)
+    def __bool_step(self,validx,keycls,params,firstcheck):
+        self.warn_override(keycls,firstcheck)
         self.set_access(keycls)
         return 0
 
-    def __args_step(self,validx,keycls,params):
+    def __args_step(self,validx,keycls,params,firstcheck):
         self.leftargs.append(params[validx])
         return 1
 
-    def __command_step(self,validx,keycls,params):
+    def __command_step(self,validx,keycls,params,firstcheck):
         return 0
 
-    def __prefix_step(self,validx,keycls,params):
+    def __prefix_step(self,validx,keycls,params,firstcheck):
         return 0
 
-    def __count_step(self,validx,keycls,params):
+    def __count_step(self,validx,keycls,params,firstcheck):
         self.set_access(keycls)
         return 0
 
-    def __jsonfile_step(self,validx,keycls,params):
-        self.warn_override(keycls)
+    def __jsonfile_step(self,validx,keycls,params,firstcheck):
+        self.warn_override(keycls,firstcheck)
         if validx < len(params)-1:
             if os.path.isfile(params[validx]):
                 warns = ''
@@ -168,15 +229,545 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
         return 1
 
 
-    def __help_step(self,validx,keycls,params):
+
+    def __help_step(self,validx,keycls,params,firstcheck):
         return -1
 
-    def 
+    def call_step_func(self,validx,keycls,params,firstcheck=True):
+        if keycls.attr is not None and keycls.attr.optparse is not None:
+            return self.call_func(keycls.attr.optparse,self,validx,keycls,params,firstcheck)
+        return self.__command_step[keycls.type](validx,keycls,params,firstcheck)
 
+    def format_subcmd(self,maincmd,subcmd):
+        retcmd = ''
+        if maincmd is not None and len(maincmd) > 0:
+            retcmd += '%s.'%(maincmd)
+        retcmd += subcmd
+        return retcmd
+
+    def __get_longopts_cmd(self,curcmd=''):
+        longopts = []
+        cmdopts = self.get_cmdopts(curcmd)
+        for opt in cmdopts:
+            if not opt.isflag  or opt.type == 'args':
+                continue
+            longopts.append(opt.longopt)
+        return longopts
+
+    def __get_shortflags_cmd(self,curcmd=''):
+        shortflags = []
+        cmdopts = self.get_cmdopts(curcmd)
+        for opt in cmdopts:
+            if not opt.isflag  or opt.type == 'args':
+                continue
+            if opt.shortflag is not None:
+                shortflags.append(opt.shortflag)
+        return shortflags
+
+
+    def __check_uniq(self,sarr,notice=''):
+        idx = 0
+        while idx < len(sarr):
+            if idx >= (len(sarr)-1):
+                break
+            if sarr[idx] == sarr[(idx+1)]:
+                del sarr[idx]
+                self.warn('[%s][%d] same'%(notice,idx))
+                continue
+            idx += 1
+        return sarr
+
+
+    def __get_longopts(self,cmdname=''):
+        longopts = []
+        sarr = []
+        if cmdname is not None and len(cmdname) > 0:
+            sarr = re.split('\.',cmdname)
+        idx = len(sarr)
+        while idx > 0:
+            curcmd = '.'.join(sarr[:idx])
+            longopts.extend(self.__get_longopts_cmd(curcmd))
+            idx -= 1
+        longopts.extend(self.__get_longopts_cmd(''))
+        longopts = sorted(longopts)
+        return self.__check_uniq(longopts,'longopts')
+
+    def __get_shortflags(self,cmdname=''):
+        shortflags = []
+        sarr = []
+        if cmdname is not None and len(cmdname) > 0:
+            sarr = re.split('\.',cmdname)
+        idx = len(sarr)
+        while idx > 0:
+            curcmd = '.'.join(sarr[:idx])
+            shortflags.extend(self.__get_shortflags_cmd(curcmd))
+            idx -= 1
+        shortflags.extend(self.__get_shortflags_cmd(''))
+        shortflags = sorted(shortflags)
+        return self.__check_uniq(shortflags,'shortflags')
+
+
+    def __get_opt_longopt_cmd(self,longopt,cmdname=''):
+        cmdopts = self.get_cmdopts(cmdname)
+        for opt in cmdopts:
+            if not opt.isflag or opt.type == 'args':
+                continue
+            if opt.longopt == longopt:
+                return opt
+        return None
+
+    def __get_opt_longopt(self,longopt,cmdname):
+        sarr = []
+        if cmdname is not None and len(cmdname) > 0:
+            sarr = re.split('\.',cmdname)
+        idx = len(sarr)
+        while idx > 0:
+            curcmd = '.'.join(sarr[:idx])
+            curopt = self.__get_opt_longopt_cmd(longopt,curcmd)
+            if curopt is not None:
+                return curopt
+            idx -= 1
+        return self.__get_opt_longopt_cmd(longopt,'')
+
+
+    def __get_opt_shortflag_cmd(self,shortflag,cmdname=''):
+        cmdopts = self.get_cmdopts(cmdname)
+        for opt in cmdopts:
+            if not opt.isflag or opt.type == 'args':
+                continue
+            if opt.shortflag is not None and opt.shortflag == shortflag:
+                return opt
+        return None
+
+    def __get_opt_shortflag(self,shortflag,cmdname):
+        sarr = []
+        if cmdname is not None and len(cmdname) > 0:
+            sarr = re.split('\.',cmdname)
+        idx = len(sarr)
+        while idx > 0:
+            curcmd = '.'.join(sarr[:idx])
+            curopt = self.__get_opt_shortflag_cmd(shortflag,curcmd)
+            if curopt is not None:
+                return curopt
+            idx -= 1
+        return self.__get_opt_shortflag_cmd(shortflag,'')
+
+    def __step_longopt(self,must=False):
+        need = must
+        if not need and self.__longstep >= 0:
+            need = True
+        if need:
+            assert(self.__longstep >= 0)
+            assert(self.__validx > 0)
+            assert(self.__shortstep < 0)
+            assert(self.__curcharidx < 0)
+            self.__curidx += self.__longstep
+            self.__validx = -1
+            self.__longstep = -1
+        return self.__curidx
+
+    def __step_shortopt(self,must=True):
+        need = must
+        if not need and self.__shortstep >= 0:
+            need = True
+        if need:
+            assert(self.__curcharidx >= 0)
+            if self.__shortstep >= 0:
+                # we maybe use some bad options , so we need any error
+                self.__curidx += self.__shortstep
+            self.__valid = -1
+            self.__shortstep = -1
+            self.__curcharidx = -1
+        return self.__curidx
+
+    def __get_cmd_step(self,cmdname,params):
+        if self.__ended > 0:
+            return cmdname,None
+        oldidx = self.__step_longopt(False)
+        oldcharidx = self.__curcharidx
+        while True:
+            if oldidx >= len(params):
+                self.__ended = 1
+                self.__curidx = oldidx
+                self.__validx = oldidx
+                self.__longstep = -1
+                self.__shortstep = -1
+                self.__curcharidx = -1
+                return cmdname,None
+
+            curopt = params[oldidx]
+            if curopt == '--':
+                if (oldidx + 1) < len(params):
+                    self.leftargs.extend(params[(oldidx+1):])
+                self.__curidx = len(params)
+                self.__validx = len(params)
+                assert(self.__shortstep < 0)
+                assert(self.__curcharidx < 0)
+                self.__ended = 1
+                return cmdname,None
+            if oldcharidx > 0:
+                while oldcharidx < len(curopt):
+                    curch = curopt[oldcharidx]
+                    if curch in self.__get_shortflags(curch,cmdname):
+                        opt = self.__get_opt_shortflag(curch,cmdname)
+                        self.__curidx = oldidx
+                        self.__curcharidx = oldcharidx
+                        self.__validx = (oldidx + 1)
+                        return cmdname,opt
+                    else:
+                        self.warn('[%d][%d] [%s] not in the options'%(oldidx,oldcharidx,curch))
+                    oldcharidx += 1
+
+                if len(curopt) <= oldcharidx:
+                    oldidx = self.__step_shortopt(True)
+                    oldcharidx = self.__curcharidx
+                    # we get the next one
+                    continue
+            else:
+                if self.options.bundled:
+                    if curopt.startswith(self.options.longprefix):
+                        if curopt in self.__get_longopts(cmdname):
+                            opt = self.__get_opt_longopt(curopt,cmdname)
+                            self.__curidx = oldidx
+                            self.__validx = (oldidx + 1)
+                            return cmdname,opt
+                        else:
+                            if self.options.parseall:
+                                self.warn('[%d] [%s] not supported'%(oldidx,curopt))
+                                self.leftargs.append(params[oldidx])
+                                oldidx += 1
+                                oldcharidx = -1
+                                assert(self.__longstep < 0)
+                                assert(self.__shortstep < 0)
+                                continue
+                            # that is ended
+                            self.leftargs.extend(params[oldidx:])
+                            self.__curidx = len(params)
+                            self.__curcharidx = -1
+                            self.__validx = len(params)
+                            self.__ended = 1
+                            assert(self.__longstep < 0)
+                            assert(self.__shortstep < 0)
+                            return cmdname,None
+                    elif self.options.shortprefix is not None and curopt.startswith(self.options.shortprefix):
+                        oldcharidx = len(self.options.shortprefix)
+                        while oldcharidx < len(curopt):
+                            curch = curopt[oldcharidx]
+                            if curch in self.__get_shortflags(curch,cmdname):
+                                opt = self.__get_opt_shortflag(curch,cmdname)
+                                self.__curidx = oldidx
+                                self.__curcharidx = oldcharidx
+                                self.__validx = (oldidx + 1)
+                                return cmdname,opt,False
+                            else:
+                                if oldidx < (len(params) - 1):
+                                    self.warn('[%d][%d] [%s] not in the options'%(oldidx,oldcharidx,curch))
+                            oldcharidx += 1
+
+                        if len(curopt) <= oldcharidx:
+                            if self.__shortstep < 0:                                
+                                # this means that nothing in the more
+                                if not self.options.parseall:
+                                    self.options.extend(params[oldidx:])
+                                    self.__curidx = len(params)
+                                    self.__validx = len(params)
+                                    assert(self.__longstep < 0)
+                                    self.__curcharidx = -1
+                                    self.__ended = 1
+                                    return cmdname,None
+                                # parse all ,so add it to the command
+                                self.leftargs.append(params[oldidx])
+                            oldidx = self.__step_shortopt(True)
+                            oldcharidx = self.__curcharidx
+                            # we get the next one
+                            continue
+                else:
+                    # not bundle ,because this is the long and short prefix
+                    shortlen = len(self.options.longprefix)
+                    if len(curopt) > (shortlen + 1) and curopt.startswith(self.options.longprefix):
+                        if curopt in self.__get_longopts(cmdname):
+                            opt = self.__get_opt_longopt(curopt,cmdname)
+                            self.__curidx = oldidx
+                            self.__validx = (oldidx + 1)
+                            return cmdname,opt,False
+                        else:
+                            if self.options.parseall:
+                                if oldidx < (len(params) - 1):
+                                    self.warn('[%d] [%s] not supported'%(oldidx,curopt))
+                                self.leftargs.append(params[oldidx])
+                                oldidx += 1
+                                oldcharidx = -1
+                                assert(self.__longstep < 0)
+                                assert(self.__shortstep < 0)
+                                continue
+                            # that is ended
+                            self.leftargs.extend(params[oldidx:])
+                            self.__curidx = len(params)
+                            self.__curcharidx = -1
+                            self.__validx = len(params)
+                            self.__ended = 1
+                            assert(self.__longstep < 0)
+                            assert(self.__shortstep < 0)
+                            return cmdname,None
+
+                    if len(curopt) == (shortlen + 1):
+                        curch = curopt[shortlen]
+                        if curch in self.__get_shortflags(cmdname):
+                            opt = self.__get_opt_shortflag(curch,cmdname)
+                            self.__curidx = oldidx
+                            self.__validx = (oldidx + 1)
+                            # make this as the long step
+                            self.__curcharidx = -1
+                            assert(self.__shortstep < 0)
+                            assert(self.__longstep < 0)
+                            return cmdname,opt,False
+                        else:
+                            if self.options.parseall:
+                                if oldidx < (len(params) - 1):
+                                    self.warn('[%d] [%s] not supported'%(oldidx,curopt))
+                                self.leftargs.append(params[oldidx])
+                                oldidx += 1
+                                oldcharidx = -1
+                                assert(self.__longstep < 0)
+                                assert(self.__shortstep < 0)
+                                continue
+                            self.leftargs.extend(params[oldidx:])
+                            self.__ended = 1
+                            self.__curidx = len(params)
+                            self.__validx = len(params)
+                            self.__curcharidx = -1
+                            assert(self.__shortstep < 0)
+                            assert(self.__longstep < 0)
+                            return cmdname,None
+            # that can not be handled
+            subcmds = self.get_subcommands(cmdname)
+            if subcmds is not None:
+                if params[oldidx] in subcmds:
+                    if cmdname is None:
+                        cmdname = ''
+                    if len(cmdname) > 0:
+                        cmdname += '.'
+                    cmdname += params[oldidx]
+            else:
+                if self.options.parseall:
+                    self.leftargs.append(params[oldidx])
+                else:
+                    self.leftargs.extend(params[oldidx:])
+                    self.__curidx = len(params)
+                    self.__validx = len(params)
+                    self.__curcharidx = -1
+                    self.__ended = 1
+                    assert(self.__shortstep < 0)
+                    assert(self.__longstep < 0)
+                    return cmdname,None
+            oldidx += 1
+            oldcharidx = -1
+        return cmdname,None
+
+    def __step(self,step,opt):
+        if self.__curcharidx >= 0:
+            if self.__shortstep < 0:
+                self.__shortstep = 0
+            if self.__shortstep > 0:
+                assert(len(self.__laststepopts) > 0)
+                self.warn('[%s] with [%s] conflict'%(self.__laststepopts[-1].shortflag, opt.shortflag))
+                self.__shortstep = 0
+                self.__laststepopts = []
+            self.__shortstep += step
+            if step > 0:
+                self.__laststepopts.append(opt)
+        else:
+            if self.__longstep < 0:
+                self.__longstep = 0
+            assert(self.__longstep == 0)
+            self.__longstep += step
+        return
 
     def step_completes(self,args=[]):
         self.optaccess = _OptionAccess()
+        self.leftargs = []
+        curcmd = ''
         # now we should give the 
+        idx = 1
+        result = ResultAttr()
+        result.stopped = False
+        result.lastopt = None
+        result.lastidx = None
+        while True:
+            curcmd,opt = self.__get_cmd_step(curcmd,args)
+            if opt is None:
+                break
+            step = self.call_optfunc(self.__validx,opt,args)
+            if step < 0:
+                # this means we should end of this
+                self.leftargs.extend(args[self.__validx:])
+                self.__ended = 1
+                self.__validx = len(args)
+                self.__curidx = len(args)
+                self.__shortstep = -1
+                self.__longstep = -1
+                self.__curcharidx = -1
+                result.stopped = True
+                break
+            self.__step(step,opt)
+            if step > 0:
+                result.lastidx = self.__validx
+                result.lastopt = opt
+        self.__laststepopts = []
+        result.cmdname = curcmd
+        logging.info('result (%s)'%(result))
+        return result
+
+    def completion_call_opt(self,validx,opt,params):
+        if opt.attr is not None and opt.attr.completefunc is not None:
+            return self.call_func(opt.attr.completefunc,self,validx,opt,params)
+        return self.__opt_complete_map[opt.type](validx,opt,params)
+
+    def __get_argsattr(self,cmdname):
+        cmdopts = self.get_cmdopts(cmdname)
+        for opt in cmdopts:
+            if opt.type == 'args':
+                return opt
+        return None
+
+    def file_common_completion(self,pathpat,filterop=None):
+        retfiles = []
+        basedir = os.path.dirname(pathpat)
+        if len(basedir) == 0:
+            basedir = '.'
+            appenddir = ''
+        else:
+            appenddir = basedir
+        try:
+            for c in os.listdir(basedir):
+                ok = True
+                if len(appenddir) == 0:
+                    ofile = c
+                else:
+                    ofile = os.path.join(basedir,c)
+                if filterop is not None:
+                    ok = filterop(ofile)
+                if ok and (len(pathpat) == 0 or ofile.startswith(pathpat)):
+                    retfiles.append(ofile)
+        except:
+            # nothing to handle 
+            retfiles = []
+        return retfiles
+
+
+    def call_completion_cmd_nargs(self,cmdname,params):
+        addmost = -1
+        filtername = ''
+        if len(params) > 1:
+            filtername = params[-1]
+        argsattr = self.__get_argsattr(cmdname)
+        if argsattr is not None:
+            if argsattr.nargs != '+' and argsattr.nargs != '*':
+                if argsattr.nargs == '?':
+                    addmost = 1
+                else:
+                    addmost = argsattr.nargs
+        retcompletions = []
+        if addmost >= 0 and addmost < len(self.leftargs):
+            return retcompletions
+        if argsattr.attr is not None and argsattr.attr.completefunc is not None:
+            retcompletions.extend(self.call_func(argsattr.attr.completefunc,self,cmdname,params))
+            return
+        curcompletions = self.file_common_completion(filtername,None)
+        curcompletions = sorted(curcompletions)
+        for c in curcompletions:
+            if c.startswith(filtername):
+                retcompletions.append(c)
+        return retcompletions     
+
+
+    def completion_call_cmd(self,cmdname,params):
+        filtername = ''
+        validx = 1
+        if len(params) > 1:
+            filtername = params[-1]
+            validx = len(params) - 1
+        retcompletions = []
+        hasstepped = False
+        if len(filtername) > 0 and filtername.startswith(self.options.shortprefix) \
+            and not filtername.startswith(self.options.longprefix) and self.options.bundled:
+            idx = len(self.options.shortprefix)
+            while idx < len(filtername):
+                curch = filtername[idx]
+                opt = self.__get_opt_shortflag(curch,cmdname)
+                if opt is not None:
+                    step = self.call_step_func(validx,opt,params,False)
+                    if step > 0:
+                        hasstepped = True
+                idx += 1
+        curcompletions = []
+
+        for l in self.__get_longopts(cmdname):
+            if l.startswith(filtername):
+                curcompletions.append(l)
+        curcompletions = sorted(curcompletions)
+        retcompletions.extend(curcompletions)
+        curcompletions = []
+        if self.options.bundled and self.options.shortprefix is not None:
+            if len(filtername) == 0:
+                for c in self.__get_shortflags(cmdname):
+                    curc = '%s%s'%(self.options.shortprefix,c)
+                    curcompletions.append(curc)
+            elif filtername.startswith(self.options.shortprefix) and not filtername.startswith(self.options.longprefix) :
+                for c in self.__get_shortflags(cmdname):
+                    added = True
+                    opt = self.__get_opt_shortflag(c,cmdname)
+                    if opt is not None and hasstepped:
+                        step = self.call_step_func(validx,opt,params,False)
+                        if step > 0:
+                            added = False
+                    if added :
+                        curcompletions.append(c)
+        elif self.options.shortprefix is not None:
+            # this is not bundled ,so we do this ok
+            for c in self.__get_shortflags(cmdname):
+                curc = '%s%s'%(self.options.shortprefix,c)
+                if curc.startswith(filtername):
+                    curcompletions.append(curc)
+        curcompletions = sorted(curcompletions)
+        retcompletions.extend(curcompletions)
+        subcmds = self.get_subcommands(cmdname)
+        curcompletions = []
+        if subcmds is not None:
+            for c in subcmds:
+                if c.startswith(filtername):
+                    curcompletions.append(c)
+        curcompletions = sorted(curcompletions)
+        retcompletions.extend(curcompletions)
+        logging.info('cmdname [%s] params (%s)'%(cmdname,params))        
+        curcompletions = self.call_completion_cmd_nargs(cmdname,params)
+        curcompletions = sorted(curcompletions)
+        logging.info('curcompletions (%s) '%(curcompletions))
+        retcompletions.extend(curcompletions)
+        return retcompletions
+
+    def __get_completions_cmdname(self,result,params):
+        needopt = None
+        if result.lastopt is not None and (result.lastidx < (len(params) - 1)):
+            step = self.call_step_func(result.lastidx,result.lastopt,params)
+            if   (result.lastidx + step) >= len(params):
+                # this means that we have not handled all the needed
+                needopt = result.lastopt
+        if needopt is not None:
+            # it means that we need to handle specified handle
+            return self.completeion_call(result.lastidx,result.lastopt,params)
+        return self.completion_call_cmd(result.cmdname,params)
+
+
+    def get_completions(self,args=[]):
+        result = self.step_completes(args)
+        completions = []
+        if result.stopped :
+            return completions
+        completions = self.__get_completions_cmdname(result,args)
+        return completions
+
+
 
 
 
@@ -648,36 +1239,20 @@ def __get_priority(inputprior):
 def completion_format(args):
     s = ''
     if args.jsonstr is None:
-        args.jsonstr = read_file(args.input)
+        args.jsonstr = read_file(args.jsonfile)
     if args.optfile is not None:
         args.options = read_file(args.optfile)
     logging.info('jsonstr (%s)'%(args.jsonstr))
-    extoptions = extargsparse.ExtArgOptions(args.options)
+    extoptions = extargsparse.ExtArgsOptions(args.options)
     priority = None
     if extoptions.priority is not None:
         priority = __get_priority(extoptions.priority)
     argsopt = CompleteExtArgs(extoptions,priority)
     argsopt.load_command_line_string(args.jsonstr)
-    tempf = None
-    optattr = _OptionAccess()
-    cmdname ,errors = get_command_name(args,argsopt,tempf,optattr,args.args)
-    if cmdname == '--':
-        s += errors
-        remove_file(args,tempf)
-        return s
-    if cmdname.startswith('+'):
-        idxexpr = re.compile('^\+([\d]+)-([\w\.]*)')
-        mg = idxexpr.findall(cmdname)
-        if len(mg) < 0 or len(mg[0]) < 2:
-            raise Exception('(%s) not valid startswith +'%(cmdname))
-        cmdidx = int(mg[0][0])
-        cmdname = mg[0][1]
-    else:
-        cmdidx = len(args.args) - 1
-    s += format_completion(args,argsopt,tempf,cmdidx,cmdname,optattr,args.args)
-    remove_file(args,tempf)
-    return s
-    
+    completions = argsopt.get_completions(args.args)
+    for l in completions:
+        s += '%s\n'%(l)    
+    return s    
 
 
 
@@ -743,10 +1318,12 @@ def main():
         "verbose|v" : "+",
         "input|i" : null,
         "reserved|R##to reserve temp file##" : false,
-        "jsonparse|j##if not set ,input json string from stdin##" : null,
+        "jsonparse|j##if not set ,input json string from jsonfile or stdin##" : null,
+        "jsonfile|J" : null,
         "output|o" : null,
         "options|O" : null,
         "optfile|F" : null,
+        "debugmode|d" : false,
         "$" : "*"
     }
     '''
@@ -755,17 +1332,20 @@ def main():
     parser.load_command_line_string(commandline)
     args = parser.parse_command_line()
     set_log_level(args)
-    try:        
+    if args.debugmode:
         s = completion_format(args)
-    except:
-        trback = sys.exc_info()[2]
-        exceptname = sys.exc_info()[1]
-        s = ''
-        s += 'exception %s:\n'%(exceptname)
-        s +='trace back:\n'
-        s += get_full_trace_back(trback,1,0)
-        sys.stderr.write('%s'%(s))
-        return
+    else:
+        try:        
+            s = completion_format(args)
+        except:
+            trback = sys.exc_info()[2]
+            exceptname = sys.exc_info()[1]
+            s = ''
+            s += 'exception %s:\n'%(exceptname)
+            s +='trace back:\n'
+            s += get_full_trace_back(trback,1,0)
+            sys.stderr.write('%s'%(s))
+            return
     output_string(s,args.output)
     return
 
