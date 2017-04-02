@@ -301,8 +301,27 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
 
     def __float_complete(self,validx,keycls,params,endwords=''):
         retcompletions = []
-
+        filtername = ''
+        if len(params) > 1:
+            filtername = params[-1]
+        totalwords = filtername + endwords
+        if len(totalwords) > 0:
+            floatexpr = re.compile('^([\+\-])?([0-9]*)?(\.[0-9]*)?$')
+            matched = False
+            if floatexpr.match(totalwords):
+                matched = True
+            if not matched:
+                warns = '['
+                warns +=  keycls.longopt
+                if keycls.shortopt is not None:
+                    warns += '|%s'%(keycls.shortopt)
+                warns += '] should float'
+                sys.stderr.write('\n%s\n'%(warns))
+                sys.stderr.flush()
         return retcompletions
+
+    def __list_complete(self,validx,keycls,params,endwords=''):
+        return self.__string_complete(validx,keycls,params,endwords)
 
     def call_step_func(self,validx,keycls,params,firstcheck=True):
         if keycls.attr is not None and keycls.attr.optparse is not None:
