@@ -143,7 +143,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
             'string' : self.__string_step,
             'unicode' : self.__string_step,
             'int' : self.__int_step,
-            'long' : self.__int_step,
+            'long' : self.__long_step,
             'float' : self.__float_step,
             'list' : self.__list_step,
             'bool' : self.__bool_step,
@@ -153,6 +153,22 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
             'count': self.__count_step,
             'help' : self.__help_step,
             'jsonfile' : self.__jsonfile_step
+        }
+
+        self.__complete_functions = {
+            'string' : self.__string_complete,
+            'unicode' : self.__string_complete,
+            'int' : self.__int_complete,
+            'long' : self.__int_complete,
+            'float' : self.__float_complete,
+            'list' : self.__list_complete,
+            'bool' : self.__bool_complete,
+            'args' : self.__args_complete,
+            'command' : self.__command_complete,
+            'prefix' : self.__prefix_complete,
+            'count': self.__count_complete,
+            'help' : self.__help_complete,
+            'jsonfile' : self.__jsonfile_complete
         }
         return
 
@@ -230,6 +246,63 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
 
     def __help_step(self,validx,keycls,params,firstcheck):
         return -1
+
+    def get_filter_name(self,instr,filtername='',endwords=''):
+        if len(filtername) > 0 and not instr.startswith(filtername):
+            return None
+        if len(endwords) > 0 and not instr.endswith(endwords):
+            return None
+        if len(endwords) > 0:
+            return instr.replace('%s$'%(endwords),'')
+        return instr
+
+
+
+    def __string_complete(self,validx,keycls,params,endwords=''):
+        retcompletions = []
+        filtername = ''
+        if len(params) > 1:
+            filtername = params[-1]
+        # now to add file name 
+        for c in self.file_common_completion(filtername,None):
+            r = self.get_filter_name(c,filtername,endwords)
+            if r is not None:
+                retcompletions.append(r)
+        return retcompletions
+
+    def __int_complete(self,validx,keycls,params,endwords=''):
+        retcompletions = []
+        filtername = ''        
+        if len(params) > 0:
+            filtername = params[-1]
+        totalwords = filtername + endwords
+        if len(totalwords) > 0:
+            matched = False
+            if 'x' in totalwords or 'X' in totalwords:
+                intexpr = re.compile('^(0x|x)?([0-9a-f]*)$',re.I)
+                if intexpr.match(totalwords):
+                    matched = True
+            else:
+                intexpr = re.compile('^([0-9]*)$',re.I)
+                if intexpr.match(totalwords):
+                    matched = True
+            if not matched:
+                warns = '['
+                warns +=  keycls.longopt
+                if keycls.shortopt is not None:
+                    warns += '|%s'%(keycls.shortopt)
+                warns += '] should number used'
+                sys.stderr.write('\n%s\n'%(warns))
+                sys.stderr.flush()
+        return retcompletions
+
+    def __long_complete(self,validx,keycls,params,endwords=''):
+        return self.__int_complete(validx,keycls,params,endwords)
+
+    def __float_complete(self,validx,keycls,params,endwords=''):
+        retcompletions = []
+
+        return retcompletions
 
     def call_step_func(self,validx,keycls,params,firstcheck=True):
         if keycls.attr is not None and keycls.attr.optparse is not None:
@@ -764,7 +837,13 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
         retcompletions.extend(curcompletions)
         return retcompletions
 
-    def __get_completions_cmdname(self,result,params):
+    def completeion_call(self,validx,opt,params,endwords=''):
+        retcompletions = []
+
+        return retcompletions
+
+
+    def __get_completions_cmdname(self,result,params,endwords=''):
         needopt = None
         if result.lastopt is not None and (result.lastidx < (len(params) - 1)):
             step = self.call_step_func(result.lastidx,result.lastopt,params)
@@ -773,11 +852,11 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
                 needopt = result.lastopt
         if needopt is not None:
             # it means that we need to handle specified handle
-            return self.completeion_call(result.lastidx,result.lastopt,params)
+            return self.completeion_call(result.lastidx,result.lastopt,params,endwords)
         return self.completion_call_cmd(result.cmdname,params)
 
 
-    def get_completions(self,args=[]):
+    def get_completions(self,args=[],endwords=''):
         self.leftargs = []
         result = self.step_completes(args)
         logging.info('leftargs (%s)'%(self.leftargs))
@@ -786,7 +865,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
             return completions
 
 
-        completions = self.__get_completions_cmdname(result,args)
+        completions = self.__get_completions_cmdname(result,args,endwords='')
         return completions
 
 
