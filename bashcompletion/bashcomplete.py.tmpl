@@ -196,7 +196,8 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
 
     def __string_step(self,validx,keycls,params,firstcheck):
         self.warn_override(keycls)
-        self.set_access(keycls)
+        if firstcheck:
+            self.set_access(keycls)
         return 1        
 
     def __int_step(self,validx,keycls,params,firstcheck):
@@ -205,7 +206,8 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
         if validx < (len(params) - 1):
             filtername = params[validx]
         self.int_value_warn(filtername,firstcheck)
-        self.set_access(keycls)
+        if firstcheck:
+            self.set_access(keycls)
         return 1
 
     def __long_step(self,validx,keycls,params,firstcheck):
@@ -217,16 +219,19 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
         if validx < (len(params)-1):
             filtername = params[validx]
         self.float_value_warn(filtername,firstcheck)
-        self.set_access(keycls)
+        if firstcheck:
+            self.set_access(keycls)
         return 1
 
     def __list_step(self,validx,keycls,params,firstcheck):
-        self.set_access(keycls)
+        if firstcheck:
+            self.set_access(keycls)
         return 1
 
     def __bool_step(self,validx,keycls,params,firstcheck):
         self.warn_override(keycls,firstcheck)
-        self.set_access(keycls)
+        if firstcheck:
+            self.set_access(keycls)
         return 0
 
     def __args_step(self,validx,keycls,params,firstcheck):
@@ -240,7 +245,8 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
         return 0
 
     def __count_step(self,validx,keycls,params,firstcheck):
-        self.set_access(keycls)
+        if firstcheck:
+            self.set_access(keycls)
         return 0
 
     def __jsonfile_step(self,validx,keycls,params,firstcheck):
@@ -253,7 +259,8 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
                     warns += '|%s'%(keycls.shortopt)
                 warns += '] set [%s] not valid file'%(params[validx])
                 self.warn_message(warns)
-        self.set_access(keycls)
+        if firstcheck:
+            self.set_access(keycls)
         return 1
 
     def __help_step(self,validx,keycls,params,firstcheck):
@@ -756,10 +763,10 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
                     idx += 1
         return result
 
-    def completion_call_opt(self,validx,opt,params):
+    def completion_call_opt(self,validx,opt,params,endwords=''):
         if opt.attr is not None and opt.attr.completefunc is not None:
-            return self.call_func(opt.attr.completefunc,self,validx,opt,params)
-        return self.__opt_complete_map[opt.type](validx,opt,params)
+            return self.call_func(opt.attr.completefunc,self,validx,opt,params,endwords)
+        return self.__opt_complete_map[opt.type](validx,opt,params,endwords)
 
     def __get_argsattr(self,cmdname):
         cmdopts = self.get_cmdopts(cmdname)
