@@ -122,6 +122,8 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
             self.options.bundled = False
         else:
             self.options.bundled = True
+        if self.options.endwordshandle is None:
+            self.options.endwordshandle = False
         self.priority = priority
         if priority is None:
             self.priority = [extargsparse.SUB_COMMAND_JSON_SET,extargsparse.COMMAND_JSON_SET,\
@@ -172,6 +174,11 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
         }
         return
 
+    def warn_message(self,message,callstack=1):
+        sys.stderr.write('\n%s'%(message))
+        sys.stderr.flush()
+        return
+
     def warn_override(self,keycls,firstcheck):
         accessed = getattr(self.optaccess,keycls.optdest,None)
         if accessed is not None and firstcheck:
@@ -180,7 +187,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
             if keycls.shortopt is not None:
                 warns += '|%s'%(keycls.shortopt)
             warns += '] will be override'
-            logging.warn('%s'%(warns))
+            self.warn_message(warns)
         return
 
     def set_access(self,keycls):
@@ -194,17 +201,22 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
 
     def __int_step(self,validx,keycls,params,firstcheck):
         self.warn_override(keycls)
+        filtername = ''
+        if validx < (len(params) - 1):
+            filtername = params[validx]
+        self.int_value_warn(filtername,firstcheck)
         self.set_access(keycls)
         return 1
 
     def __long_step(self,validx,keycls,params,firstcheck):
-        self.warn_override(keycls,firstcheck)
-        self.set_access(keycls)
-        return 1
-
+        return self.__int_step(validx,keycls,params,firstcheck)
 
     def __float_step(self,validx,keycls,params,firstcheck):
         self.warn_override(keycls,firstcheck)
+        filtername = ''
+        if validx < (len(params)-1):
+            filtername = params[validx]
+        self.float_value_warn(filtername,firstcheck)
         self.set_access(keycls)
         return 1
 
@@ -233,14 +245,14 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
 
     def __jsonfile_step(self,validx,keycls,params,firstcheck):
         self.warn_override(keycls,firstcheck)
-        if validx < len(params)-1:
+        if validx < (len(params)-1):
             if os.path.isfile(params[validx]):
                 warns = ''
                 warns += '[%s'%(keycls.longopt)
                 if keycls.shortopt is not None:
                     warns += '|%s'%(keycls.shortopt)
                 warns += '] set [%s] not valid file'%(params[validx])
-                logging.warn('%s'%(warns))
+                self.warn_message(warns)
         self.set_access(keycls)
         return 1
 
@@ -250,9 +262,9 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
     def get_filter_name(self,instr,filtername='',endwords=''):
         if len(filtername) > 0 and not instr.startswith(filtername):
             return None
-        if len(endwords) > 0 and not instr.endswith(endwords):
+        if self.options.endwordshandle and len(endwords) > 0 and not instr.endswith(endwords):
             return None
-        if len(endwords) > 0:
+        if self.options.endwordshandle and len(endwords) > 0  :
             return instr.replace('%s$'%(endwords),'')
         return instr
 
@@ -270,13 +282,8 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
                 retcompletions.append(r)
         return retcompletions
 
-    def __int_complete(self,validx,keycls,params,endwords=''):
-        retcompletions = []
-        filtername = ''        
-        if len(params) > 0:
-            filtername = params[-1]
-        totalwords = filtername + endwords
-        if len(totalwords) > 0:
+    def int_value_warn(self,totalwords,warning=True):
+        if len(totalwords) > 0 and warning:
             matched = False
             if 'x' in totalwords or 'X' in totalwords:
                 intexpr = re.compile('^(0x|x)?([0-9a-f]*)$',re.I)
@@ -292,20 +299,27 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
                 if keycls.shortopt is not None:
                     warns += '|%s'%(keycls.shortopt)
                 warns += '] should number used'
-                sys.stderr.write('\n%s\n'%(warns))
-                sys.stderr.flush()
+                self.warn_message(warns)
+        return
+
+
+    def __int_complete(self,validx,keycls,params,endwords=''):
+        retcompletions = []
+        filtername = ''        
+        if len(params) > 0:
+            filtername = params[-1]
+        if self.options.endwordshandle:
+            totalwords = filtername + endwords
+        else:
+            totalwords = filtername
+        self.int_value_warn(totalwords,True)
         return retcompletions
 
     def __long_complete(self,validx,keycls,params,endwords=''):
         return self.__int_complete(validx,keycls,params,endwords)
 
-    def __float_complete(self,validx,keycls,params,endwords=''):
-        retcompletions = []
-        filtername = ''
-        if len(params) > 1:
-            filtername = params[-1]
-        totalwords = filtername + endwords
-        if len(totalwords) > 0:
+    def float_value_warn(self,totalwords,warning=True):
+        if len(totalwords) > 0 and warning:
             floatexpr = re.compile('^([\+\-])?([0-9]*)?(\.[0-9]*)?$')
             matched = False
             if floatexpr.match(totalwords):
@@ -316,8 +330,20 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
                 if keycls.shortopt is not None:
                     warns += '|%s'%(keycls.shortopt)
                 warns += '] should float'
-                sys.stderr.write('\n%s\n'%(warns))
-                sys.stderr.flush()
+                self.warn_message(warns)
+        return
+
+
+    def __float_complete(self,validx,keycls,params,endwords=''):
+        retcompletions = []
+        filtername = ''
+        if len(params) > 1:
+            filtername = params[-1]
+        if self.options.endwordshandle :
+            totalwords = filtername + endwords
+        else:
+            totalwords = filtername
+        self.float_value_warn(totalwords,True)
         return retcompletions
 
     def __list_complete(self,validx,keycls,params,endwords=''):
