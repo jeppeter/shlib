@@ -9,6 +9,9 @@ import random
 import bz2
 import base64
 import time
+import tempfile
+import importlib
+import re
 
 
 ##debugoutstart
@@ -51,12 +54,12 @@ def read_file(infile=None):
     s = ''
     fin = sys.stdin
     if infile is not None:
-        fin = open(infile,'rb')
+        fin = open(infile,'r')
+    bmode = False
+    if 'b' in fin.mode:
+        bmode = True
     for l in fin:
-        if sys.version[0] == '2':
-            s += l
-        else:
-            s += l.decode(encoding='UTF-8')
+        s += l
     if fin != sys.stdin:
         fin.close()
     fin = None
@@ -127,6 +130,8 @@ def set_log_level(args):
     elif args.verbose >= 1 :
         loglvl = logging.WARN
     # we delete old handlers ,and set new handler
+    if logging.root is not None and len(logging.root.handlers) > 0:
+        logging.root.handlers = []
     logging.basicConfig(level=loglvl,format='%(asctime)s:%(filename)s:%(funcName)s:%(lineno)d\t%(message)s')
     return
 
@@ -257,12 +262,14 @@ def check_functions(jsonstr,pythonstr,extoptstr=None):
         priority = None
         if options.priority is not None:
             priority = __get_priority(options.priority)
-        parser = extargsparse.ExtArgsOptions(options,priority)
+        parser = extargsparse.ExtArgsParse(options,priority)
         tempd = os.path.dirname(os.path.realpath(tempf))
+        logging.info('tempd [%s]'%(tempd))
         _add_path(tempd)
         pymod = os.path.basename(os.path.realpath(tempf))
-        pymod = pymod.replace('\.py$','')
-        mod = importlib.import_module(pymode)
+        pymod = re.sub('\.py$','',pymod)
+        logging.debug('sys.path (%s) pymod[%s]'%(sys.path,pymod))
+        mod = importlib.import_module(pymod)
         __check_function(parser,mod)
     finally:
         if tempf is not None:
@@ -274,9 +281,13 @@ def check_functions(jsonstr,pythonstr,extoptstr=None):
 def output_handler(args,parser):
     set_log_level(args)
     if args.prefix is None:
-        raise Exception('please specified release')
+        raise Exception('please specified prefix')
+    if args.jsonfile is not None:
+        args.jsonstr = read_file(args.jsonfile)
     if args.jsonstr is None:
         args.jsonstr = read_file(args.input)
+    if args.optfile is not None:
+        args.extoptions = read_file(args.optfile)
     args.pattern = "extended_opt_code=''"
     extrastr = ''
     for c in args.subnargs:
@@ -393,8 +404,14 @@ def release_handler(args,parser):
 
 def debug_handler(args,parser):
     set_log_level(args)
-    if args.basefile is None:
-        raise Exception('can not handle basefile ok')
+    if args.prefix is None:
+        raise Exception('please specified prefix')
+    if args.jsonfile is not None:
+        args.jsonstr = read_file(args.jsonfile)
+    if args.jsonstr is None:
+        args.jsonstr = read_file(args.input)
+    if args.optfile is not None:
+        args.extoptions = read_file(args.optfile)
     args.pattern = "extended_opt_code=''"
     extrastr = ''
     for c in args.subnargs:
@@ -411,6 +428,9 @@ def main():
     {
         "verbose|v" : "+",
         "jsonstr|j##jsonstr to read  none read from input or stdin##" : null,
+        "basefile|B" : null,
+        "jsonfile" : null,
+        "optfile|F" : null,
         "extoptions|E" : null,
         "input|i" : null,
         "output|o" : null,

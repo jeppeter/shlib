@@ -195,7 +195,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
         return
 
     def __string_step(self,validx,keycls,params,firstcheck):
-        self.warn_override(keycls)
+        self.warn_override(keycls,firstcheck)
         if firstcheck:
             self.set_access(keycls)
         return 1        
@@ -352,6 +352,28 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
             totalwords = filtername
         self.float_value_warn(totalwords,True)
         return retcompletions
+
+    def __bool_complete(self,validx,keycls,params,endwords=''):
+        # nothing to handle
+        return []
+
+    def __args_complete(self,validx,keycls,params,endwords=''):
+        return []
+
+    def __command_complete(self,validx,keycls,params,endwords=''):
+        return []
+
+    def __prefix_complete(self,validx,keycls,params,endwords=''):
+        return []
+
+    def __count_complete(self,validx,keycls,params,endwords=''):
+        return []
+
+    def __help_complete(self,validx,keycls,params,endwords=''):
+        return []
+
+    def __jsonfile_complete(self,validx,keycls,params,endwords=''):
+        return self.__string_complete(validx,keycls,params,endwords)
 
     def __list_complete(self,validx,keycls,params,endwords=''):
         return self.__string_complete(validx,keycls,params,endwords)
@@ -800,7 +822,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
         return retfiles
 
 
-    def call_completion_cmd_nargs(self,cmdname,params):
+    def call_completion_cmd_nargs(self,cmdname,params,endwords=''):
         addmost = -1
         filtername = ''
         if len(params) > 1:
@@ -937,7 +959,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
                     curcompletions.append(curcmd)
         curcompletions = sorted(curcompletions)
         retcompletions.extend(curcompletions)
-        curcompletions = self.call_completion_cmd_nargs(cmdname,params)
+        curcompletions = self.call_completion_cmd_nargs(cmdname,params,endwords)
         curcompletions = sorted(curcompletions)
         retcompletions.extend(curcompletions)
         return retcompletions
@@ -1104,6 +1126,7 @@ def completion_format(args):
     argsopt = CompleteExtArgs(extoptions,priority)
     argsopt.load_command_line_string(args.jsonstr)
     retsarr,endwords = get_handle_args(args.line,args.index,args.subnargs)
+    logging.debug('retsarr (%s) endwords[%s]'%(retsarr,endwords))
     completions = argsopt.get_completions(retsarr,endwords)
     for l in completions:
         s += '%s\n'%(l)

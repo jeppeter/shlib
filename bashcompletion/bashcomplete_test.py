@@ -34,6 +34,10 @@ def make_tempfile(prefix=None,suffix=''):
 class debug_bashcomplete_case(unittest.TestCase):
     def setUp(self):
         self.__tempfiles = []
+        self.__resultok = False
+        self.__verbose = 0
+        if 'TEST_VERBOSE' in os.environ.keys():
+            self.__verbose = int(os.environ['TEST_VERBOSE'])
         return
 
     def __remove_dir(self,dirn,issuper=False):
@@ -43,6 +47,17 @@ class debug_bashcomplete_case(unittest.TestCase):
             cmd = ['rm','-rf',dirn]
         subprocess.check_call(cmd)
         return
+
+    def __quote_string(self,s):
+        rets = ''
+        for c in s:
+            if c == '"':
+                rets += '\\"'
+            elif c == '\\':
+                rets += '\\\\'
+            else:
+                rets += c
+        return rets
 
 
     def __remove_file_safe(self,f=None):
@@ -61,8 +76,8 @@ class debug_bashcomplete_case(unittest.TestCase):
         return
 
     def tearDown(self):
-        if 'TEST_RESERVED' not in os.environ.keys():
-            for f in self.__tempfiles:
+        if 'TEST_RESERVED' not in os.environ.keys() and self.__resultok :
+            for f in self.__tempfiles :
                 self.__remove_file_safe(f)
 
         self.__tempfiles = []
@@ -90,46 +105,111 @@ class debug_bashcomplete_case(unittest.TestCase):
         logging.debug('write (%s) [%s]'%(s,tempf))
         return tempf
 
-    def __check_completion_output(self,jsonstr,inputargs,outputlines,additioncode=None):
-        tempf = self.__write_tempfile(jsonstr)
+    def __write_basic_files(self,jsonstr,prefix,additioncode=None,outfile=None,extoptions=None):
+        jsonfile = self.__write_tempfile(jsonstr)
         runfile = self.__write_tempfile('')
         codef = None
+        optfile = None
         if additioncode is not None:
             codef = self.__write_tempfile(additioncode)
+        if extoptions is not None:
+            optfile = self.__write_tempfile(extoptions)
         # now to make format for the job
         cmds = []
         cmds.append('%s'%(sys.executable))
         curdir = os.path.realpath(os.path.dirname(__file__))
-        templatefile = os.path.join(curdir,'bashcomplete_base.py')
-        cmds.append(templatefile)
-        cmds.append('-o')
+        if outfile is None:
+            pythonfile = os.path.join(curdir,'bashcomplete_format_debug.py')
+            templatefile = os.path.join(curdir,'bashcomplete.py.tmpl')
+        else:
+            pythonfile = outfile
+            templatefile = os.path.join(curdir,'bashcomplete.py.tmpl')
+        cmds.append(pythonfile)
+        if templatefile is not None:
+            cmds.append('--basefile')
+            cmds.append(templatefile)
+        if jsonfile is not None:
+            cmds.append('--jsonfile')
+            cmds.append(jsonfile)
+        if self.__verbose > 0:
+            verbosemode = '-'
+            verbosemode += 'v' * self.__verbose
+            cmds.append(verbosemode)
+        cmds.append('--output')
         cmds.append(runfile)
+        cmds.append('--prefix')
+        cmds.append(prefix)
+        if optfile is not None:
+            cmds.append('--optfile')
+            cmds.append(optfile)
         cmds.append('debug')
         if codef is not None:
             cmds.append(codef)
         logging.debug('format command (%s)'%(cmds))
-        cmdpack.run_cmd_wait(cmds)
-        logging.debug('format over')
+        noout = 1
+        if self.__verbose >= 3:
+            noout = 0
+        cmdpack.run_cmd_wait(cmds,mustsucc=1,noout=noout,shellmode=True)
+        return jsonfile,runfile,templatefile,codef,optfile
+
+    def __check_completion_output(self,jsonstr,inputargs,outputlines,additioncode=None,outfile=None,extoptions=None,index=None,line=None):
+        prefix = 'prog'
+        if len(inputargs) > 0:
+            prefix = os.path.basename(inputargs[0])
+            prefix = prefix.replace('\.','_')
+        jsonfile,runfile,templatefile,codef,optfile = self.__write_basic_files(jsonstr,prefix,additioncode,outfile,extoptions)
+        if line is None:
+            line = ''
+            for c in inputargs:
+                if len(line) > 0:
+                    line += ' '
+                line += '"%s"'%(c)
+        if index is None:
+            index = len(line)
         cmds = []
         cmds.append('%s'%(sys.executable))
         cmds.append(runfile)
         cmds.append('-i')
-        cmds.append(tempf)
+        cmds.append(jsonfile)
+        if optfile is not None:
+            cmds.append('--optfile')
+            cmds.append(optfile)
+        if self.__verbose >= 3:
+            cmds.append('--debugmode')
+        if self.__verbose > 0:
+            verbosemode = '-'
+            verbosemode += 'v' * self.__verbose
+            cmds.append(verbosemode)
+        if jsonfile is not None:
+            cmds.append('--jsonfile')
+            cmds.append(jsonfile)
+        cmds.append('--line')
+        cmds.append(line)
+        cmds.append('--index')
+        cmds.append('%s'%(index))
+        cmds.append('complete')
         cmds.append('--')
         cmds.extend(inputargs)
         logging.debug('run (%s)'%(cmds))
         idx = 0
-        for l in cmdpack.run_cmd_output(cmds):
+        stderrout = False
+        if self.__verbose >= 3:
+            stderrout = None
+        for l in cmdpack.run_cmd_output(cmds,True,stderrout):
             l = l.rstrip('\r\n')
-            logging.debug('[%d][%s][%d]'%(idx,l,len(outputlines)))
-            self.assertTrue( idx < len(outputlines) )
+            logging.debug('[%d]l [%s]'%(idx,l))
+            self.assertTrue( idx < len(outputlines))
+            logging.debug('[%d][%s] [%s]'%(idx,l,outputlines[idx].rstrip('\r\n')))
             self.assertEqual(l,outputlines[idx])
             idx += 1
         self.assertEqual(idx,len(outputlines))
         return
 
-    def __get_list_dir(self,pathext):
+    def __get_list_dir(self,pathext,endwords='',extoptions=None):
         retd = []
+        options = extargsparse.ExtArgsOptions(extoptions)
+        if options.endwordshandle is None:
+            options.endwordshandle = False
         if pathext.startswith('/'):
             basedir = os.path.dirname(pathext)
         else:
@@ -148,8 +228,11 @@ class debug_bashcomplete_case(unittest.TestCase):
                 else:
                     ll = os.path.join(basedir,l)
                 logging.debug('l %s pathext(%s)'%(ll,pathext))
-                if len(pathext) == 0 or ll.startswith(pathext):
-                    retd.append(ll)
+                if ll.startswith(pathext):
+                    if options.endwordshandle and ll.endswith(endwords):
+                        retd.append(ll.replace('%s$'%(endwords),''))
+                    elif not options.endwordshandle:
+                        retd.append(ll)
         except:
             pass
         logging.debug('retd (%s)'%(retd))
@@ -194,26 +277,17 @@ class debug_bashcomplete_case(unittest.TestCase):
         '''
         outputlines = []
         # this is need long opt args
-        outputlines.extend(['--input','--json','--output','--pattern'])
-        outputlines.extend(['--help','--verbose'])
-        # short flag for need args
-        outputlines.extend(['-i','-o','-p'])
-        # short flag for no args 
-        outputlines.extend(['-h','-v'])
-        # the subcommand
+        outputlines.extend(['--help','--input','--json','--output','--pattern','--verbose'])
+        outputlines.extend(['-h','-i','-o','-p','-v'])
         outputlines.extend(['bashinsert','bashstring','makeperl','makepython','pythonperl','shperl','shpython'])
         self.__check_completion_output_add_files(commandline,['insertcode'],outputlines)
         outputlines = []
         # this is need long opt args
-        outputlines.extend(['--input','--json','--output','--pattern'])
-        outputlines.extend(['--help','--verbose'])
-        # short flag for need args
-        outputlines.extend(['-i','-o','-p'])
-        # short flag for no args 
-        outputlines.extend(['-h','-v'])
-        # the subcommand
+        outputlines.extend(['--help','--input','--json','--output','--pattern','--verbose'])
+        outputlines.extend(['-h','-i','-o','-p','-v'])
         outputlines.extend(['bashinsert','bashstring','makeperl','makepython','pythonperl','shperl','shpython'])
         self.__check_completion_output_add_files(commandline,['insertcode',''],outputlines)
+        self.__resultok = True
         return
 
     def test_A002(self):
@@ -248,13 +322,12 @@ class debug_bashcomplete_case(unittest.TestCase):
         '''
         outputlines = []
         # this is need long opt args
-        outputlines.extend(['--input','--json','--output','--pattern'])
-        outputlines.extend(['--help','--verbose'])
+        outputlines.extend(['--help','--input','--json','--output','--pattern','--verbose'])
         # short flag for need args
-        outputlines.extend(['i','o','p'])
-        # short flag for no args 
-        outputlines.extend(['h','v'])
+        outputlines.extend(['-h','-i','-o','-p','-v'])
+        # to make the command
         self.__check_completion_output(commandline,['insertcode','-'],outputlines)
+        self.__resultok = True
         return
 
 def set_log_level(args):
@@ -266,6 +339,8 @@ def set_log_level(args):
     elif args.verbose >= 1 :
         loglvl = logging.WARN
     # we delete old handlers ,and set new handler
+    if logging.root is not None and len(logging.root.handlers) > 0:
+        logging.root.handlers = []
     logging.basicConfig(level=loglvl,format='%(asctime)s:%(filename)s:%(funcName)s:%(lineno)d\t%(message)s')
     return
 
@@ -283,6 +358,7 @@ def main():
     parser.load_command_line_string(commandline)
     args = parser.parse_command_line(None,parser)
     set_log_level(args)
+    os.environ['TEST_VERBOSE'] = '%d'%(args.verbose)
     if args.reserved:
         os.environ['TEST_RESERVED'] = '1'
     else:
