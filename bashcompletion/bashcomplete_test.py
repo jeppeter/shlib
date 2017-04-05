@@ -7,6 +7,8 @@ import os
 import sys
 import logging
 import cmdpack
+import re
+import subprocess
 
 def make_dir_safe(dname=None):
     if dname is not None:
@@ -29,6 +31,49 @@ def make_tempfile(prefix=None,suffix=''):
     os.close(fd)
     f = os.path.abspath(os.path.realpath(result))
     return f
+
+def get_full_trace_back(trback,tabs=1,cnt=0):
+    s = ''
+    frm = getattr(trback,'tb_frame',None)
+    if frm is not None:
+        code = getattr(frm,'f_code',None)
+        if code is not None:
+            s += ' ' * tabs * 4
+            s += '[%d][%s:%s:%s]\n'%(cnt,code.co_filename,code.co_name,frm.f_lineno)
+            ntrace = getattr(trback,'tb_next',None)
+            if ntrace is not None:
+                s += get_full_trace_back(ntrace,tabs,cnt+1)
+    return s
+
+
+def change_shell_special_dir(d):
+    retd = d
+    try:
+        devnullfd = open(os.devnull,'w')
+        p = subprocess.Popen(['/bin/bash'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=devnullfd,shell=False)
+        p.stdin.write('export DIRVALUE=%s\n'%(d))
+        p.stdin.write('echo -n "$DIRVALUE"\n')
+        p.stdin.close()
+        lines = p.stdout.readlines()
+        for l in lines:
+            l = l.rstrip('\r\n')
+            retd = l
+            logging.info('[%s] [%s]'%(d,retd))
+        p = None
+        if devnullfd is not None:
+            devnullfd.close()
+        devnullfd = None
+    except:
+        trback = sys.exc_info()[2]
+        exceptname = sys.exc_info()[1]
+        s = ''
+        s += 'exception %s:\n'%(exceptname)
+        s +='trace back:\n'
+        s += get_full_trace_back(trback,1,0)
+        logging.warn('%s'%(s))
+        retd = d
+    return retd
+
 
 
 class debug_bashcomplete_case(unittest.TestCase):
@@ -210,15 +255,18 @@ class debug_bashcomplete_case(unittest.TestCase):
         options = extargsparse.ExtArgsOptions(extoptions)
         if options.endwordshandle is None:
             options.endwordshandle = False
-        if pathext.startswith('/'):
-            basedir = os.path.dirname(pathext)
-        else:
-            basedir = os.path.dirname(pathext)
+        basedir = os.path.dirname(pathext)
         if len(basedir) == 0:
-            basedir = '.'
-            appenddir = ''
+            if len(pathext) == 0:
+                basedir = '.'
+                appenddir = ''
+            else:
+                appenddir = pathext
+                basedir = pathext
+                basedir = change_shell_special_dir(basedir)
         else:
             appenddir = basedir
+            basedir = change_shell_special_dir(basedir)
 
         logging.debug('cd (%s)'%(basedir))
         try:
@@ -226,22 +274,23 @@ class debug_bashcomplete_case(unittest.TestCase):
                 if len(appenddir) == 0:
                     ll = l
                 else:
-                    ll = os.path.join(basedir,l)
+                    ll = os.path.join(appenddir,l)
                 logging.debug('l %s pathext(%s)'%(ll,pathext))
                 if ll.startswith(pathext):
                     if options.endwordshandle and ll.endswith(endwords):
-                        retd.append(ll.replace('%s$'%(endwords),''))
+                        retd.append(re.sub('%s$'%(endwords),'',ll))
                     elif not options.endwordshandle:
                         retd.append(ll)
         except:
             pass
+        retd = sorted(retd)
         logging.debug('retd (%s)'%(retd))
         return retd
 
-    def __check_completion_output_add_files(self,jsonstr,inputargs,outputlines,pathset='',additioncode=None):
+    def __check_completion_output_add_files(self,jsonstr,inputargs,outputlines,pathset='',additioncode=None,outfile=None,extoptions=None,index=None,line=None):
         outputlines.extend(self.__get_list_dir(pathset))
         logging.debug('outputlines (%s)'%(outputlines))
-        self.__check_completion_output(jsonstr,inputargs,outputlines,additioncode)
+        self.__check_completion_output(jsonstr,inputargs,outputlines,additioncode,outfile,extoptions,index,line)
         return
 
 
@@ -329,6 +378,80 @@ class debug_bashcomplete_case(unittest.TestCase):
         self.__check_completion_output(commandline,['insertcode','-'],outputlines)
         self.__resultok = True
         return
+
+    def test_A003(self):
+        commandline='''
+        {
+            "verbose|v": "+",
+            "input|i##default (stdin)##": null,
+            "output|o##default (stdout)##": null,
+            "pattern|p": "%REPLACE_PATTERN%",
+            "bashinsert<bashinsert_handler>": {
+                "$": "*"
+            },
+            "bashstring<bashstring_handler>": {
+                "$": "*"
+            },
+            "makepython<makepython_handler>": {
+                "$": "*"
+            },
+            "makeperl<makeperl_handler>": {
+                "$": "*"
+            },
+            "shperl<shperl_handler>": {
+                "$": "*"
+            },
+            "shpython<shpython_handler>": {
+                "$": "*"
+            },
+            "pythonperl<pythonperl_handler>": {
+                "$": "*"
+            }
+        }
+        '''
+        outputlines = []
+        self.__check_completion_output_add_files(commandline,['insertcode','~'],outputlines,'~')
+        self.__resultok = True
+        return
+
+    def test_A004(self):
+        commandline='''
+        {
+            "verbose|v": "+",
+            "input|i##default (stdin)##": null,
+            "output|o##default (stdout)##": null,
+            "pattern|p": "%REPLACE_PATTERN%",
+            "bashinsert<bashinsert_handler>": {
+                "$": "*"
+            },
+            "bashstring<bashstring_handler>": {
+                "$": "*"
+            },
+            "makepython<makepython_handler>": {
+                "$": "*"
+            },
+            "makeperl<makeperl_handler>": {
+                "$": "*"
+            },
+            "shperl<shperl_handler>": {
+                "$": "*"
+            },
+            "shpython<shpython_handler>": {
+                "$": "*"
+            },
+            "pythonperl<pythonperl_handler>": {
+                "$": "*"
+            }
+        }
+        '''
+        outputlines = []
+        outputlines.extend(['makeperl','makepython'])
+        self.__check_completion_output_add_files(commandline,['insertcode','make'],outputlines,'make')
+        self.__resultok = True
+        return
+
+
+
 
 def set_log_level(args):
     loglvl= logging.ERROR

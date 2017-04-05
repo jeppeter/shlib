@@ -5,6 +5,7 @@ import extargsparse
 import logging
 import re
 import sys
+import subprocess
 
 
 def read_file(infile=None):
@@ -41,6 +42,42 @@ def output_string(s,outfile=None):
         fout.close()
     fout = None
     return
+
+def get_full_trace_back(trback,tabs=1,cnt=0):
+    s = ''
+    frm = getattr(trback,'tb_frame',None)
+    if frm is not None:
+        code = getattr(frm,'f_code',None)
+        if code is not None:
+            s += ' ' * tabs * 4
+            s += '[%d][%s:%s:%s]\n'%(cnt,code.co_filename,code.co_name,frm.f_lineno)
+            ntrace = getattr(trback,'tb_next',None)
+            if ntrace is not None:
+                s += get_full_trace_back(ntrace,tabs,cnt+1)
+    return s
+
+
+def change_shell_special_dir(d):
+    retd = d
+    try:
+        devnullfd = open(os.devnull,'w')
+        p = subprocess.Popen(['/bin/bash'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=devnullfd,shell=False)
+        p.stdin.write('export DIRVALUE=%s\n'%(d))
+        p.stdin.write('echo -n "$DIRVALUE"\n')
+        p.stdin.close()
+        lines = p.stdout.readlines()
+        for l in lines:
+            l = l.rstrip('\r\n')
+            retd = l
+            logging.info('[%s] [%s]'%(d,retd))
+        p = None
+        if devnullfd is not None:
+            devnullfd.close()
+        devnullfd = None
+    except:
+        retd = d
+    return retd
+
 
 class _OptionAccess(object):
     def __init__(self):
@@ -801,12 +838,18 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
         retfiles = []
         basedir = os.path.dirname(pathpat)
         if len(basedir) == 0:
-            basedir = '.'
-            appenddir = ''
+            if len(pathpat) == 0:
+                basedir = '.'
+                appenddir = ''
+            else:
+                basedir = pathpat
+                appenddir = pathpat
         else:
             appenddir = basedir
+        reald = change_shell_special_dir(basedir)
+        logging.debug('[%s][%s]reald [%s]'%(pathpat,basedir,reald))
         try:
-            for c in os.listdir(basedir):
+            for c in os.listdir(reald):
                 ok = True
                 if len(appenddir) == 0:
                     ofile = c
@@ -1128,6 +1171,7 @@ def completion_format(args):
     retsarr,endwords = get_handle_args(args.line,args.index,args.subnargs)
     logging.debug('retsarr (%s) endwords[%s]'%(retsarr,endwords))
     completions = argsopt.get_completions(retsarr,endwords)
+    logging.debug('completions (%s)'%(completions))
     for l in completions:
         s += '%s\n'%(l)
     return s    
