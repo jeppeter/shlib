@@ -430,6 +430,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
     def __get_longopts_cmd(self,curcmd=''):
         longopts = []
         cmdopts = self.get_cmdopts(curcmd)
+        logging.info('[%s]cmdopts (%s)'%(curcmd,cmdopts))
         for opt in cmdopts:
             if not opt.isflag  or opt.type == 'args':
                 continue
@@ -468,6 +469,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
         idx = len(sarr)
         while idx > 0:
             curcmd = '.'.join(sarr[:idx])
+            logging.info('curcmd [%s]'%(curcmd))
             longopts.extend(self.__get_longopts_cmd(curcmd))
             idx -= 1
         longopts.extend(self.__get_longopts_cmd(''))
@@ -543,6 +545,8 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
             assert(self.__validx > 0)
             assert(self.__shortstep < 0)
             assert(self.__curcharidx < 0)
+            # we should give the validx to the next one
+            self.__curidx = self.__validx
             self.__curidx += self.__longstep
             self.__validx = -1
             self.__longstep = -1
@@ -556,6 +560,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
             assert(self.__curcharidx >= 0)
             if self.__shortstep >= 0:
                 # we maybe use some bad options , so we need any error
+                self.__curidx = self.__validx
                 self.__curidx += self.__shortstep
             self.__valid = -1
             self.__shortstep = -1
@@ -567,6 +572,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
             return cmdname,None
         oldidx = self.__step_longopt(False)
         oldcharidx = self.__curcharidx
+        logging.info('[%d][%d]'%(oldidx,oldcharidx))
         while True:
             if oldidx >= (len(params)-1):
                 self.__ended = 1
@@ -590,10 +596,11 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
             if oldcharidx > 0:
                 while oldcharidx < len(curopt):
                     curch = curopt[oldcharidx]
-                    if curch in self.__get_shortflags(curch,cmdname):
+                    if curch in self.__get_shortflags(cmdname):
                         opt = self.__get_opt_shortflag(curch,cmdname)
                         self.__curidx = oldidx
-                        self.__curcharidx = oldcharidx
+                        # to make the next one
+                        self.__curcharidx = (oldcharidx+1)
                         self.__validx = (oldidx + 1)
                         return cmdname,opt
                     else:
@@ -608,6 +615,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
             else:
                 if self.options.bundled:
                     if curopt.startswith(self.options.longprefix):
+                        logging.info('cmdname [%s] curopt [%s]'%(cmdname,curopt))
                         if curopt in self.__get_longopts(cmdname):
                             opt = self.__get_opt_longopt(curopt,cmdname)
                             self.__curidx = oldidx
@@ -672,6 +680,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
                     # not bundle ,because this is the long and short prefix
                     shortlen = len(self.options.longprefix)
                     if len(curopt) > (shortlen + 1) and curopt.startswith(self.options.longprefix):
+                        logging.info('cmdname [%s]'%(cmdname))
                         if curopt in self.__get_longopts(cmdname):
                             opt = self.__get_opt_longopt(curopt,cmdname)
                             self.__curidx = oldidx
@@ -940,6 +949,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
         if len(params) > 1:
             filtername = params[-1]
         curcompletions = []
+        logging.info('cmdname [%s]'%(cmdname))
         for l in self.__get_longopts(cmdname):
             opt = self.__get_opt_longopt(l,cmdname)
             if opt is not None:

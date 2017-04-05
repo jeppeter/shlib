@@ -87,7 +87,7 @@ def replace_outputs(s,pattern,instrs=None):
     rets += instrs.replace(pattern,s)
     return rets
 
-def __get_sh_python(args,ins):
+def __get_sh_python(ins):
     s = ''
     for l in ins:
         for c in l:
@@ -121,6 +121,20 @@ def __get_sh_python(args,ins):
                 s += c
     return s
 
+def __get_bash_string(ins):
+    rets = ''
+    for c in ins:
+        if c == '$':
+            rets += '\\'
+            rets += '$'
+        elif c == '\\':
+            rets += '\\\\'
+        elif c == '`':
+            rets += '\\`'
+        else:
+            rets += c
+    return rets
+
 def set_log_level(args):
     loglvl= logging.ERROR
     if args.verbose >= 3:
@@ -140,32 +154,49 @@ def __format_tab_line(s,tabs=0):
     outs += '%s\n'%(s)
     return outs
 
-def get_bash_complete_string(args,newargspattern):
-    hprefix = args.prefix.upper()
-    lprefix = args.prefix.lower()
+def get_bash_complete_string(prefix,newargspattern,jsonstr,extoptions=None):
+    hprefix = prefix.upper()
+    lprefix = prefix.lower()
     s = ''
     s += __format_tab_line('#! /bin/bash')
     s += __format_tab_line('read -r -d \'\' %s_COMMAND_JSON_OPTIONS<<%s_EOFMM'%(hprefix,newargspattern))
-    s += __format_tab_line(args.jsonstr)
+    shjsonstr = __get_bash_string(jsonstr)
+    s += __format_tab_line(shjsonstr,0)
     s += __format_tab_line('%s_EOFMM'%(newargspattern))
     s += __format_tab_line('')
     s += __format_tab_line('%s_PYTHON_COMPLETE_STR="c=\'%%%s%%\';exec(c);"'%(hprefix,newargspattern))
     s += __format_tab_line('')
+    if extoptions is not None:
+        shextoptions = __get_bash_string(extoptions)
+        s += __format_tab_line('')
+        s += __format_tab_line('read -r -d \'\' %s_COMMAND_JSON_EXTOPTIONS<<%s_EOFMM'%(hprefix,newargspattern))
+        s += __format_tab_line(shextoptions)
+        s += __format_tab_line('%s_COMMAND_JSON_EXTOPTIONS'%(newargspattern))
+    s += __format_tab_line('')
     s += __format_tab_line('_%s_complete()'%(lprefix))
     s += __format_tab_line('{')
     s += __format_tab_line('local _verbosemode=""',1)
-    s += __format_tab_line('if [ -n "$%s_DEBUG_MODE" ] && [ $%s_DEBUG_MODE -gt 0 ]'%(hprefix,hprefix),1)
+    s += __format_tab_line('local _cnt=0',1)
+    s += __format_tab_line('if [ -n "$%s_COMPLETION_DEBUG_MODE" ] && [ $%s_COMPLETION_DEBUG_MODE -gt 0 ]'%(hprefix,hprefix),1)
     s += __format_tab_line('then',2)
-    s += __format_tab_line('_verbosemode="-vvvv"',2)
+    s += __format_tab_line('_verbosemode="-"',2)
+    s += __format_tab_line('while [ $_cnt -lt $%s_COMPLETION_DEBUG_MODE ]'%(hprefix),2)
+    s += __format_tab_line('do',2)
+    s += __format_tab_line('_verbosemode="${_verbosemode}v"',3)
+    s += __format_tab_line('_cnt=`expr $_cnt \\+ 1`',3)
+    s += __format_tab_line('done',2)
     s += __format_tab_line('fi',1)
-    s += __format_tab_line('if [ -z "$PYTHON"]',1)
+    s += __format_tab_line('if [ -z "$PYTHON" ]',1)
     s += __format_tab_line('then',2)
     s += __format_tab_line('PYTHON=python',2)
     s += __format_tab_line('fi',1)
     s += __format_tab_line('',1)
-    s += __format_tab_line('COMPREPLY=($(echo -n "$%s_COMMAND_JSON_OPTIONS" | $PYTHON -c "$%s_PYTHON_COMPLETE_STR" $_verbosemode --line "${COMP_LINE}" --index "${COMP_POINT}" --  "${COMP_WORDS[@]}"))'%(hprefix,hprefix),1)
+    if extoptions is not None:
+        s += __format_tab_line('COMPREPLY=($(echo -n "$%s_COMMAND_JSON_OPTIONS" | $PYTHON -c "$%s_PYTHON_COMPLETE_STR" $_verbosemode --options "%s_COMMAND_JSON_EXTOPTIONS" --line "${COMP_LINE}" --index "${COMP_POINT}" complete --  "${COMP_WORDS[@]}"))'%(hprefix,hprefix,hprefix),1)
+    else:
+        s += __format_tab_line('COMPREPLY=($(echo -n "$%s_COMMAND_JSON_OPTIONS" | $PYTHON -c "$%s_PYTHON_COMPLETE_STR" $_verbosemode --line "${COMP_LINE}" --index "${COMP_POINT}" complete --  "${COMP_WORDS[@]}"))'%(hprefix,hprefix),1)
     s += __format_tab_line('}')
-    s += __format_tab_line('complete -F _%s_complete %s'%(lprefix,args.prefix))
+    s += __format_tab_line('complete -F _%s_complete %s'%(lprefix,prefix))
     return s
 
 RANDOM_LOWER = 'abcdefghijklmnopqrstuvwxyz'
@@ -298,38 +329,16 @@ def output_handler(args,parser):
     check_functions(args.jsonstr,python_string,args.extoptions)
     # now w
     newargspattern = 'REPLACE_PATTERN'
+    dummystr = get_bash_complete_string(args.prefix,newargspattern,args.jsonstr,args.extoptions)
     while True:
-        newstr = args.jsonstr.replace('%%%s%%'%(newargspattern),'')
-        # it means that the coding 
-        if newstr != args.jsonstr:
+        newstr = dummystr.replace('%s'%(newargspattern),'')
+        # it means that we no match
+        if newstr != dummystr:
             newargspattern = get_temp_value()
             continue
-        newstr = args.jsonstr.replace('%s'%(newargspattern),'')
-        if newstr != args.jsonstr:
-            newargspattern = get_temp_value()
-            continue
-        newstr = python_string.replace('%%%s%%'%(newargspattern),'')
-        # it means that the 
-        if newstr != python_string:
-            newargspattern = get_temp_value()
-            continue
-        newstr = python_string.replace('%s'%(newargspattern),'')
-        if newstr != python_string:
-            newargspattern = get_temp_value()
-            continue
-
-        if args.extoptions is not None:
-            newstr = args.extoptions.replace('%%%s%%'%(newargspattern),'')
-            if newstr != args.extoptions:
-                newargspattern = get_temp_value()
-                continue
-            newstr = args.extoptions.replace('%s'%(newargspattern),'')
-            if newstr != args.extoptions:
-                newargspattern = get_temp_value()
-                continue
         break        
-    bash_base_string=get_bash_complete_string(args,newargspattern)
-    shpython_string = __get_sh_python(args,python_string)
+    bash_base_string=get_bash_complete_string(args.prefix,newargspattern,args.jsonstr,args.extoptions)
+    shpython_string = __get_sh_python(python_string)
     bash_complete_string = replace_outputs(shpython_string,'%%%s%%'%(newargspattern),bash_base_string)
     bash_complete_string = bash_complete_string.replace('\r','')
     write_file(bash_complete_string,args.output)
