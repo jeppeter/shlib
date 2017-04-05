@@ -450,6 +450,42 @@ class debug_bashcomplete_case(unittest.TestCase):
         self.__resultok = True
         return
 
+    def test_A005(self):
+        commandline='''
+        {
+            "verbose|v": "+",
+            "input|i##default (stdin)##": null,
+            "output|o##default (stdout)##": null,
+            "pattern|p": "%REPLACE_PATTERN%",
+            "bashinsert<bashinsert_handler>": {
+                "$": "*"
+            },
+            "bashstring<bashstring_handler>": {
+                "$": "*"
+            },
+            "makepython<makepython_handler>": {
+                "$": "*"
+            },
+            "makeperl<makeperl_handler>": {
+                "$": "*"
+            },
+            "shperl<shperl_handler>": {
+                "$": "*"
+            },
+            "shpython<shpython_handler>": {
+                "$": "*"
+            },
+            "pythonperl<pythonperl_handler>": {
+                "$": "*"
+            }
+        }
+        '''
+        outputlines = []
+        outputlines.extend(['makeperl','makepython'])
+        self.__check_completion_output_add_files(commandline,['insertcode','make'],outputlines,'mak',additioncode=None,outfile=None,extoptions=None,index=13,line='insertcode make')
+        self.__resultok = True
+        return
+
 
 
 
