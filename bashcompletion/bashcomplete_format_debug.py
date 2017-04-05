@@ -5,15 +5,28 @@ import sys
 import extargsparse
 import logging
 import os
-import tempfile
+import random
 import bz2
 import base64
+import time
 
 
 ##debugoutstart
 
 
 ##debugoutend
+
+def _add_path(curpath,*paths):
+    testfile = os.path.join(curpath,*paths)
+    if os.path.exists(testfile):
+        if curpath != sys.path[0]:
+            if curpath in sys.path:
+                sys.path.remove(curpath)
+            oldpath=sys.path
+            sys.path = [curpath]
+            sys.path.extend(oldpath)
+    return
+
 
 def make_dir_safe(dname=None):
     if dname is not None:
@@ -140,20 +153,29 @@ def get_bash_complete_string(args,newargspattern):
     s += __format_tab_line('then',2)
     s += __format_tab_line('_verbosemode="-vvvv"',2)
     s += __format_tab_line('fi',1)
+    s += __format_tab_line('if [ -z "$PYTHON"]',1)
+    s += __format_tab_line('then',2)
+    s += __format_tab_line('PYTHON=python',2)
+    s += __format_tab_line('fi',1)
     s += __format_tab_line('',1)
-    s += __format_tab_line('COMPREPLY=($(echo -n "$%s_COMMAND_JSON_OPTIONS" | python -c "$%s_PYTHON_COMPLETE_STR" $_verbosemode --  "${COMP_WORDS[@]}"))'%(hprefix,hprefix),1)
+    s += __format_tab_line('COMPREPLY=($(echo -n "$%s_COMMAND_JSON_OPTIONS" | $PYTHON -c "$%s_PYTHON_COMPLETE_STR" $_verbosemode --line "${COMP_LINE}" --index "${COMP_POINT}" --  "${COMP_WORDS[@]}"))'%(hprefix,hprefix),1)
     s += __format_tab_line('}')
     s += __format_tab_line('complete -F _%s_complete %s'%(lprefix,args.prefix))
     return s
 
-def get_temp_value():
-    while True:
-        newfile = make_tempfile()
-        newargspattern = '%s'%(os.path.basename(newfile).replace('.','_'))
-        os.remove(newfile)
-        if (newargspattern[0] >= 'a' and newargspattern[0] <= 'z' ) or \
-            (newargspattern[0] >= 'A' and newargspattern[0] <= 'Z'):
-            break
+RANDOM_LOWER = 'abcdefghijklmnopqrstuvwxyz'
+RANDOM_UPPER = RANDOM_LOWER.upper()
+RANDOM_NUMBER = '0123456789'
+RANDOM_ALPHBET = RANDOM_LOWER + RANDOM_UPPER
+RANDOM_CHARS = RANDOM_ALPHBET + RANDOM_NUMBER + '_'
+
+def get_temp_value(numchars=10):
+    newargspattern = ''
+    while len(newargspattern) < numchars:
+        if len(newargspattern) == 0:
+            newargspattern += random.choice(RANDOM_ALPHBET)
+        else:
+            newargspattern += random.choice(RANDOM_CHARS)    
     return newargspattern
 
 def unzip_format_string(instr):
@@ -175,6 +197,80 @@ def format_get_base_string():
 def get_base_string(args):
     return base_get_base_string(args)
 
+def __get_priority(inputprior):
+    priority = None
+    if len(inputprior) == 0 or (len(inputprior) == 1 and inputprior[0] == 'NONE'):
+        pass
+    else:
+        priority = []
+        for c in inputprior:
+            if c == 'SUBCMD_JSON' :
+                priority.append(extargsparse.SUB_COMMAND_JSON_SET)
+            elif c == 'CMD_JSON' :
+                priority.append(extargsparse.COMMAND_JSON_SET)
+            elif c == 'ENV_SUBCMD_JSON' :
+                priority.append(extargsparse.ENV_SUB_COMMAND_JSON_SET)
+            elif c == 'ENV_CMD_JSON':
+                priority.append(extargsparse.ENV_COMMAND_JSON_SET)
+            elif c == 'ENV_CMD' :
+                priority.append(extargsparse.ENVIRONMENT_SET)
+            elif c == 'NONE':
+                break
+            else:
+                raise Exception('unknown priority (%s)'%(c))
+    return priority
+
+
+def __check_function(parser,mod,cmdname=''):
+    subcmds = parser.get_subcommands(cmdname)
+    if subcmds is not None:
+        for c in subcmds:
+            curcmd = cmdname
+            if len(curcmd) > 0:
+                curcmd += '.'
+            curcmd += c
+            __check_function(parser,mod,curcmd)
+    cmdopts = parser.get_cmdopts(cmdname)
+    if cmdopts is not None:
+        for opt in cmdopts:
+            if not opt.isflag:
+                continue
+            if opt.attr is not None and opt.attr.optparse is not None:
+                funcptr = getattr(mod,opt.attr.optparse,None)
+                if funcptr is None:
+                    raise Exception('can not find optparse [%s]'%(opt.attr.optparse))
+            if opt.attr is not None and opt.attr.completefunc is not None:
+                funcptr = getattr(mod,opt.attr.completefunc,None)
+                if funcptr is None:
+                    raise Exception('can not find optparse [%s]'%(opt.attr.completefunc))
+    return
+
+
+
+def check_functions(jsonstr,pythonstr,extoptstr=None):
+    tempf = None
+    try:
+        tempf = make_tempfile(prefix=None,suffix='.py')
+        with open(tempf,'w') as fout:
+            fout.write('%s'%(pythonstr))
+        options = extargsparse.ExtArgsOptions(extoptstr)
+        priority = None
+        if options.priority is not None:
+            priority = __get_priority(options.priority)
+        parser = extargsparse.ExtArgsOptions(options,priority)
+        tempd = os.path.dirname(os.path.realpath(tempf))
+        _add_path(tempd)
+        pymod = os.path.basename(os.path.realpath(tempf))
+        pymod = pymod.replace('\.py$','')
+        mod = importlib.import_module(pymode)
+        __check_function(parser,mod)
+    finally:
+        if tempf is not None:
+            os.remove(tempf)
+        tempf = None
+    return
+
+
 def output_handler(args,parser):
     set_log_level(args)
     if args.prefix is None:
@@ -188,6 +284,8 @@ def output_handler(args,parser):
     base_string = read_file(args.basefile)
     logging.info('base_string (%d)'%(len(base_string)))
     python_string = replace_outputs(extrastr,args.pattern,base_string)
+    check_functions(args.jsonstr,python_string,args.extoptions)
+    # now w
     newargspattern = 'REPLACE_PATTERN'
     while True:
         newstr = args.jsonstr.replace('%%%s%%'%(newargspattern),'')
@@ -208,12 +306,24 @@ def output_handler(args,parser):
         if newstr != python_string:
             newargspattern = get_temp_value()
             continue
-        break
+
+        if args.extoptions is not None:
+            newstr = args.extoptions.replace('%%%s%%'%(newargspattern),'')
+            if newstr != args.extoptions:
+                newargspattern = get_temp_value()
+                continue
+            newstr = args.extoptions.replace('%s'%(newargspattern),'')
+            if newstr != args.extoptions:
+                newargspattern = get_temp_value()
+                continue
+        break        
     bash_base_string=get_bash_complete_string(args,newargspattern)
     shpython_string = __get_sh_python(args,python_string)
     bash_complete_string = replace_outputs(shpython_string,'%%%s%%'%(newargspattern),bash_base_string)
     bash_complete_string = bash_complete_string.replace('\r','')
     write_file(bash_complete_string,args.output)
+    # now to try out
+
     sys.exit(0)
     return
 
@@ -271,6 +381,8 @@ def release_handler(args,parser):
     set_log_level(args)
     if args.basefile is None:
         raise Exception('please specified basefile by [--basefile|-B]')
+    if args.pattern is None:
+        args.pattern = '%BASH_COMPLETE_STRING%'
     basestr = read_file(args.basefile)
     logging.info('basestring (%s)'%(basestr))
     basestr = bzip2_base64_encode(basestr)
@@ -299,6 +411,7 @@ def main():
     {
         "verbose|v" : "+",
         "jsonstr|j##jsonstr to read  none read from input or stdin##" : null,
+        "extoptions|E" : null,
         "input|i" : null,
         "output|o" : null,
         "prefix|p" : null,
@@ -313,6 +426,7 @@ def main():
         }
     }
     '''
+    random.seed(time.time())
     parser = extargsparse.ExtArgsParse(None,priority=[])
     parser.load_command_line_string(commandline)
     parser.parse_command_line(None,parser)

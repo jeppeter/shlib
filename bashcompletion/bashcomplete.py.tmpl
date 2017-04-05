@@ -313,7 +313,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
     def __int_complete(self,validx,keycls,params,endwords=''):
         retcompletions = []
         filtername = ''        
-        if len(params) > 0:
+        if len(params) > 1:
             filtername = params[-1]
         if self.options.endwordshandle:
             totalwords = filtername + endwords
@@ -815,18 +815,77 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
         retcompletions = []
         if addmost >= 0 and addmost < len(self.leftargs):
             return retcompletions
+        validx = len(params) - 1
         if argsattr.attr is not None and argsattr.attr.completefunc is not None:
-            retcompletions.extend(self.call_func(argsattr.attr.completefunc,self,cmdname,params))
+            retcompletions.extend(self.call_func(argsattr.attr.completefunc,self,validx,argsattr,params,endwords))
             return
         curcompletions = self.file_common_completion(filtername,None)
         curcompletions = sorted(curcompletions)
         for c in curcompletions:
-            if c.startswith(filtername):
-                retcompletions.append(c)
-        return retcompletions     
+            curfile = self.get_filter_name(c,filtername,endwords)
+            if curfile is not None:
+                retcompletions.append(curfile)
+        return retcompletions
+
+    def __completion_shortflag_cmd(self,cmdname,params,stepped=False,endwords=''):
+        filtername = ''
+        if len(params) > 1:
+            filtername = params[-1]
+        validx = 1
+        if len(params) > 1:
+            validx = (len(params) - 1)
+        curcompletions = []
+        if self.options.bundled and self.options.shortprefix is not None:
+            if len(filtername) == 0:
+                for c in self.__get_shortflags(cmdname):
+                    curc = '%s%s'%(self.options.shortprefix,c)
+                    opt = self.__get_opt_shortflag(c,cmdname)
+                    if opt is not None:
+                        step = self.call_step_func(validx,opt,params,False)
+                        if (step == 0  or not stepped) and ( not getattr(self.optaccess, opt.optdest,False)  or \
+                            opt.type == 'list' ):
+                            if self.options.endwordshandle and curc.endswith(endwords):
+                                curcompletions.append(curc)
+                            elif not self.options.endwordshandle:
+                                curcompletions.append(curc)
+            elif filtername.startswith(self.options.shortprefix) and not filtername.startswith(self.options.longprefix) :
+                for c in self.__get_shortflags(cmdname):
+                    added = True
+                    opt = self.__get_opt_shortflag(c,cmdname)
+                    if opt is not None:
+                        step = self.call_step_func(validx,opt,params,False)
+                        if (step > 0 and stepped) or (getattr(self.optaccess,opt.optdest,False) and opt.type != 'list'):
+                            added = False
+                    if added :
+                        addc = '%s%s'%(filtername,c)
+                        curcompletions.append(addc)
+        elif self.options.shortprefix is not None:
+            # this is not bundled ,so we do this ok
+            for c in self.__get_shortflags(cmdname):
+                opt = self.__get_opt_shortflag(c,cmdname)
+                if opt is not None:
+                    if not getattr(self.optaccess,opt.optdest,False) or opt.type == 'list':
+                        curc = '%s%s'%(self.options.shortprefix,c)
+                        if curc.startswith(filtername) and (not self.options.endwordshandle or len(endwords) == 0):
+                            curcompletions.append(curc)
+        return curcompletions
+
+    def __completion_longopt_cmd(self,cmdname,params,endwords=''):
+        filtername = ''
+        if len(params) > 1:
+            filtername = params[-1]
+        curcompletions = []
+        for l in self.__get_longopts(cmdname):
+            opt = self.__get_opt_longopt(l,cmdname)
+            if opt is not None:
+                if not getattr(self.optaccess,opt.optdest,False) or opt.type == 'list':
+                    curl = self.get_filter_name(l,filtername,endwords)
+                    if curl is not None:
+                        curcompletions.append(curl)
+        return curcompletions
 
 
-    def completion_call_cmd(self,cmdname,params):
+    def completion_call_cmd(self,cmdname,params,endwords=''):
         filtername = ''
         validx = 1
         if len(params) > 1:
@@ -844,44 +903,38 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
                     step = self.call_step_func(validx,opt,params,False)
                     if step > 0:
                         hasstepped = True
+                        break
+                idx += 1
+
+        if len(endwords) > 0 and not hasstepped and \
+            filtername.startswith(self.options.shortprefix) and \
+            not filtername.startswith(self.options.longprefix) and self.options.bundled and \
+            self.options.endwordshandle :
+            idx = 0
+            while idx < len(endwords):
+                curch = endwords[idx]
+                opt = self.__get_opt_shortflag(curch,cmdname)
+                if opt is not None:
+                    step = self.call_step_func(validx,opt,params,False)
+                    if step > 0:
+                        hasstepped = True
+                        break
                 idx += 1
         curcompletions = []
-
-        for l in self.__get_longopts(cmdname):
-            if l.startswith(filtername):
-                curcompletions.append(l)
+        curcompletions = self.__completion_longopt_cmd(cmdname,params,endwords)
         curcompletions = sorted(curcompletions)
         retcompletions.extend(curcompletions)
         curcompletions = []
-        if self.options.bundled and self.options.shortprefix is not None:
-            if len(filtername) == 0:
-                for c in self.__get_shortflags(cmdname):
-                    curc = '%s%s'%(self.options.shortprefix,c)
-                    curcompletions.append(curc)
-            elif filtername.startswith(self.options.shortprefix) and not filtername.startswith(self.options.longprefix) :
-                for c in self.__get_shortflags(cmdname):
-                    added = True
-                    opt = self.__get_opt_shortflag(c,cmdname)
-                    if opt is not None and hasstepped:
-                        step = self.call_step_func(validx,opt,params,False)
-                        if step > 0:
-                            added = False
-                    if added :
-                        curcompletions.append(c)
-        elif self.options.shortprefix is not None:
-            # this is not bundled ,so we do this ok
-            for c in self.__get_shortflags(cmdname):
-                curc = '%s%s'%(self.options.shortprefix,c)
-                if curc.startswith(filtername):
-                    curcompletions.append(curc)
+        curcompletions = self.__completion_shortflag_cmd(cmdname,params,hasstepped,endwords)
         curcompletions = sorted(curcompletions)
         retcompletions.extend(curcompletions)
         subcmds = self.get_subcommands(cmdname)
         curcompletions = []
         if subcmds is not None:
             for c in subcmds:
-                if c.startswith(filtername):
-                    curcompletions.append(c)
+                curcmd = self.get_filter_name(c,filtername,endwords)
+                if curcmd is not None:
+                    curcompletions.append(curcmd)
         curcompletions = sorted(curcompletions)
         retcompletions.extend(curcompletions)
         curcompletions = self.call_completion_cmd_nargs(cmdname,params)
@@ -891,7 +944,11 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
 
     def completeion_call(self,validx,opt,params,endwords=''):
         retcompletions = []
-
+        if opt.attr is not None and opt.attr.completefunc is not None:
+            optcomplete = self.call_func(opt.attr.completefunc,self,validx,opt,params,endwords)
+        else:
+            optcomplete = self.__complete_functions[opt.type](validx,opt,params,endwords)
+        retcompletions.extend(optcomplete)
         return retcompletions
 
 
@@ -905,7 +962,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
         if needopt is not None:
             # it means that we need to handle specified handle
             return self.completeion_call(result.lastidx,result.lastopt,params,endwords)
-        return self.completion_call_cmd(result.cmdname,params)
+        return self.completion_call_cmd(result.cmdname,params,endwords)
 
 
     def get_completions(self,args=[],endwords=''):
@@ -915,8 +972,6 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
         completions = []
         if result.stopped:
             return completions
-
-
         completions = self.__get_completions_cmdname(result,args,endwords='')
         return completions
 
@@ -952,6 +1007,88 @@ def __get_priority(inputprior):
                 raise Exception('unknown priority (%s)'%(c))
     return priority
 
+def unquote_string(qs,startqs=''):
+    rets = ''
+    idx = 0
+    matchqs = startqs
+    backslashed = 0
+    while idx < len(qs):
+        if idx == 0 and (qs[idx] == '\'' or qs[idx]=='"') and \
+            matchqs == '':
+            matchqs = qs[idx]
+            idx += 1
+            continue
+        elif matchqs != '' and (qs[idx] == matchqs) and backslashed == 0:
+            matchqs = ''
+            break
+        if backslashed != 0 and matchqs == '"':
+            if qs[idx] == '\\':
+                rets += '\\'
+            elif qs[idx] == 't':
+                rets += '\t'
+            elif qs[idx] == 'n':
+                rets += '\n'
+            elif qs[idx] == '\'':
+                rets += '\''
+            elif qs[idx] == '"':
+                rets += '"'
+            else:
+                logging.info('unknown \%s'%(qs[idx]))
+                rets += qs[idx]
+            backslashed = 0
+        elif backslashed != 0 and matchqs == '\'':
+            if qs[idx] == '\\':
+                rets += '\\\\'
+            elif qs[idx] == 't':
+                rets += '\\t'
+            elif qs[idx] == 'n':
+                rets += '\\n'
+            elif qs[idx] == '\'':
+                rets += '\''
+            elif qs[idx] == '"':
+                rets += '\\"'
+            else:
+                logging.info('unknown \%s'%(qs[idx]))
+                rets += qs[idx]
+            backslashed = 0         
+        elif qs[idx] == '\\':
+            backslashed = 1
+        else:
+            rets += qs[idx]
+        idx += 1
+    return rets,matchqs
+
+
+def get_handle_args(line,index,sarr):
+    retsarr = []
+    endwords = ''
+    idx= 0
+    retidx = 0
+    retcnt = 0
+    while idx < index and retidx < len(sarr):
+        retcnt = 0
+        while retcnt < len(sarr[retidx]) and idx < index:
+            if sarr[retidx][retcnt] == line[idx]:
+                idx += 1
+                retcnt += 1
+                continue
+            if line[idx] != ' ' and \
+                line[idx] != '\t':
+                logging.info('[%d] [%s]'%(idx,line[idx]))
+            idx += 1
+        if retcnt < len(sarr[retidx]):
+            retsarr.append(sarr[retidx][:retcnt])
+            endwords = sarr[retidx][retcnt:]
+            retsarr[retidx],startqs = unquote_string(retsarr[retidx])
+            endwords,endqs = unquote_string(endwords,startqs)
+            break
+        retsarr.append(sarr[retidx])
+        retsarr[retidx],startqs = unquote_string(retsarr[retidx])
+        idx += 1
+        retidx += 1
+    return retsarr,endwords
+
+
 
 def completion_format(args):
     s = ''
@@ -966,9 +1103,10 @@ def completion_format(args):
         priority = __get_priority(extoptions.priority)
     argsopt = CompleteExtArgs(extoptions,priority)
     argsopt.load_command_line_string(args.jsonstr)
-    completions = argsopt.get_completions(args.subnargs)
+    retsarr,endwords = get_handle_args(args.line,args.index,args.subnargs)
+    completions = argsopt.get_completions(retsarr,endwords)
     for l in completions:
-        s += '%s\n'%(l)    
+        s += '%s\n'%(l)
     return s    
 
 
@@ -1061,6 +1199,8 @@ def main():
         "options|O" : null,
         "optfile|F" : null,
         "debugmode|d" : false,
+        "line|L" : null,
+        "index|I" : -1,
         "complete<complete_handler>" : {
             "$" : "*"
         }
