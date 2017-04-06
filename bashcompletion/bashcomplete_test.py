@@ -48,6 +48,8 @@ def get_full_trace_back(trback,tabs=1,cnt=0):
             ntrace = getattr(trback,'tb_next',None)
             if ntrace is not None:
                 s += get_full_trace_back(ntrace,tabs,cnt+1)
+    if not isinstance(s,str):
+        logging.warning('[%s] not str'%(s))
     return s
 
 def read_file(infile=None):
@@ -69,23 +71,35 @@ def read_file(infile=None):
     return s
 
 
+def encode_string_mode(instr,bmode):
+    retstr = instr
+    if sys.version[0] != '2' and bmode:
+        retstr = instr.encode(encoding='UTF-8')
+    return retstr
+
 def change_shell_special_dir(d):
     retd = d
+    devnullfd = None
     try:
         devnullfd = open(os.devnull,'w')
         p = subprocess.Popen(['/bin/bash'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=devnullfd,shell=False)
-        p.stdin.write('export DIRVALUE=%s\n'%(d))
-        p.stdin.write('echo -n "$DIRVALUE"\n')
+        bmode = False
+        if 'b' in p.stdin.mode:
+            bmode = True
+        p.stdin.write(encode_string_mode('export DIRVALUE=%s\n'%(d),bmode))
+        p.stdin.write(encode_string_mode('echo -n "$DIRVALUE"\n',bmode))
         p.stdin.close()
+        p.stdin = None
         lines = p.stdout.readlines()
+        p.stdout.close()
+        p.stdout = None
         for l in lines:
+            if sys.version[0] != '2':
+                l = l.decode(encoding='UTF-8')
             l = l.rstrip('\r\n')
             retd = l
             logging.info('[%s] [%s]'%(d,retd))
         p = None
-        if devnullfd is not None:
-            devnullfd.close()
-        devnullfd = None
     except:
         trback = sys.exc_info()[2]
         exceptname = sys.exc_info()[1]
@@ -93,8 +107,12 @@ def change_shell_special_dir(d):
         s += 'exception %s:\n'%(exceptname)
         s +='trace back:\n'
         s += get_full_trace_back(trback,1,0)
-        logging.warn('%s'%(s))
+        logging.warning('%s'%(s))
         retd = d
+    finally:
+        if devnullfd is not None:
+            devnullfd.close()
+        devnullfd = None
     return retd
 
 def regular_quote(ins):
