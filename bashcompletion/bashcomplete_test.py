@@ -9,6 +9,11 @@ import logging
 import cmdpack
 import re
 import subprocess
+try:
+    import pexpect
+    pexpectimported=True
+except:
+    pexpectimported=False
 
 def make_dir_safe(dname=None):
     if dname is not None:
@@ -73,6 +78,107 @@ def change_shell_special_dir(d):
         logging.warn('%s'%(s))
         retd = d
     return retd
+
+def regular_quote(ins):
+    regular_special_case = ['+','*','(',')','[',']','-','?','\\','^','$','{','}']
+    rets = ''
+    for c in ins:
+        if c in regular_special_case:
+            rets += '\\'
+        rets += c
+    return rets
+
+
+KEY_UP = '\x1b[A'
+KEY_DOWN = '\x1b[B'
+KEY_RIGHT = '\x1b[C'
+KEY_LEFT = '\x1b[D'
+
+
+class ExpLogObject(object):
+    def __init__(self,logfd=None):
+        self.__logfd= None
+        self.__bmode = False
+        if logfd is not None:
+            self.__logfd = logfd
+            self.__bmode = False
+            if 'b' in self.__logfd.mode:
+                self.__bmode = True
+        return
+
+    def write(self,s):
+        bmode = False
+        if isinstance(s,bytes):
+            bmode = True
+        if self.__bmode == bmode or sys.version[0] == '2':
+            self.__logfd.write(s)
+        elif self.__bmode :
+            # we encode
+            self.__logfd.write(s.encode(encoding='UTF-8'))
+        elif bmode:
+            self.__logfd.write(s.decode(encoding='UTF-8'))
+        return
+
+    def flush(self):
+        if self.__logfd is not None:
+            self.__logfd.flush()
+        return
+
+def read_buffer(child,timeout=.3,checkfunc=None,checkctx=None,bufsize=1024):
+    if sys.version[0] == '2':
+        totalbuf = ''
+    else:
+        totalbuf = b''
+    while True:
+        try:
+            cbuf = child.read_nonblocking(bufsize,timeout=timeout)
+        except pexpect.exceptions.TIMEOUT as e:
+            break
+        totalbuf += cbuf
+        if checkfunc is not None:
+            bret = checkfunc(totalbuf,checkctx)
+            if bret :
+                break
+    retbuf = totalbuf
+    if sys.version[0] != '2':
+        retbuf = totalbuf.decode(encoding='UTF-8')
+    return retbuf
+
+def get_read_completion(child,timeout=0.5):
+    totalbuf = ''
+    requireexpr = re.compile('.*\(y or n\)$',re.M | re.S)
+    moreexpr = re.compile('.*--More--$',re.M | re.S)
+    handlemode = None
+    while True:
+        cbuf = read_buffer(child,timeout=timeout)
+        handlemode = None
+        sarr = re.split('\n',cbuf)
+        for l in sarr:
+            l = l.rstrip('\r\n')
+            if l.startswith('>>>>>>'):
+                continue
+            if requireexpr.match(l):
+                assert(handlemode is None)
+                handlemode = 'yeshandle'
+            elif moreexpr.match(l):
+                assert(handlemode is None)
+                handlemode = 'more'
+            else:
+                l = l.replace('\r','')
+                # replace bell
+                l = l.replace('\x07','')
+                # that is the erase line
+                l = l.replace('\x1b[K','')
+                if len(l) > 0:
+                    totalbuf += '%s\n'%(l)
+        if handlemode is not None:
+            if handlemode == 'yeshandle':
+                child.send('y')
+            elif handlemode == 'more' :
+                child.send('y')
+        else:
+            break
+    return totalbuf
 
 
 
@@ -205,10 +311,15 @@ class debug_bashcomplete_case(unittest.TestCase):
         jsonfile,runfile,templatefile,codef,optfile = self.__write_basic_files('debug',jsonstr,prefix,additioncode,outfile,extoptions)
         if line is None:
             line = ''
+            idx = 0
             for c in inputargs:
                 if len(line) > 0:
                     line += ' '
-                line += '"%s"'%(c)
+                if idx == 0:
+                    line += c
+                else:
+                    line += '"%s"'%(c)
+                idx += 1
         if index is None:
             index = len(line)
         cmds = []
@@ -251,6 +362,52 @@ class debug_bashcomplete_case(unittest.TestCase):
         self.assertEqual(idx,len(outputlines))
         return
 
+    def __start_pexpect(self,sourcefile,timeout=0.5):
+        child = pexpect.spawn('/bin/bash')
+        # now we should make sure 
+        logobj = None
+        if self.__verbose >= 3:
+            logobj = ExpLogObject(sys.stderr)
+        child.logfile = logobj
+        child.send('export PS1=\'>>>>>>\'\r\n')
+        child.expect('>>>>>>',timeout=timeout)
+        curdir = os.getcwd()
+        # to change the current directory
+        child.send('cd "%s"\r\n'%(self.__quote_string(curdir)))
+        child.expect('"%s"'%(self.__quote_string(curdir)),timeout=timeout)
+        child.expect('>>>>>>',timeout=timeout)
+        child.send('source %s\r\n'%(sourcefile))
+        child.expect('%s\r\n'%(sourcefile),timeout=timeout)
+        child.expect('>>>>>>',timeout=timeout)
+        return child
+
+    def __check_line_in_completion(self,l,sarr):
+        for sl in sarr:
+            chgs = sl.replace(l,'')
+            if chgs != sl:
+                reorigin = regular_quote(l)
+                respaces = re.compile('.*\s+%s\s+.*'%(reorigin),re.S)
+                rewithstart=re.compile('^%s\s+.*'%(reorigin),re.S)
+                reendwith = re.compile('.*\s+%s$'%(reorigin),re.S)
+                reonly = re.compile('^%s$'%(reorigin))
+                if respaces.match(sl) or rewithstart.match(sl) or \
+                    reendwith.match(sl) or reonly.match(sl):
+                    return True
+        logging.error('%s not in (%s)'%(l,sarr))
+        return False
+
+    def __check_line_in_outlines(self,l,sarr):
+        bsarr = re.split('\s+',l)
+        for b in bsarr:
+            ok = False
+            for s in sarr:
+                if b == s:
+                    ok = True
+            if ok :
+                continue
+            
+
+
     def __check_bash_completion_output(self,jsonstr,inputargs,outputlines,additioncode=None,outfile=None,extoptions=None,index=None,line=None):
         prefix = 'prog'
         if len(inputargs) > 0:
@@ -259,14 +416,39 @@ class debug_bashcomplete_case(unittest.TestCase):
         jsonfile,runfile,templatefile,codef,optfile = self.__write_basic_files('output',jsonstr,prefix,additioncode,outfile,extoptions)
         if line is None:
             line = ''
+            idx = 0
             for c in inputargs:
                 if len(line) > 0:
                     line += ' '
-                line += '"%s"'%(c)
+                if idx == 0:
+                    line += c
+                else:
+                    line += '"%s"'%(c)
+                idx += 1
+            if idx == 1:
+                # we add one in the last
+                line += ' '
         if index is None:
-            index = len(line)
-        # now this is the runfile is the bash
-        raise Exception('error code')
+            index = len(line)            
+        child = self.__start_pexpect(runfile)
+        child.send('%s'%(line))
+        child.expect('%s'%(line),timeout=.5)
+        if index < len(line):
+            cnt = (len(line) - index)
+            child.send(KEY_LEFT * cnt)
+        child.send('\t\t')
+        readbuf = get_read_completion(child,timeout=.3)
+        child.close()
+        child.wait()
+        logging.debug('get [%s]'%(readbuf))
+        sarr = re.split('\n',readbuf)
+        for l in outputlines:
+            bret = self.__check_line_in_completion(l,sarr)
+            self.assertEqual(bret,True)
+
+        for l in sarr:
+            bret = self.__check_line_in_outlines(l,outputlines)
+            self.assertEqual(bret,True)
         return
 
     def __get_list_dir(self,pathext,endwords='',extoptions=None):
@@ -585,12 +767,25 @@ class debug_bashcomplete_case(unittest.TestCase):
         self.__resultok = True
         return
 
-
     #############################################
     ## these are the pexpect to handle
     ##
     #############################################
+    def __expect_bash_supported(self):
+        plat = sys.platform.lower()
+        if not pexpectimported:
+            logging.error('no pexpect imported')
+            return False
+        if plat == 'win32':
+            logging.error('win32 not supported')
+            return False
+        return True
+
+
     def test_B001(self):
+        supported = self.__expect_bash_supported()
+        if not supported:
+            return
         commandline='''
         {
             "verbose|v": "+",
