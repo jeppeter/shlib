@@ -297,7 +297,7 @@ class debug_bashcomplete_case(unittest.TestCase):
         logging.debug('write (%s) [%s]'%(s,tempf))
         return tempf
 
-    def __write_basic_files(self,cmdact,jsonstr,prefix,additioncode=None,outfile=None,extoptions=None):
+    def __write_basic_files(self,cmdact,jsonstr,prefix,additioncode=None,outfile=None,extoptions=None,relasemode=None):
         jsonfile = self.__write_tempfile(jsonstr)
         runfile = self.__write_tempfile('')
         codef = None
@@ -311,11 +311,21 @@ class debug_bashcomplete_case(unittest.TestCase):
         cmds.append('%s'%(sys.executable))
         curdir = os.path.realpath(os.path.dirname(__file__))
         if outfile is None:
-            pythonfile = os.path.join(curdir,'bashcomplete_format_debug.py')
-            templatefile = os.path.join(curdir,'bashcomplete.py.tmpl')
+            if relasemode is None:                
+                pythonfile = os.path.join(curdir,'bashcomplete_format_debug.py')
+                templatefile = os.path.join(curdir,'bashcomplete.py.tmpl')
+            else:
+                logging.info('release mode')
+                pythonfile = os.path.join(curdir,'bashcomplete_format.py')
+                templatefile = None
         else:
-            pythonfile = outfile
-            templatefile = os.path.join(curdir,'bashcomplete.py.tmpl')
+            if relasemode is None:
+                pythonfile = outfile
+                templatefile = os.path.join(curdir,'bashcomplete.py.tmpl')
+            else:
+                logging.info('release mode')
+                pythonfile = outfile
+                templatefile = None
         cmds.append(pythonfile)
         if templatefile is not None:
             cmds.append('--basefile')
@@ -351,7 +361,7 @@ class debug_bashcomplete_case(unittest.TestCase):
             prefix = prefix.replace('\.','_')
         if valattr is None:
             valattr = ValueAttr()
-        jsonfile,runfile,templatefile,codef,optfile = self.__write_basic_files('debug',jsonstr,prefix,valattr.additioncode,valattr.outfile,valattr.extoptions)
+        jsonfile,runfile,templatefile,codef,optfile = self.__write_basic_files('debug',jsonstr,prefix,valattr.additioncode,valattr.outfile,valattr.extoptions,valattr.releasemode)
         line = valattr.line
         if line is None:
             line = ''
@@ -505,7 +515,7 @@ class debug_bashcomplete_case(unittest.TestCase):
         if len(inputargs) > 0:
             prefix = os.path.basename(inputargs[0])
             prefix = prefix.replace('\.','_')
-        jsonfile,runfile,templatefile,codef,optfile = self.__write_basic_files('output',jsonstr,prefix,valattr.additioncode,valattr.outfile,valattr.extoptions)
+        jsonfile,runfile,templatefile,codef,optfile = self.__write_basic_files('output',jsonstr,prefix,valattr.additioncode,valattr.outfile,valattr.extoptions,valattr.releasemode)
         line = valattr.line
         if line is None:
             line = ''
@@ -645,13 +655,19 @@ class debug_bashcomplete_case(unittest.TestCase):
         outputlines.extend(['--help','--input','--json','--output','--pattern','--verbose'])
         outputlines.extend(['-h','-i','-o','-p','-v'])
         outputlines.extend(['bashinsert','bashstring','makeperl','makepython','pythonperl','shperl','shpython'])
-        self.__check_completion_output_add_files(commandline,['insertcode'],outputlines)
+        valattr =ValueAttr()
+        if 'TEST_RELEASE' in os.environ.keys():
+            valattr.releasemode = True
+        self.__check_completion_output_add_files(commandline,['insertcode'],outputlines,'',valattr)
         outputlines = []
         # this is need long opt args
         outputlines.extend(['--help','--input','--json','--output','--pattern','--verbose'])
         outputlines.extend(['-h','-i','-o','-p','-v'])
         outputlines.extend(['bashinsert','bashstring','makeperl','makepython','pythonperl','shperl','shpython'])
-        self.__check_completion_output_add_files(commandline,['insertcode',''],outputlines)
+        valattr =ValueAttr()
+        if 'TEST_RELEASE' in os.environ.keys():
+            valattr.releasemode = True
+        self.__check_completion_output_add_files(commandline,['insertcode',''],outputlines,'',valattr)
         self.__resultok = True
         return
 
@@ -691,7 +707,10 @@ class debug_bashcomplete_case(unittest.TestCase):
         # short flag for need args
         outputlines.extend(['-h','-i','-o','-p','-v'])
         # to make the command
-        self.__check_completion_output(commandline,['insertcode','-'],outputlines)
+        valattr = ValueAttr()
+        if 'TEST_RELEASE' in os.environ.keys():
+            valattr.releasemode = True
+        self.__check_completion_output(commandline,['insertcode','-'],outputlines,valattr)
         self.__resultok = True
         return
 
@@ -726,7 +745,10 @@ class debug_bashcomplete_case(unittest.TestCase):
         }
         '''
         outputlines = []
-        self.__check_completion_output_add_files(commandline,['insertcode','~/'],outputlines,'~/')
+        valattr = ValueAttr()
+        if 'TEST_RELEASE' in os.environ.keys():
+            valattr.releasemode = True
+        self.__check_completion_output_add_files(commandline,['insertcode','~/'],outputlines,'~/',valattr)
         self.__resultok = True
         return
 
@@ -762,7 +784,10 @@ class debug_bashcomplete_case(unittest.TestCase):
         '''
         outputlines = []
         outputlines.extend(['makeperl','makepython'])
-        self.__check_completion_output_add_files(commandline,['insertcode','make'],outputlines,'make')
+        valattr = ValueAttr()
+        if 'TEST_RELEASE' in os.environ.keys():
+            valattr.releasemode = True
+        self.__check_completion_output_add_files(commandline,['insertcode','make'],outputlines,'make',valattr)
         self.__resultok = True
         return
 
@@ -801,6 +826,8 @@ class debug_bashcomplete_case(unittest.TestCase):
         valattr = ValueAttr()
         valattr.line = 'insertcode make'
         valattr.index = 13
+        if 'TEST_RELEASE' in os.environ.keys():
+            valattr.releasemode = True
         self.__check_completion_output_add_files(commandline,['insertcode','make'],outputlines,'make',valattr)
         self.__resultok = True
         return
@@ -838,7 +865,10 @@ class debug_bashcomplete_case(unittest.TestCase):
         outputlines = []
         outputlines.extend(['--help','--input','--json','--output','--pattern'])
         outputlines.extend(['-h','-i','-o','-p'])
-        self.__check_completion_output(commandline,['insertcode','--verbose','-'],outputlines)
+        valattr = ValueAttr()
+        if 'TEST_RELEASE' in os.environ.keys():
+            valattr.releasemode = True
+        self.__check_completion_output(commandline,['insertcode','--verbose','-'],outputlines,valattr)
         self.__resultok = True
         return
 
@@ -875,7 +905,10 @@ class debug_bashcomplete_case(unittest.TestCase):
         outputlines = []
         outputlines.extend(['--help','--input','--json','--output','--pattern'])
         outputlines.extend(['-h','-i','-o','-p'])
-        self.__check_completion_output(commandline,['insertcode','--verbose','-v','-'],outputlines)
+        valattr = ValueAttr()
+        if 'TEST_RELEASE' in os.environ.keys():
+            valattr.releasemode = True
+        self.__check_completion_output(commandline,['insertcode','--verbose','-v','-'],outputlines,valattr)
         self.__resultok = True
         return
 
@@ -894,7 +927,7 @@ class debug_bashcomplete_case(unittest.TestCase):
         return True
 
 
-    def test_B001(self):
+    def test_C001(self):
         supported = self.__expect_bash_supported()
         if not supported:
             return
@@ -932,18 +965,24 @@ class debug_bashcomplete_case(unittest.TestCase):
         outputlines.extend(['--help','--input','--json','--output','--pattern','--verbose'])
         outputlines.extend(['-h','-i','-o','-p','-v'])
         outputlines.extend(['bashinsert','bashstring','makeperl','makepython','pythonperl','shperl','shpython'])
-        self.__check_bash_completion_output_add_files(commandline,['insertcode'],outputlines)
+        valattr = ValueAttr()
+        if 'TEST_RELEASE' in os.environ.keys():
+            valattr.releasemode = True
+        self.__check_bash_completion_output_add_files(commandline,['insertcode'],outputlines,'',valattr)
         outputlines = []
         # this is need long opt args
         outputlines.extend(['--help','--input','--json','--output','--pattern','--verbose'])
         outputlines.extend(['-h','-i','-o','-p','-v'])
         outputlines.extend(['bashinsert','bashstring','makeperl','makepython','pythonperl','shperl','shpython'])
-        self.__check_bash_completion_output_add_files(commandline,['insertcode',''],outputlines)
+        valattr = ValueAttr()
+        if 'TEST_RELEASE' in os.environ.keys():
+            valattr.releasemode = True
+        self.__check_bash_completion_output_add_files(commandline,['insertcode',''],outputlines,'',valattr)
         self.__resultok = True
         return
 
 
-    def test_B002(self):
+    def test_C002(self):
         supported = self.__expect_bash_supported()
         if not supported:
             return
@@ -982,11 +1021,14 @@ class debug_bashcomplete_case(unittest.TestCase):
         # short flag for need args
         outputlines.extend(['-h','-i','-o','-p','-v'])
         # to make the command
-        self.__check_bash_completion_output(commandline,['insertcode','-'],outputlines)
+        valattr = ValueAttr()
+        if 'TEST_RELEASE' in os.environ.keys():
+            valattr.releasemode = True
+        self.__check_bash_completion_output(commandline,['insertcode','-'],outputlines,valattr)
         self.__resultok = True
         return
 
-    def test_B003(self):
+    def test_C003(self):
         supported = self.__expect_bash_supported()
         if not supported:
             return
@@ -1022,11 +1064,13 @@ class debug_bashcomplete_case(unittest.TestCase):
         outputlines = []
         valattr = ValueAttr()
         valattr.tabtimes = 2
+        if 'TEST_RELEASE' in os.environ.keys():
+            valattr.releasemode = True
         self.__check_bash_completion_output_add_files(commandline,['insertcode','~'],outputlines,'~',valattr)
         self.__resultok = True
         return
 
-    def test_B004(self):
+    def test_C004(self):
         supported = self.__expect_bash_supported()
         if not supported:
             return
@@ -1063,12 +1107,14 @@ class debug_bashcomplete_case(unittest.TestCase):
         outputlines.extend(['makeperl','makepython'])
         valattr = ValueAttr()
         valattr.tabtimes = 2
+        if 'TEST_RELEASE' in os.environ.keys():
+            valattr.releasemode = True
         self.__check_bash_completion_output_add_files(commandline,['insertcode','make'],outputlines,'make',valattr)
         self.__resultok = True
         return
 
 
-    def test_B005(self):
+    def test_C005(self):
         supported = self.__expect_bash_supported()
         if not supported:
             return
@@ -1107,12 +1153,14 @@ class debug_bashcomplete_case(unittest.TestCase):
         valattr.tabtimes = 2
         valattr.index = 13
         valattr.line = 'insertcode make'
+        if 'TEST_RELEASE' in os.environ.keys():
+            valattr.releasemode = True
         self.__check_bash_completion_output_add_files(commandline,['insertcode','make'],outputlines,'mak',valattr)
         self.__resultok = True
         return
 
 
-    def test_B006(self):
+    def test_C006(self):
         supported = self.__expect_bash_supported()
         if not supported:
             return
@@ -1148,11 +1196,14 @@ class debug_bashcomplete_case(unittest.TestCase):
         outputlines = []
         outputlines.extend(['--help','--input','--json','--output','--pattern'])
         outputlines.extend(['-h','-i','-o','-p'])
-        self.__check_bash_completion_output(commandline,['insertcode','--verbose','-'],outputlines)
+        valattr = ValueAttr()
+        if 'TEST_RELEASE' in os.environ.keys():
+            valattr.releasemode = True
+        self.__check_bash_completion_output(commandline,['insertcode','--verbose','-'],outputlines,valattr)
         self.__resultok = True
         return
 
-    def test_B007(self):
+    def test_C007(self):
         supported = self.__expect_bash_supported()
         if not supported:
             return
@@ -1188,7 +1239,10 @@ class debug_bashcomplete_case(unittest.TestCase):
         outputlines = []
         outputlines.extend(['--help','--input','--json','--output','--pattern'])
         outputlines.extend(['-h','-i','-o','-p'])
-        self.__check_bash_completion_output(commandline,['insertcode','--verbose','-v','-'],outputlines)
+        valattr = ValueAttr()
+        if 'TEST_RELEASE' in os.environ.keys():
+            valattr.releasemode = True
+        self.__check_bash_completion_output(commandline,['insertcode','--verbose','-v','-'],outputlines,valattr)
         self.__resultok = True
         return
 
@@ -1214,6 +1268,7 @@ def main():
         "verbose|v" : "+",
         "failfast|f" : false,
         "reserved|r" : false,
+        "releasemode" : false,
         "$" : "*"
     }
     '''
@@ -1227,6 +1282,11 @@ def main():
     else:
         if 'TEST_RESERVED' in os.environ.keys():
             del os.environ['TEST_RESERVED']
+    if args.releasemode:
+        os.environ['TEST_RELEASE'] = '1'
+    else:
+        if 'TEST_RELEASE' in os.environ.keys():
+            del os.environ['TEST_RELEASE']
     newargs = []
     newargs.extend(args.args)
     sys.argv[1:]=newargs

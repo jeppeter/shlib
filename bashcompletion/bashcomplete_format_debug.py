@@ -12,12 +12,9 @@ import time
 import tempfile
 import importlib
 import re
+import disttools
 
 
-##debugoutstart
-
-
-##debugoutend
 
 def _add_path(curpath,*paths):
     testfile = os.path.join(curpath,*paths)
@@ -54,12 +51,15 @@ def read_file(infile=None):
     s = ''
     fin = sys.stdin
     if infile is not None:
-        fin = open(infile,'r')
+        fin = open(infile,'rb')
     bmode = False
     if 'b' in fin.mode:
         bmode = True
     for l in fin:
-        s += l
+        if sys.version[0] == '2' or not bmode:
+            s += l
+        else:
+            s += l.decode(encoding='UTF-8')
     if fin != sys.stdin:
         fin.close()
     fin = None
@@ -220,7 +220,10 @@ def unzip_format_string(instr):
     instr = instr.replace('\r','')
     instr = instr.replace('\n','')
     encstr = base64.b64decode(instr)
-    return bz2.decompress(encstr)
+    outs = bz2.decompress(encstr)
+    if sys.version[0] != '2':
+        outs = outs.decode(encoding='UTF-8')
+    return outs
 
 def base_get_base_string(args):
     if args.basefile is None:
@@ -308,13 +311,22 @@ def check_functions(jsonstr,pythonstr,extoptstr=None):
         tempf = None
     return
 
+def release_read_basefile(args):
+    return unzip_format_string(BASH_COMPLETE_STRING)
+
+def read_basefile(args):
+    return release_read_basefile(args)
+
+##debugoutstart
 def debug_read_basefile(args):
     if args.basefile is None:
         raise Exception('please specify basefile by [--basefile|-B]')
     return read_file(args.basefile)
 
+
 def read_basefile(args):
     return debug_read_basefile(args)
+##debugoutend
 
 def output_handler(args,parser):
     set_log_level(args)
@@ -409,16 +421,25 @@ def release_handler(args,parser):
     set_log_level(args)
     if args.basefile is None:
         raise Exception('please specified basefile by [--basefile|-B]')
-    if args.pattern is None:
-        args.pattern = '%BASH_COMPLETE_STRING%'
     basestr = read_file(args.basefile)
     logging.info('basestring (%s)'%(basestr))
     basestr = bzip2_base64_encode(basestr)
     logging.info('basestring (%s)'%(basestr))
-    outstr_repls(basestr,args.pattern,args.input,args.output)
+    tofile = os.path.join(os.path.dirname(os.path.realpath(__file__)),'bashcomplete_format.py')
+    keyname = r'%BASH'
+    keyname += r'_COMPLETE_STRING%'
+    repls = dict()
+    repls[keyname] = basestr
+    disttools.release_file('__main__',tofile,[],[['##debugoutstart','##debugoutend']],[],repls)
     sys.exit(0)
     return
 
+def verify_handler(args,parser):
+    set_log_level(args)
+    outs = read_basefile(args)
+    sys.stdout.write('%s'%(outs))
+    sys.exit(0)
+    return
 
 
 def debug_handler(args,parser):
@@ -442,32 +463,62 @@ def debug_handler(args,parser):
     sys.exit(0)
     return
 
-def main():
-    commandline='''
-    {
-        "verbose|v" : "+",
-        "jsonstr|j##jsonstr to read  none read from input or stdin##" : null,
-        "basefile|B" : null,
-        "jsonfile" : null,
-        "optfile|F" : null,
-        "extoptions|E" : null,
-        "input|i" : null,
-        "output|o" : null,
-        "prefix|p" : null,
-        "output<output_handler>" : {
-            "$" : "*"
-        },
-        "release<release_handler>" : {
-            "$" : "*"
-        },
-        "debug<debug_handler>" : {
-            "$" : "*"
-        }
+
+global_commandline='''
+{
+    "verbose|v" : "+",
+    "jsonstr|j##jsonstr to read  none read from input or stdin##" : null,
+    "basefile|B" : null,
+    "jsonfile" : null,
+    "optfile|F" : null,
+    "extoptions|E" : null,
+    "input|i" : null,
+    "output|o" : null,
+    "prefix|p" : null,
+    "output<output_handler>" : {
+        "$" : "*"
+    },
+    "release<release_handler>" : {
+        "$" : "*"
+    },
+    "debug<debug_handler>" : {
+        "$" : "*"
+    },
+    "verify<verify_handler>" : {
+        "$" : 0
     }
-    '''
+}
+'''
+
+##debugoutstart
+global_commandline='''
+{
+    "verbose|v" : "+",
+    "jsonstr|j##jsonstr to read  none read from input or stdin##" : null,
+    "basefile|B" : null,
+    "jsonfile" : null,
+    "optfile|F" : null,
+    "extoptions|E" : null,
+    "input|i" : null,
+    "output|o" : null,
+    "prefix|p" : null,
+    "output<output_handler>" : {
+        "$" : "*"
+    },
+    "release<release_handler>" : {
+        "$" : "*"
+    },
+    "debug<debug_handler>" : {
+        "$" : "*"
+    }
+}
+'''
+##debugoutend
+
+def main():
     random.seed(time.time())
     parser = extargsparse.ExtArgsParse(None,priority=[])
-    parser.load_command_line_string(commandline)
+    parser.load_command_line_string(global_commandline)
     parser.parse_command_line(None,parser)
     raise Exception('can not run here without specified subcommand')
     return
