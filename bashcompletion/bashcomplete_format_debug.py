@@ -308,6 +308,13 @@ def check_functions(jsonstr,pythonstr,extoptstr=None):
         tempf = None
     return
 
+def debug_read_basefile(args):
+    if args.basefile is None:
+        raise Exception('please specify basefile by [--basefile|-B]')
+    return read_file(args.basefile)
+
+def read_basefile(args):
+    return debug_read_basefile(args)
 
 def output_handler(args,parser):
     set_log_level(args)
@@ -323,7 +330,7 @@ def output_handler(args,parser):
     extrastr = ''
     for c in args.subnargs:
         extrastr += read_file(c)
-    base_string = read_file(args.basefile)
+    base_string = read_basefile(args)
     logging.info('base_string (%d)'%(len(base_string)))
     python_string = replace_outputs(extrastr,args.pattern,base_string)
     check_functions(args.jsonstr,python_string,args.extoptions)
@@ -397,6 +404,7 @@ def outstr_repls(repls,pattern,infile=None,outfile=None):
     fout = None
     return
 
+
 def release_handler(args,parser):
     set_log_level(args)
     if args.basefile is None:
@@ -410,6 +418,8 @@ def release_handler(args,parser):
     outstr_repls(basestr,args.pattern,args.input,args.output)
     sys.exit(0)
     return
+
+
 
 def debug_handler(args,parser):
     set_log_level(args)
@@ -425,7 +435,7 @@ def debug_handler(args,parser):
     extrastr = ''
     for c in args.subnargs:
         extrastr += read_file(c)
-    base_string = read_file(args.basefile)
+    base_string = read_basefile(args)
     logging.info('base_string (%d)'%(len(base_string)))
     python_string = replace_outputs(extrastr,args.pattern,base_string)
     write_file(python_string,args.output)
