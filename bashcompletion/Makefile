@@ -1,5 +1,10 @@
 
 TOPDIR=../
+ifeq (${V},)
+Q=@
+else
+Q=
+endif
 
 include ${TOPDIR}/basedef.mak
 

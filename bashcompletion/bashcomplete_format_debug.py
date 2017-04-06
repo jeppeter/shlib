@@ -14,7 +14,7 @@ import importlib
 import re
 import disttools
 
-
+versionbase='%versionbase%'
 
 def _add_path(curpath,*paths):
     testfile = os.path.join(curpath,*paths)
@@ -159,6 +159,12 @@ def get_bash_complete_string(prefix,newargspattern,jsonstr,extoptions=None):
     lprefix = prefix.lower()
     s = ''
     s += __format_tab_line('#! /bin/bash')
+    cmpversion = '%ver'
+    cmpversion += 'ionbase%'
+    if versionbase != cmpversion:
+        s += __format_tab_line('')
+        s += __format_tab_line('%s_COMPLETE_VERSION="%s"'%(hprefix,versionbase))
+    s += __format_tab_line('')
     s += __format_tab_line('read -r -d \'\' %s_COMMAND_JSON_OPTIONS<<%s_EOFMM'%(hprefix,newargspattern))
     shjsonstr = __get_bash_string(jsonstr)
     s += __format_tab_line(shjsonstr,0)
@@ -430,6 +436,11 @@ def release_handler(args,parser):
     keyname += r'_COMPLETE_STRING%'
     repls = dict()
     repls[keyname] = basestr
+    keyname = r'%ver'
+    keyname += r'sionbase%'
+    versionfile = os.path.join(os.path.dirname(os.path.realpath(__file__)),'VERSION')
+    versionstr = read_file(versionfile)
+    repls[keyname] = versionstr
     disttools.release_file('__main__',tofile,[],[['##debugoutstart','##debugoutend']],[],repls)
     sys.exit(0)
     return
@@ -463,6 +474,11 @@ def debug_handler(args,parser):
     sys.exit(0)
     return
 
+def version_handler(args,parser):
+    sys.stdout.write('%s\n'%(versionbase))
+    sys.exit(0)
+    return
+
 
 global_commandline='''
 {
@@ -485,6 +501,9 @@ global_commandline='''
         "$" : "*"
     },
     "verify<verify_handler>" : {
+        "$" : 0
+    },
+    "version<version_handler>" : {
         "$" : 0
     }
 }

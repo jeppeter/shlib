@@ -50,6 +50,24 @@ def get_full_trace_back(trback,tabs=1,cnt=0):
                 s += get_full_trace_back(ntrace,tabs,cnt+1)
     return s
 
+def read_file(infile=None):
+    s = ''
+    fin = sys.stdin
+    if infile is not None:
+        fin = open(infile,'rb')
+    bmode = False
+    if 'b' in fin.mode:
+        bmode = True
+    for l in fin:
+        if sys.version[0] == '2' or not bmode:
+            s += l
+        else:
+            s += l.decode(encoding='UTF-8')
+    if fin != sys.stdin:
+        fin.close()
+    fin = None
+    return s
+
 
 def change_shell_special_dir(d):
     retd = d
@@ -927,7 +945,7 @@ class debug_bashcomplete_case(unittest.TestCase):
         return True
 
 
-    def test_C001(self):
+    def test_B001(self):
         supported = self.__expect_bash_supported()
         if not supported:
             return
@@ -982,7 +1000,7 @@ class debug_bashcomplete_case(unittest.TestCase):
         return
 
 
-    def test_C002(self):
+    def test_B002(self):
         supported = self.__expect_bash_supported()
         if not supported:
             return
@@ -1028,7 +1046,7 @@ class debug_bashcomplete_case(unittest.TestCase):
         self.__resultok = True
         return
 
-    def test_C003(self):
+    def test_B003(self):
         supported = self.__expect_bash_supported()
         if not supported:
             return
@@ -1070,7 +1088,7 @@ class debug_bashcomplete_case(unittest.TestCase):
         self.__resultok = True
         return
 
-    def test_C004(self):
+    def test_B004(self):
         supported = self.__expect_bash_supported()
         if not supported:
             return
@@ -1114,7 +1132,7 @@ class debug_bashcomplete_case(unittest.TestCase):
         return
 
 
-    def test_C005(self):
+    def test_B005(self):
         supported = self.__expect_bash_supported()
         if not supported:
             return
@@ -1160,7 +1178,7 @@ class debug_bashcomplete_case(unittest.TestCase):
         return
 
 
-    def test_C006(self):
+    def test_B006(self):
         supported = self.__expect_bash_supported()
         if not supported:
             return
@@ -1203,7 +1221,7 @@ class debug_bashcomplete_case(unittest.TestCase):
         self.__resultok = True
         return
 
-    def test_C007(self):
+    def test_B007(self):
         supported = self.__expect_bash_supported()
         if not supported:
             return
@@ -1245,6 +1263,78 @@ class debug_bashcomplete_case(unittest.TestCase):
         self.__check_bash_completion_output(commandline,['insertcode','--verbose','-v','-'],outputlines,valattr)
         self.__resultok = True
         return
+
+    ##################################
+    ## to check version
+    ##
+    ##################################
+    def test_C001(self):
+        if 'TEST_RELEASE' not in os.environ.keys():
+            return
+        versionstr = ''
+        versionfile = os.path.join(os.path.dirname(os.path.realpath(__file__)),'VERSION')
+        format_release= os.path.join(os.path.dirname(os.path.realpath(__file__)),'bashcomplete_format.py')
+        cmds = []
+        cmds.append('%s'%(sys.executable))
+        cmds.append(format_release)
+        cmds.append('version')
+        for l in cmdpack.run_cmd_output(cmds):
+            versionstr = l.rstrip('\r\n')
+        versionread = read_file(versionfile)
+        versionread = versionread.rstrip('\r\n')
+        self.assertEqual(versionread,versionstr)
+        self.__resultok = True
+        return
+
+    def test_C002(self):
+        if 'TEST_RELEASE' not in os.environ.keys():
+            return
+        supported = self.__expect_bash_supported()
+        if not supported:
+            return
+        commandline='''
+        {
+            "verbose|v": "+",
+            "input|i##default (stdin)##": null,
+            "output|o##default (stdout)##": null,
+            "pattern|p": "%REPLACE_PATTERN%",
+            "bashinsert<bashinsert_handler>": {
+                "$": "*"
+            },
+            "bashstring<bashstring_handler>": {
+                "$": "*"
+            },
+            "makepython<makepython_handler>": {
+                "$": "*"
+            },
+            "makeperl<makeperl_handler>": {
+                "$": "*"
+            },
+            "shperl<shperl_handler>": {
+                "$": "*"
+            },
+            "shpython<shpython_handler>": {
+                "$": "*"
+            },
+            "pythonperl<pythonperl_handler>": {
+                "$": "*"
+            }
+        }
+        '''
+        versionfile = os.path.join(os.path.dirname(os.path.realpath(__file__)),'VERSION')
+        versionstr = read_file(versionfile).rstrip('\r\n')
+        jsonfile,runfile,templatefile,codef,optfile = self.__write_basic_files('output',commandline,'insertcode',None,None,None,True)
+        child = self.__start_pexpect(runfile)
+        # now we should give the echo
+        child.send('echo "$INSERTCODE_COMPLETE_VERSION"\r\n')
+        child.expect('INSERTCODE_COMPLETE_VERSION',timeout=0.3)
+        child.expect('%s'%(versionstr),timeout=0.3)
+        child.close()
+        child.wait()
+        child = None
+        self.__resultok = True
+        return
+
 
 
 def set_log_level(args):
