@@ -1112,6 +1112,86 @@ class debug_bashcomplete_case(unittest.TestCase):
         return
 
 
+    def test_B006(self):
+        supported = self.__expect_bash_supported()
+        if not supported:
+            return
+        commandline='''
+        {
+            "verbose|v": "+",
+            "input|i##default (stdin)##": null,
+            "output|o##default (stdout)##": null,
+            "pattern|p": "%REPLACE_PATTERN%",
+            "bashinsert<bashinsert_handler>": {
+                "$": "*"
+            },
+            "bashstring<bashstring_handler>": {
+                "$": "*"
+            },
+            "makepython<makepython_handler>": {
+                "$": "*"
+            },
+            "makeperl<makeperl_handler>": {
+                "$": "*"
+            },
+            "shperl<shperl_handler>": {
+                "$": "*"
+            },
+            "shpython<shpython_handler>": {
+                "$": "*"
+            },
+            "pythonperl<pythonperl_handler>": {
+                "$": "*"
+            }
+        }
+        '''
+        outputlines = []
+        outputlines.extend(['--help','--input','--json','--output','--pattern'])
+        outputlines.extend(['-h','-i','-o','-p'])
+        self.__check_bash_completion_output(commandline,['insertcode','--verbose','-'],outputlines)
+        self.__resultok = True
+        return
+
+    def test_B007(self):
+        supported = self.__expect_bash_supported()
+        if not supported:
+            return
+        commandline='''
+        {
+            "verbose|v": "+",
+            "input|i##default (stdin)##": null,
+            "output|o##default (stdout)##": null,
+            "pattern|p": "%REPLACE_PATTERN%",
+            "bashinsert<bashinsert_handler>": {
+                "$": "*"
+            },
+            "bashstring<bashstring_handler>": {
+                "$": "*"
+            },
+            "makepython<makepython_handler>": {
+                "$": "*"
+            },
+            "makeperl<makeperl_handler>": {
+                "$": "*"
+            },
+            "shperl<shperl_handler>": {
+                "$": "*"
+            },
+            "shpython<shpython_handler>": {
+                "$": "*"
+            },
+            "pythonperl<pythonperl_handler>": {
+                "$": "*"
+            }
+        }
+        '''
+        outputlines = []
+        outputlines.extend(['--help','--input','--json','--output','--pattern'])
+        outputlines.extend(['-h','-i','-o','-p'])
+        self.__check_bash_completion_output(commandline,['insertcode','--verbose','-v','-'],outputlines)
+        self.__resultok = True
+        return
+
 
 def set_log_level(args):
     loglvl= logging.ERROR
