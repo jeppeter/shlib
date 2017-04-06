@@ -397,15 +397,54 @@ class debug_bashcomplete_case(unittest.TestCase):
         return False
 
     def __check_line_in_outlines(self,l,sarr):
-        bsarr = re.split('\s+',l)
-        for b in bsarr:
-            ok = False
+        startidx =0 
+        while startidx < len(l) and (l[startidx] == ' ' or l[startidx] == '\t'):
+            startidx += 1
+        endidx = startidx + 1
+        if endidx >= len(l):
+            # nothing to match
+            return True
+
+        while startidx < len(l):
+            partl = l[startidx:endidx]
+            finds = []
             for s in sarr:
-                if b == s:
-                    ok = True
-            if ok :
-                continue
-            
+                if s.startswith(partl):
+                    finds.append(s)
+            if len(finds) == 0:
+                logging.error('can not find [%s] in (%s)'%(l,sarr))
+                return False
+            while endidx < len(l):
+                partl = l[startidx:endidx]
+                okfind = False
+                for s in finds:
+                    if s.startswith(partl):
+                        okfind = True
+                if okfind:
+                    endidx += 1
+                else:
+                    endidx -= 1
+                    partl = l[startidx:endidx]
+                    okfind = False
+                    for s in finds:
+                        if partl == s:
+                            okfind = True
+                            break
+                    if okfind:
+                        break
+                    else:
+                        logging.error('can not find [%s] in (%s)'%(l,sarr))
+                        return False
+            # now we should find it
+            startidx = endidx + 1
+            while startidx < len(l) and (l[startidx] == ' ' or l[startidx] == '\t'):
+                startidx += 1
+            endidx = startidx + 1
+            if endidx >= len(l):
+                return True
+        logging.error('can not find [%s] in (%s)'%(l,sarr))
+        return False
+
 
 
     def __check_bash_completion_output(self,jsonstr,inputargs,outputlines,additioncode=None,outfile=None,extoptions=None,index=None,line=None):
@@ -441,7 +480,13 @@ class debug_bashcomplete_case(unittest.TestCase):
         child.close()
         child.wait()
         logging.debug('get [%s]'%(readbuf))
-        sarr = re.split('\n',readbuf)
+        sarr = []
+        for l in re.split('\n',readbuf):
+            l  = l.rstrip('\r\n')
+            if len(l) == 0:
+                continue
+            sarr.append(l)
+        
         for l in outputlines:
             bret = self.__check_line_in_completion(l,sarr)
             self.assertEqual(bret,True)
