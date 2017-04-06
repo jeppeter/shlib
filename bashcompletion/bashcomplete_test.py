@@ -180,6 +180,47 @@ def get_read_completion(child,timeout=0.5):
             break
     return totalbuf
 
+class ValueAttr(object):
+    def __init__(self):
+        self.__obj = dict()
+        self.__access = dict()
+        return
+
+    def __setattr__(self,key,val):
+        if not key.startswith('_'):
+            self.__obj[key] = val
+            self.__access[key] = True
+            return
+        self.__dict__[key] = val
+        return
+
+    def __getattr__(self,key):
+        if not key.startswith('_'):
+            if key in self.__obj.keys():
+                return self.__obj[key]
+            return None
+        return self.__dict__[key]
+
+    def __str__(self):
+        s = '{'
+        for k in self.__obj.keys():
+            s += '%s=%s;'%(k,self.__obj[k])
+        s += '}'
+        return s
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __has_accessed(self,name):
+        if name in self.__access.keys():
+            return True
+        return False
+
+    def is_accessed(self,name):
+        return self.__has_accessed(name)
+
+    def get_keys(self):
+        return self.__obj.keys()
 
 
 class debug_bashcomplete_case(unittest.TestCase):
@@ -303,23 +344,27 @@ class debug_bashcomplete_case(unittest.TestCase):
         cmdpack.run_cmd_wait(cmds,mustsucc=1,noout=noout,shellmode=True)
         return jsonfile,runfile,templatefile,codef,optfile
 
-    def __check_completion_output(self,jsonstr,inputargs,outputlines,additioncode=None,outfile=None,extoptions=None,index=None,line=None):
+    def __check_completion_output(self,jsonstr,inputargs,outputlines,valattr=None):
         prefix = 'prog'
         if len(inputargs) > 0:
             prefix = os.path.basename(inputargs[0])
             prefix = prefix.replace('\.','_')
-        jsonfile,runfile,templatefile,codef,optfile = self.__write_basic_files('debug',jsonstr,prefix,additioncode,outfile,extoptions)
+        if valattr is None:
+            valattr = ValueAttr()
+        jsonfile,runfile,templatefile,codef,optfile = self.__write_basic_files('debug',jsonstr,prefix,valattr.additioncode,valattr.outfile,valattr.extoptions)
+        line = valattr.line
         if line is None:
             line = ''
             idx = 0
             for c in inputargs:
                 if len(line) > 0:
                     line += ' '
-                if idx == 0:
-                    line += c
-                else:
+                if self.__must_quote_string(c):
                     line += '"%s"'%(c)
+                else:
+                    line += c
                 idx += 1
+        index = valattr.index
         if index is None:
             index = len(line)
         cmds = []
@@ -445,38 +490,57 @@ class debug_bashcomplete_case(unittest.TestCase):
         logging.error('can not find [%s] in (%s)'%(l,sarr))
         return False
 
+    def __must_quote_string(self,c):
+        if ' ' in c:
+            return True
+        if '\t' in c:
+            return True
+        return False
 
 
-    def __check_bash_completion_output(self,jsonstr,inputargs,outputlines,additioncode=None,outfile=None,extoptions=None,index=None,line=None):
+    def __check_bash_completion_output(self,jsonstr,inputargs,outputlines,valattr=None):
         prefix = 'prog'
+        if valattr is None:
+            valattr = ValueAttr()
         if len(inputargs) > 0:
             prefix = os.path.basename(inputargs[0])
             prefix = prefix.replace('\.','_')
-        jsonfile,runfile,templatefile,codef,optfile = self.__write_basic_files('output',jsonstr,prefix,additioncode,outfile,extoptions)
+        jsonfile,runfile,templatefile,codef,optfile = self.__write_basic_files('output',jsonstr,prefix,valattr.additioncode,valattr.outfile,valattr.extoptions)
+        line = valattr.line
         if line is None:
             line = ''
             idx = 0
             for c in inputargs:
                 if len(line) > 0:
                     line += ' '
-                if idx == 0:
-                    line += c
-                else:
+                if self.__must_quote_string(c):
                     line += '"%s"'%(c)
+                else:
+                    line += c
                 idx += 1
             if idx == 1:
                 # we add one in the last
                 line += ' '
+        index = valattr.index
+        exptimeout = valattr.timeout
+        if exptimeout is None:
+            exptimeout = 0.3
         if index is None:
             index = len(line)            
-        child = self.__start_pexpect(runfile)
+        child = self.__start_pexpect(runfile,timeout=exptimeout)
         child.send('%s'%(line))
-        child.expect('%s'%(line),timeout=.5)
+        child.expect('%s'%(line),timeout=exptimeout)
         if index < len(line):
             cnt = (len(line) - index)
             child.send(KEY_LEFT * cnt)
-        child.send('\t\t')
-        readbuf = get_read_completion(child,timeout=.3)
+        tabtimes = valattr.tabtimes
+        if tabtimes is None:
+            tabtimes = 1
+        curtime = 0
+        while curtime < tabtimes:
+            child.send('\t\t')
+            readbuf = get_read_completion(child,timeout=exptimeout)
+            curtime += 1
         child.close()
         child.wait()
         logging.debug('get [%s]'%(readbuf))
@@ -486,7 +550,7 @@ class debug_bashcomplete_case(unittest.TestCase):
             if len(l) == 0:
                 continue
             sarr.append(l)
-        
+
         for l in outputlines:
             bret = self.__check_line_in_completion(l,sarr)
             self.assertEqual(bret,True)
@@ -533,16 +597,16 @@ class debug_bashcomplete_case(unittest.TestCase):
         logging.debug('retd (%s)'%(retd))
         return retd
 
-    def __check_completion_output_add_files(self,jsonstr,inputargs,outputlines,pathset='',additioncode=None,outfile=None,extoptions=None,index=None,line=None):
+    def __check_completion_output_add_files(self,jsonstr,inputargs,outputlines,pathset='',valattr=None):
         outputlines.extend(self.__get_list_dir(pathset))
         logging.debug('outputlines (%s)'%(outputlines))
-        self.__check_completion_output(jsonstr,inputargs,outputlines,additioncode,outfile,extoptions,index,line)
+        self.__check_completion_output(jsonstr,inputargs,outputlines,valattr)
         return
 
-    def __check_bash_completion_output_add_files(self,jsonstr,inputargs,outputlines,pathset='',additioncode=None,outfile=None,extoptions=None,index=None,line=None):
+    def __check_bash_completion_output_add_files(self,jsonstr,inputargs,outputlines,pathset='',valattr=None):
         outputlines.extend(self.__get_list_dir(pathset))
         logging.debug('outputlines (%s)'%(outputlines))
-        self.__check_bash_completion_output(jsonstr,inputargs,outputlines,additioncode,outfile,extoptions,index,line)
+        self.__check_bash_completion_output(jsonstr,inputargs,outputlines,valattr)
         return
 
 
@@ -662,7 +726,7 @@ class debug_bashcomplete_case(unittest.TestCase):
         }
         '''
         outputlines = []
-        self.__check_completion_output_add_files(commandline,['insertcode','~'],outputlines,'~')
+        self.__check_completion_output_add_files(commandline,['insertcode','~/'],outputlines,'~/')
         self.__resultok = True
         return
 
@@ -734,7 +798,10 @@ class debug_bashcomplete_case(unittest.TestCase):
         '''
         outputlines = []
         outputlines.extend(['makeperl','makepython'])
-        self.__check_completion_output_add_files(commandline,['insertcode','make'],outputlines,'mak',additioncode=None,outfile=None,extoptions=None,index=13,line='insertcode make')
+        valattr = ValueAttr()
+        valattr.line = 'insertcode make'
+        valattr.index = 13
+        self.__check_completion_output_add_files(commandline,['insertcode','make'],outputlines,'make',valattr)
         self.__resultok = True
         return
 
@@ -771,7 +838,7 @@ class debug_bashcomplete_case(unittest.TestCase):
         outputlines = []
         outputlines.extend(['--help','--input','--json','--output','--pattern'])
         outputlines.extend(['-h','-i','-o','-p'])
-        self.__check_completion_output(commandline,['insertcode','--verbose','-'],outputlines,additioncode=None,outfile=None,extoptions=None)
+        self.__check_completion_output(commandline,['insertcode','--verbose','-'],outputlines)
         self.__resultok = True
         return
 
@@ -808,7 +875,7 @@ class debug_bashcomplete_case(unittest.TestCase):
         outputlines = []
         outputlines.extend(['--help','--input','--json','--output','--pattern'])
         outputlines.extend(['-h','-i','-o','-p'])
-        self.__check_completion_output(commandline,['insertcode','--verbose','-v','-'],outputlines,additioncode=None,outfile=None,extoptions=None)
+        self.__check_completion_output(commandline,['insertcode','--verbose','-v','-'],outputlines)
         self.__resultok = True
         return
 
@@ -874,6 +941,176 @@ class debug_bashcomplete_case(unittest.TestCase):
         self.__check_bash_completion_output_add_files(commandline,['insertcode',''],outputlines)
         self.__resultok = True
         return
+
+
+    def test_B002(self):
+        supported = self.__expect_bash_supported()
+        if not supported:
+            return
+        commandline='''
+        {
+            "verbose|v": "+",
+            "input|i##default (stdin)##": null,
+            "output|o##default (stdout)##": null,
+            "pattern|p": "%REPLACE_PATTERN%",
+            "bashinsert<bashinsert_handler>": {
+                "$": "*"
+            },
+            "bashstring<bashstring_handler>": {
+                "$": "*"
+            },
+            "makepython<makepython_handler>": {
+                "$": "*"
+            },
+            "makeperl<makeperl_handler>": {
+                "$": "*"
+            },
+            "shperl<shperl_handler>": {
+                "$": "*"
+            },
+            "shpython<shpython_handler>": {
+                "$": "*"
+            },
+            "pythonperl<pythonperl_handler>": {
+                "$": "*"
+            }
+        }
+        '''
+        outputlines = []
+        # this is need long opt args
+        outputlines.extend(['--help','--input','--json','--output','--pattern','--verbose'])
+        # short flag for need args
+        outputlines.extend(['-h','-i','-o','-p','-v'])
+        # to make the command
+        self.__check_bash_completion_output(commandline,['insertcode','-'],outputlines)
+        self.__resultok = True
+        return
+
+    def test_B003(self):
+        supported = self.__expect_bash_supported()
+        if not supported:
+            return
+        commandline='''
+        {
+            "verbose|v": "+",
+            "input|i##default (stdin)##": null,
+            "output|o##default (stdout)##": null,
+            "pattern|p": "%REPLACE_PATTERN%",
+            "bashinsert<bashinsert_handler>": {
+                "$": "*"
+            },
+            "bashstring<bashstring_handler>": {
+                "$": "*"
+            },
+            "makepython<makepython_handler>": {
+                "$": "*"
+            },
+            "makeperl<makeperl_handler>": {
+                "$": "*"
+            },
+            "shperl<shperl_handler>": {
+                "$": "*"
+            },
+            "shpython<shpython_handler>": {
+                "$": "*"
+            },
+            "pythonperl<pythonperl_handler>": {
+                "$": "*"
+            }
+        }
+        '''
+        outputlines = []
+        valattr = ValueAttr()
+        valattr.tabtimes = 2
+        self.__check_bash_completion_output_add_files(commandline,['insertcode','~'],outputlines,'~',valattr)
+        self.__resultok = True
+        return
+
+    def test_B004(self):
+        supported = self.__expect_bash_supported()
+        if not supported:
+            return
+        commandline='''
+        {
+            "verbose|v": "+",
+            "input|i##default (stdin)##": null,
+            "output|o##default (stdout)##": null,
+            "pattern|p": "%REPLACE_PATTERN%",
+            "bashinsert<bashinsert_handler>": {
+                "$": "*"
+            },
+            "bashstring<bashstring_handler>": {
+                "$": "*"
+            },
+            "makepython<makepython_handler>": {
+                "$": "*"
+            },
+            "makeperl<makeperl_handler>": {
+                "$": "*"
+            },
+            "shperl<shperl_handler>": {
+                "$": "*"
+            },
+            "shpython<shpython_handler>": {
+                "$": "*"
+            },
+            "pythonperl<pythonperl_handler>": {
+                "$": "*"
+            }
+        }
+        '''
+        outputlines = []
+        outputlines.extend(['makeperl','makepython'])
+        valattr = ValueAttr()
+        valattr.tabtimes = 2
+        self.__check_bash_completion_output_add_files(commandline,['insertcode','make'],outputlines,'make',valattr)
+        self.__resultok = True
+        return
+
+
+    def test_B005(self):
+        supported = self.__expect_bash_supported()
+        if not supported:
+            return
+        commandline='''
+        {
+            "verbose|v": "+",
+            "input|i##default (stdin)##": null,
+            "output|o##default (stdout)##": null,
+            "pattern|p": "%REPLACE_PATTERN%",
+            "bashinsert<bashinsert_handler>": {
+                "$": "*"
+            },
+            "bashstring<bashstring_handler>": {
+                "$": "*"
+            },
+            "makepython<makepython_handler>": {
+                "$": "*"
+            },
+            "makeperl<makeperl_handler>": {
+                "$": "*"
+            },
+            "shperl<shperl_handler>": {
+                "$": "*"
+            },
+            "shpython<shpython_handler>": {
+                "$": "*"
+            },
+            "pythonperl<pythonperl_handler>": {
+                "$": "*"
+            }
+        }
+        '''
+        outputlines = []
+        outputlines.extend(['makeperl','makepython'])
+        valattr = ValueAttr()
+        valattr.tabtimes = 2
+        valattr.index = 13
+        valattr.line = 'insertcode make'
+        self.__check_bash_completion_output_add_files(commandline,['insertcode','make'],outputlines,'mak',valattr)
+        self.__resultok = True
+        return
+
 
 
 def set_log_level(args):
