@@ -9,6 +9,8 @@ import logging
 import cmdpack
 import re
 import subprocess
+import random
+import time
 try:
     import pexpect
     pexpectimported=True
@@ -77,11 +79,23 @@ def encode_string_mode(instr,bmode):
         retstr = instr.encode(encoding='UTF-8')
     return retstr
 
+def encode_eval_string(instr):
+    rets = ''
+    for c in instr:
+        if c == '`':
+            rets += '\\`'
+        elif c == '"':
+            rets += '\\"'
+        else:
+            rets += c
+    return rets
+
 def change_shell_special_dir(d):
     retd = d
     devnullfd = None
+    logging.info('d [%s]'%(d))
     try:
-        devnullfd = open(os.devnull,'w')
+        #devnullfd = open(os.devnull,'w')
         p = subprocess.Popen(['/bin/bash'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=devnullfd,shell=False)
         bmode = False
         if 'b' in p.stdin.mode:
@@ -89,7 +103,12 @@ def change_shell_special_dir(d):
         curdir = os.getcwd()
         # to make the current directory
         p.stdin.write(encode_string_mode('cd %s\n'%(curdir),bmode))
-        p.stdin.write(encode_string_mode('export DIRVALUE=%s\n'%(d),bmode))
+        cmd = 'export DIRVALUE=`%s '%(sys.executable)
+        cmd += '-c "import os;import sys;print(\'%s\'%(os.path.expanduser(sys.argv[1])))"'
+        cmd += ' "%s"`'%(encode_eval_string(d))
+        cmd += '\n'
+        logging.info('cmd [%s]'%(cmd))
+        p.stdin.write(encode_string_mode(cmd,bmode))
         p.stdin.write(encode_string_mode('echo -n "$DIRVALUE"\n',bmode))
         p.stdin.close()
         p.stdin = None
@@ -218,6 +237,22 @@ def get_read_completion(child,timeout=0.5):
         else:
             break
     return totalbuf
+
+RANDOM_LOWER = 'abcdefghijklmnopqrstuvwxyz'
+RANDOM_UPPER = RANDOM_LOWER.upper()
+RANDOM_NUMBER = '0123456789'
+RANDOM_ALPHBET = RANDOM_LOWER + RANDOM_UPPER
+RANDOM_CHARS = RANDOM_ALPHBET + RANDOM_NUMBER + '_'
+
+def get_temp_value(numchars=10):
+    newargspattern = ''
+    while len(newargspattern) < numchars:
+        if len(newargspattern) == 0:
+            newargspattern += random.choice(RANDOM_ALPHBET)
+        else:
+            newargspattern += random.choice(RANDOM_CHARS)
+    return newargspattern
+
 
 class ValueAttr(object):
     def __init__(self):
@@ -1129,6 +1164,74 @@ class debug_bashcomplete_case(unittest.TestCase):
         valattr.index = 64
         self.__check_completion_output_add_files(commandline,['bashcomplete_format','-o','bashcomplete_format.completion','selfcomp'],outputlines,'',valattr)
         self.__check_bash_completion_output_add_files(commandline,['bashcomplete_format','-o','bashcomplete_format.completion','selfcomp'],outputlines,'',valattr)
+        self.__resultok = True
+        return
+
+    def test_A011(self):
+        commandline='''
+        {
+            "verbose|v" : "+",
+            "jsonstr|j##jsonstr to read  none read from input or stdin##" : null,
+            "basefile|B" : null,
+            "jsonfile" : null,
+            "optfile|F" : null,
+            "extoptions|E" : null,
+            "input|i" : null,
+            "output|o" : null,
+            "prefix|p" : null,
+            "output<output_handler>" : {
+                "$" : "*"
+            },
+            "release<release_handler>" : {
+                "$" : "*"
+            },
+            "debug<debug_handler>" : {
+                "$" : "*"
+            },
+            "verify<verify_handler>" : {
+                "$" : 0
+            },
+            "version<version_handler>" : {
+                "$" : 0
+            },
+            "selfcomp<selfcomp_handler>" : {
+                "$" : 0
+            }
+        }        
+        '''
+        outputlines = []
+        _tempfile = None
+        while True:
+            _tempfile = get_temp_value(12)
+            if _tempfile not in os.listdir(os.getcwd()):
+                break
+
+        _newtempfile = None
+        while True:
+            _newtempfile = None
+            _newtempfile = _tempfile
+            # we add space in the name
+            _newtempfile += ' '
+            _newtempfile += get_temp_value(12)
+            if _newtempfile not in os.listdir(os.getcwd()):
+                break
+        # we make sure this file is ok
+        self.__write_tempfile('',_newtempfile)
+        self.__tempfiles.append(_newtempfile)
+        valattr = ValueAttr()
+        if 'TEST_RELEASE' in os.environ.keys():
+            valattr.releasemode = True
+        valattr.line = 'bashcomplete_format -o \'%s '%(_tempfile)
+        valattr.index = len(valattr.line)
+        outputlines.append(_newtempfile)
+        self.__check_completion_output(commandline,['bashcomplete_format','-o','%s '%(_tempfile)],outputlines,valattr)
+        outputlines.remove(_newtempfile)
+        # for the handling ,we should make it for the next
+        _val = _newtempfile.replace('%s '%(_tempfile),'')
+        # this is the endof line
+        _val += '\' '
+        outputlines.append(_val)
+        self.__check_bash_completion_output(commandline,['bashcomplete_format','-o','%s '%(_tempfile)],outputlines,valattr)
         self.__resultok = True
         return
 

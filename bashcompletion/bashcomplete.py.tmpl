@@ -63,11 +63,23 @@ def encode_string_mode(instr,bmode):
         retstr = instr.encode(encoding='UTF-8')
     return retstr
 
+def encode_eval_string(instr):
+    rets = ''
+    for c in instr:
+        if c == '`':
+            rets += '\\`'
+        elif c == '"':
+            rets += '\\"'
+        else:
+            rets += c
+    return rets
+
 def change_shell_special_dir(d):
     retd = d
     devnullfd = None
+    logging.info('d [%s]'%(d))
     try:
-        devnullfd = open(os.devnull,'w')
+        #devnullfd = open(os.devnull,'w')
         p = subprocess.Popen(['/bin/bash'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=devnullfd,shell=False)
         bmode = False
         if 'b' in p.stdin.mode:
@@ -75,7 +87,12 @@ def change_shell_special_dir(d):
         curdir = os.getcwd()
         # to make the current directory
         p.stdin.write(encode_string_mode('cd %s\n'%(curdir),bmode))
-        p.stdin.write(encode_string_mode('export DIRVALUE=%s\n'%(d),bmode))
+        cmd = 'export DIRVALUE=`%s '%(sys.executable)
+        cmd += '-c "import os;import sys;print(\'%s\'%(os.path.expanduser(sys.argv[1])))"'
+        cmd += ' "%s"`'%(encode_eval_string(d))
+        cmd += '\n'
+        logging.info('cmd [%s]'%(cmd))
+        p.stdin.write(encode_string_mode(cmd,bmode))
         p.stdin.write(encode_string_mode('echo -n "$DIRVALUE"\n',bmode))
         p.stdin.close()
         p.stdin = None
