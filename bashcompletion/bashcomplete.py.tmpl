@@ -72,6 +72,9 @@ def change_shell_special_dir(d):
         bmode = False
         if 'b' in p.stdin.mode:
             bmode = True
+        curdir = os.getcwd()
+        # to make the current directory
+        p.stdin.write(encode_string_mode('cd %s\n'%(curdir),bmode))
         p.stdin.write(encode_string_mode('export DIRVALUE=%s\n'%(d),bmode))
         p.stdin.write(encode_string_mode('echo -n "$DIRVALUE"\n',bmode))
         p.stdin.close()
@@ -108,10 +111,24 @@ class _OptionAccess(object):
         self.__accessed = dict()
         return
 
+    def format_call_msg(self,msg,callstack):
+        inmsg = ''  
+        if callstack is not None:
+            try:
+                frame = sys._getframe(callstack)
+                inmsg += '[%-10s:%-20s:%-5s] '%(frame.f_code.co_filename,frame.f_code.co_name,frame.f_lineno)
+            except:
+                inmsg = ''
+        inmsg += msg
+        return inmsg
+
+
     def __setattr__(self,k,v):
         if k.startswith('_'):
             self.__dict__[k]=v
             return
+        msg = self.format_call_msg('set [%s]'%(k),5)
+        #logging.info('%s'%(msg))
         self.__accessed[k] = True
         return
 
@@ -120,6 +137,8 @@ class _OptionAccess(object):
             if k not in self.__dict__.keys():
                 return defv
             return self.__dict__[k]
+        msg = self.format_call_msg('get [%s] [%s]'%(k,self.__format()),2)
+        #logging.info('%s'%(msg))
         if k not in self.__accessed.keys():
             return False
         return True
@@ -201,6 +220,10 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
         self.__shortstep = -1
 
         self.__laststepopts = []
+        try:
+            self.__verbose = int(os.environ['BASHCOMPLETE_DEBUG'])
+        except:
+            self.__verbose = 0
 
         self.__step_functions = {
             'string' : self.__string_step,
@@ -236,19 +259,23 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
         return
 
     def warn_message(self,message,callstack=1):
-        sys.stderr.write('\n%s'%(message))
+        if self.__verbose >= 3:
+            msg = self.format_call_msg(message,(callstack + 1))
+        else:
+            msg = message
+        sys.stderr.write('\n%s'%(msg))
         sys.stderr.flush()
         return
 
     def warn_override(self,keycls,firstcheck):
         accessed = getattr(self.optaccess,keycls.optdest,None)
-        if accessed is not None and firstcheck:
+        if accessed and firstcheck:
             warns = ''
             warns += '[%s'%(keycls.longopt)
             if keycls.shortopt is not None:
                 warns += '|%s'%(keycls.shortopt)
             warns += '] will be override'
-            self.warn_message(warns)
+            self.warn_message(warns,3)
         return
 
     def set_access(self,keycls):
@@ -596,7 +623,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
             return cmdname,None
         oldidx = self.__step_longopt(False)
         oldcharidx = self.__curcharidx
-        logging.info('[%d][%d]'%(oldidx,oldcharidx))
+        logging.info('[%d][%d] __laststepopts (%s)'%(oldidx,oldcharidx,self.__laststepopts))
         while True:
             if oldidx >= (len(params)-1):
                 self.__ended = 1
@@ -605,6 +632,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
                 self.__longstep = -1
                 self.__shortstep = -1
                 self.__curcharidx = -1
+                logging.info(' ')
                 return cmdname,None
 
             curopt = params[oldidx]
@@ -616,6 +644,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
                 assert(self.__shortstep < 0)
                 assert(self.__curcharidx < 0)
                 self.__ended = 1
+                logging.info(' ')
                 return cmdname,None
             if oldcharidx > 0:
                 while oldcharidx < len(curopt):
@@ -626,6 +655,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
                         # to make the next one
                         self.__curcharidx = (oldcharidx+1)
                         self.__validx = (oldidx + 1)
+                        logging.info(' ')
                         return cmdname,opt
                     else:
                         self.warn('[%d][%d] [%s] not in the options'%(oldidx,oldcharidx,curch))
@@ -635,6 +665,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
                     oldidx = self.__step_shortopt(True)
                     oldcharidx = self.__curcharidx
                     # we get the next one
+                    logging.info(' ')
                     continue
             else:
                 if self.options.bundled:
@@ -644,6 +675,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
                             opt = self.__get_opt_longopt(curopt,cmdname)
                             self.__curidx = oldidx
                             self.__validx = (oldidx + 1)
+                            logging.info(' ')
                             return cmdname,opt
                         else:
                             if self.options.parseall:
@@ -662,6 +694,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
                             self.__ended = 1
                             assert(self.__longstep < 0)
                             assert(self.__shortstep < 0)
+                            logging.info(' ')
                             return cmdname,None
                     elif self.options.shortprefix is not None and curopt.startswith(self.options.shortprefix):
                         oldcharidx = len(self.options.shortprefix)
@@ -670,8 +703,9 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
                             if curch in self.__get_shortflags(cmdname):
                                 opt = self.__get_opt_shortflag(curch,cmdname)
                                 self.__curidx = oldidx
-                                self.__curcharidx = oldcharidx
+                                self.__curcharidx = (oldcharidx + 1 )
                                 self.__validx = (oldidx + 1)
+                                logging.info(' ')
                                 return cmdname,opt
                             else:
                                 if oldidx < (len(params) - 1):
@@ -689,6 +723,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
                                     assert(self.__longstep < 0)
                                     self.__curcharidx = -1
                                     self.__ended = 1
+                                    logging.info(' ')
                                     return cmdname,None
                                 # parse all ,so add it to the command
                                 self.leftargs.append(params[oldidx])
@@ -709,6 +744,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
                             opt = self.__get_opt_longopt(curopt,cmdname)
                             self.__curidx = oldidx
                             self.__validx = (oldidx + 1)
+                            logging.info(' ')
                             return cmdname,opt
                         else:
                             if self.options.parseall:
@@ -728,6 +764,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
                             self.__ended = 1
                             assert(self.__longstep < 0)
                             assert(self.__shortstep < 0)
+                            logging.info(' ')
                             return cmdname,None
 
                     if len(curopt) == (shortlen + 1):
@@ -740,6 +777,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
                             self.__curcharidx = -1
                             assert(self.__shortstep < 0)
                             assert(self.__longstep < 0)
+                            logging.info(' ')
                             return cmdname,opt
                         else:
                             if self.options.parseall:
@@ -758,6 +796,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
                             self.__curcharidx = -1
                             assert(self.__shortstep < 0)
                             assert(self.__longstep < 0)
+                            logging.info(' ')
                             return cmdname,None
             # that can not be handled
             subcmds = self.get_subcommands(cmdname)
@@ -779,9 +818,11 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
                     self.__ended = 1
                     assert(self.__shortstep < 0)
                     assert(self.__longstep < 0)
+                    logging.info(' ')
                     return cmdname,None
             oldidx += 1
             oldcharidx = -1
+        logging.info(' ')
         return cmdname,None
 
     def __step(self,step,opt):
@@ -796,6 +837,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
             self.__shortstep += step
             if step > 0:
                 self.__laststepopts.append(opt)
+                self.info('[%s] set step [%d]'%(self.__laststepopts[-1].shortflag,step))
         else:
             if self.__longstep < 0:
                 self.__longstep = 0
@@ -817,6 +859,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
             curcmd,opt = self.__get_cmd_step(curcmd,args)
             if opt is None:
                 break
+            logging.info('[%s] opt[%s] shortstep [%d]'%(curcmd,opt,self.__shortstep))
             step = self.call_step_func(self.__validx,opt,args)
             if step < 0:
                 # this means we should end of this
@@ -870,13 +913,18 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
     def file_common_completion(self,pathpat,filterop=None):
         retfiles = []
         basedir = os.path.dirname(pathpat)
+        logging.info('basedir [%s]'%(basedir))
+        specialhandle = False
         if len(basedir) == 0:
-            if len(pathpat) == 0:
+            basedir = change_shell_special_dir(pathpat)
+            if basedir == pathpat:
                 basedir = '.'
                 appenddir = ''
             else:
-                basedir = pathpat
                 appenddir = pathpat
+                while len(appenddir) > 0 and appenddir[-1] == os.path.sep:
+                    appenddir = appenddir[:-2]
+                specialhandle = True
         else:
             appenddir = basedir
         reald = change_shell_special_dir(basedir)
@@ -886,8 +934,11 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
                 ok = True
                 if len(appenddir) == 0:
                     ofile = c
+                elif specialhandle:                    
+                    ofile = '%s%c%s'%(appenddir,os.path.sep,c)
                 else:
                     ofile = os.path.join(basedir,c)
+                logging.debug('c [%s] ofile[%s]'%(c,ofile))
                 if filterop is not None:
                     ok = filterop(ofile)
                 if ok and (len(pathpat) == 0 or ofile.startswith(pathpat)):
@@ -1203,7 +1254,7 @@ def completion_format(args):
     argsopt = CompleteExtArgs(extoptions,priority)
     argsopt.load_command_line_string(args.jsonstr)
     retsarr,endwords = get_handle_args(args.line,args.index,args.subnargs)
-    logging.debug('retsarr (%s) endwords[%s]'%(retsarr,endwords))
+    logging.debug('line [%s] index [%d] retsarr (%s) endwords[%s]'%(args.line,args.index,retsarr,endwords))
     completions = argsopt.get_completions(retsarr,endwords)
     logging.debug('completions (%s)'%(completions))
     for l in completions:
@@ -1237,6 +1288,7 @@ def set_log_level(args):
     if logging.root is not None and len(logging.root.handlers) > 0:
         logging.root.handlers = []
     # we delete old handlers ,and set new handler
+    os.environ['BASHCOMPLETE_DEBUG'] = '%d'%(args.verbose)
     logging.basicConfig(level=loglvl,format='%(asctime)s:%(filename)s:%(funcName)s:%(lineno)d\t%(message)s')
     return
 

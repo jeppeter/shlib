@@ -86,6 +86,9 @@ def change_shell_special_dir(d):
         bmode = False
         if 'b' in p.stdin.mode:
             bmode = True
+        curdir = os.getcwd()
+        # to make the current directory
+        p.stdin.write(encode_string_mode('cd %s\n'%(curdir),bmode))
         p.stdin.write(encode_string_mode('export DIRVALUE=%s\n'%(d),bmode))
         p.stdin.write(encode_string_mode('echo -n "$DIRVALUE"\n',bmode))
         p.stdin.close()
@@ -553,6 +556,24 @@ class debug_bashcomplete_case(unittest.TestCase):
             return False
         return True
 
+    def __remove_related_environ(self,inputarg0):
+        envkeys = []
+        envkeys.append('%s_COMPLETION_DEBUG_MODE'%(inputarg0.upper()))
+        envkeys.append('%s_COMMAND_JSON_EXTOPTIONS'%(inputarg0.upper()))
+        envkeys.append('%s_PYTHON_COMPLETE_STR'%(inputarg0.upper()))
+        envkeys.append('%s_COMPLETE_VERSION'%(inputarg0.upper()))
+        envkeys.append('%s_COMMAND_JSON_EXTOPTIONS'%(inputarg0.upper()))
+        removkeys = []
+        for k in os.environ.keys():
+            if k in envkeys:
+                removkeys.append(k)
+        for k in removkeys:
+            try:
+                del os.environ[k]
+            except:
+                logging.warning('can not remove [%s]'%(k))
+        return
+
 
     def __check_bash_completion_output(self,jsonstr,inputargs,outputlines,valattr=None):
         bret = self.__expect_bash_supported()
@@ -586,7 +607,8 @@ class debug_bashcomplete_case(unittest.TestCase):
         if exptimeout is None:
             exptimeout = 0.3
         if index is None:
-            index = len(line)            
+            index = len(line) 
+        self.__remove_related_environ(inputargs[0])           
         child = self.__start_pexpect(runfile,timeout=exptimeout)
         child.send('%s'%(line))
         child.expect('%s'%(line),timeout=exptimeout)
@@ -626,14 +648,17 @@ class debug_bashcomplete_case(unittest.TestCase):
         if options.endwordshandle is None:
             options.endwordshandle = False
         basedir = os.path.dirname(pathext)
+        specialhandle = False
         if len(basedir) == 0:
-            if len(pathext) == 0:
+            basedir = change_shell_special_dir(pathext)
+            if basedir == pathext:
                 basedir = '.'
                 appenddir = ''
             else:
                 appenddir = pathext
-                basedir = pathext
-                basedir = change_shell_special_dir(basedir)
+                while len(appenddir) > 0 and appenddir[-1] == os.path.sep:
+                    appenddir = appenddir[:-2]
+                specialhandle = True
         else:
             appenddir = basedir
             basedir = change_shell_special_dir(basedir)
@@ -643,6 +668,8 @@ class debug_bashcomplete_case(unittest.TestCase):
             for l in os.listdir(basedir):
                 if len(appenddir) == 0:
                     ll = l
+                elif specialhandle:
+                    ll = '%s%c%s'%(appenddir,os.path.sep,l)
                 else:
                     ll = os.path.join(appenddir,l)
                 logging.debug('l %s pathext(%s)'%(ll,pathext))
@@ -972,6 +999,49 @@ class debug_bashcomplete_case(unittest.TestCase):
         self.__check_bash_completion_output(commandline,['insertcode','--verbose','-v','-'],outputlines,valattr)
         self.__resultok = True
         return
+
+    def test_A008(self):
+        commandline='''
+        {
+            "verbose|v" : "+",
+            "jsonstr|j##jsonstr to read  none read from input or stdin##" : null,
+            "basefile|B" : null,
+            "jsonfile" : null,
+            "optfile|F" : null,
+            "extoptions|E" : null,
+            "input|i" : null,
+            "output|o" : null,
+            "prefix|p" : null,
+            "output<output_handler>" : {
+                "$" : "*"
+            },
+            "release<release_handler>" : {
+                "$" : "*"
+            },
+            "debug<debug_handler>" : {
+                "$" : "*"
+            },
+            "verify<verify_handler>" : {
+                "$" : 0
+            },
+            "version<version_handler>" : {
+                "$" : 0
+            },
+            "selfcomp<selfcomp_handler>" : {
+                "$" : 0
+            }
+        }        
+        '''
+        outputlines = []
+        valattr = ValueAttr()
+        if 'TEST_RELEASE' in os.environ.keys():
+            valattr.releasemode = True
+        valattr.tabtimes = 2
+        self.__check_completion_output_add_files(commandline,['bashcomplete_format','-o','ba'],outputlines,'ba',valattr)
+        self.__check_bash_completion_output_add_files(commandline,['bashcomplete_format','-o','ba'],outputlines,'ba',valattr)
+        self.__resultok = True
+        return
+
 
     ##################################
     ## to check version
