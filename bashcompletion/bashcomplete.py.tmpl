@@ -121,6 +121,47 @@ def change_shell_special_dir(d):
         devnullfd = None
     return retd
 
+class ValueAttr(object):
+    def __init__(self):
+        self.__obj = dict()
+        self.__access = dict()
+        return
+
+    def __setattr__(self,key,val):
+        if not key.startswith('_'):
+            self.__obj[key] = val
+            self.__access[key] = True
+            return
+        self.__dict__[key] = val
+        return
+
+    def __getattr__(self,key):
+        if not key.startswith('_'):
+            if key in self.__obj.keys():
+                return self.__obj[key]
+            return None
+        return self.__dict__[key]
+
+    def __str__(self):
+        s = '{'
+        for k in self.__obj.keys():
+            s += '%s=%s;'%(k,self.__obj[k])
+        s += '}'
+        return s
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __has_accessed(self,name):
+        if name in self.__access.keys():
+            return True
+        return False
+
+    def is_accessed(self,name):
+        return self.__has_accessed(name)
+
+    def get_keys(self):
+        return self.__obj.keys()
 
 
 class _OptionAccess(object):
@@ -227,6 +268,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
                 extargsparse.ENVIRONMENT_SET,extargsparse.ENV_SUB_COMMAND_JSON_SET,\
                 extargsparse.ENV_COMMAND_JSON_SET]
         self.optaccess = _OptionAccess()
+        self.storevalues = ValueAttr()
 
         self.leftargs = []
         self.__ended = 0
@@ -299,20 +341,69 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
         setattr(self.optaccess,keycls.optdest,True)
         return
 
+    def set_value(self,keycls,value):
+        setattr(self.storevalues,keycls.optdest,value)
+        return
+
+    def count_value(self,keycls,value):
+        origvalue = getattr(self.storevalues,keycls.optdest,None)
+        if origvalue is None:
+            origvalue = 0
+        origvalue += 1
+        setattr(self.storevalues,keycls.optdest,origvalue)
+        return
+
+    def append_value(self,keycls,value):
+        origvalue = getattr(self.storevalues,keycls.optdest,None)
+        if origvalue is None:
+            origvalue = []
+        origvalue.append(value)
+        setattr(self.storevalues,keycls.optdest,origvalue)
+        return
+
+    def extend_value(self,keycls,value):
+        origvalue = getattr(self.storevalues,keycls.optdest,None)
+        if origvalue is None:
+            origvalue = []
+        origvalue.extend(value)
+        setattr(self.storevalues,keycls.optdest,origvalue)
+        return
+
     def __string_step(self,validx,keycls,params,firstcheck):
         self.warn_override(keycls,firstcheck)
         if firstcheck:
             self.set_access(keycls)
-        return 1        
+            if validx < (len(params) - 1):
+                filtername = params[validx]
+                self.set_value(keycls,filtername)
+        return 1
 
     def __int_step(self,validx,keycls,params,firstcheck):
-        self.warn_override(keycls)
+        self.warn_override(keycls,firstcheck)
         filtername = ''
         if validx < (len(params) - 1):
             filtername = params[validx]
         self.int_value_warn(filtername,firstcheck)
         if firstcheck:
             self.set_access(keycls)
+            if validx < (len(params) - 1):
+                filtername = params[validx]
+                intvalue = 0
+                try:
+                    base = 10
+                    if filtername.startswith('x') or \
+                        filtername.startswith('X'):
+                        base = 16
+                        filtername = filtername[1:]
+
+                    if filtername.startswith('0x') or \
+                        filtername.startswith('0X'):
+                        base = 16
+                        filtername = filtername[2:]
+                    intvalue = int(filtername,base)
+                except:
+                    pass
+                self.set_value(keycls,intvalue)
         return 1
 
     def __long_step(self,validx,keycls,params,firstcheck):
@@ -326,17 +417,31 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
         self.float_value_warn(filtername,firstcheck)
         if firstcheck:
             self.set_access(keycls)
+            if validx < (len(params) - 1):
+                filtername = params[validx]
+                floatvalue = 0.0
+                try:
+                    floatvalue = float(filtername)
+                except:
+                    pass
+                self.set_value(keycls,floatvalue)
         return 1
 
     def __list_step(self,validx,keycls,params,firstcheck):
         if firstcheck:
             self.set_access(keycls)
+            if validx < (len(params) - 1):
+                self.append_value(keycls,params[validx])
         return 1
 
     def __bool_step(self,validx,keycls,params,firstcheck):
         self.warn_override(keycls,firstcheck)
         if firstcheck:
             self.set_access(keycls)
+            if keycls.value:
+                self.set_value(keycls,False)
+            else:
+                self.set_value(keycls,True)
         return 0
 
     def __args_step(self,validx,keycls,params,firstcheck):
@@ -352,6 +457,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
     def __count_step(self,validx,keycls,params,firstcheck):
         if firstcheck:
             self.set_access(keycls)
+            self.count_value(keycls,None)
         return 0
 
     def __jsonfile_step(self,validx,keycls,params,firstcheck):

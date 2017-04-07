@@ -337,6 +337,8 @@ def read_basefile(args):
     return debug_read_basefile(args)
 ##debugoutend
 
+global_extendcode_pattern="extended_opt_code=''"
+
 def output_handler(args,parser):
     set_log_level(args)
     if args.prefix is None:
@@ -347,13 +349,12 @@ def output_handler(args,parser):
         args.jsonstr = read_file(args.input)
     if args.optfile is not None:
         args.extoptions = read_file(args.optfile)
-    args.pattern = "extended_opt_code=''"
     extrastr = ''
     for c in args.subnargs:
         extrastr += read_file(c)
     base_string = read_basefile(args)
     logging.info('base_string (%d)'%(len(base_string)))
-    python_string = replace_outputs(extrastr,args.pattern,base_string)
+    python_string = replace_outputs(extrastr,global_extendcode_pattern,base_string)
     check_functions(args.jsonstr,python_string,args.extoptions)
     # now w
     newargspattern = 'REPLACE_PATTERN'
@@ -519,6 +520,66 @@ def selfcomp_handler(args,parser):
     sys.exit(0)
     return
 
+def format_completion_byname(base_string,name,directory):
+    jsonfile = os.path.join(directory,'%s.json'%(name))
+    cnffile = os.path.join(directory,'%s.cnf'%(name))
+    pyfile = os.path.join(directory,'%s.py'%(name))
+    outfile = os.path.join(directory,'%s.completion'%(name))
+    if not os.path.isfile(jsonfile):
+        raise Exception('[%s] not exists'%(jsonfile))
+    extrastr = ''
+    extoptions = None
+    if os.path.isfile(pyfile):
+        extrastr += read_file(pyfile)
+    jsonstr = read_file(jsonfile)
+    if os.path.isfile(cnffile):
+        extoptions = read_file(cnffile)
+
+    python_string = replace_outputs(extrastr,global_extendcode_pattern,base_string)
+    check_functions(jsonstr,python_string,extoptions)    # now w
+    newargspattern = 'REPLACE_PATTERN'
+    dummystr = get_bash_complete_string(name,newargspattern,jsonstr,extoptions)
+    shpython_string = __get_sh_python(python_string)
+    while True:
+        newstr = dummystr.replace('%s'%(newargspattern),'')
+        # it means that we no match
+        if newstr != dummystr:
+            newargspattern = get_temp_value()
+            continue
+        newstr = shpython_string.replace('%s'%(newargspattern),'')
+        if newstr != shpython_string:
+            newargspattern = get_temp_value()
+            continue
+        break        
+    bash_base_string=get_bash_complete_string(name,newargspattern,jsonstr,extoptions)
+    bash_complete_string = replace_outputs(shpython_string,'%%%s%%'%(newargspattern),bash_base_string)
+    bash_complete_string = bash_complete_string.replace('\r','')
+    write_file(bash_complete_string,outfile)
+    return
+
+def get_names_ok(directory):
+    retnames = []
+    if os.path.isdir(directory):
+        for f in os.listdir(directory):
+            if f.endswith('\.json'):
+                retnames.append(re.sub('\.json$','',f))
+    return retnames
+
+
+def dirform_handler(args,parser):
+    set_log_level(args)
+    if args.directory is None:
+        raise Exception('please specified the format')
+    if len(args.subnargs) == 0:
+        names = get_names_ok(args.directory)
+    else:
+        names = args.subnargs
+    base_string = read_basefile(args)
+    for n in names:
+        format_completion_byname(base_string,n,args.directory)
+    sys.exit(0)
+    return
+
 global_commandline='''
 {
     "verbose|v" : "+",
@@ -530,6 +591,7 @@ global_commandline='''
     "input|i" : null,
     "output|o" : null,
     "prefix|p" : null,
+    "directory" : null,
     "output<output_handler>" : {
         "$" : "*"
     },
@@ -547,6 +609,9 @@ global_commandline='''
     },
     "selfcomp<selfcomp_handler>" : {
         "$" : 0
+    },
+    "dirform<dirform_handler>" : {
+        "$" : "*"
     }
 }
 '''
@@ -563,6 +628,7 @@ global_commandline='''
     "input|i" : null,
     "output|o" : null,
     "prefix|p" : null,
+    "directory" : null,
     "output<output_handler>" : {
         "$" : "*"
     },
@@ -574,6 +640,9 @@ global_commandline='''
     },
     "selfcomp<selfcomp_handler>" : {
         "$" : 0
+    },
+    "dirform<dirform_handler>" : {
+        "$" : "*"
     }
 }
 '''
