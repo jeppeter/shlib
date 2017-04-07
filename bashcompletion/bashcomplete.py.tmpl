@@ -1215,6 +1215,7 @@ def get_handle_args(line,index,sarr):
     idx= 0
     retidx = 0
     retcnt = 0
+    ended = True
     while idx < index and retidx < len(sarr):
         retcnt = 0
         while retcnt < len(sarr[retidx]) and idx < index:
@@ -1231,15 +1232,17 @@ def get_handle_args(line,index,sarr):
             endwords = sarr[retidx][retcnt:]
             retsarr[retidx],startqs = unquote_string(retsarr[retidx])
             endwords,endqs = unquote_string(endwords,startqs)
+            if startqs == '':
+                ended = True
+            else:
+                ended = False
             break
         retsarr.append(sarr[retidx])
         retsarr[retidx],startqs = unquote_string(retsarr[retidx])
         idx += 1
         retidx += 1
-    if idx == index and idx == len(line):
-        if line[index-1] == ' ' or line[index-1] == '\t':
-            # this means we should add one one single
-            retsarr.append('')
+    if ended and idx >= 1 and idx <= len(line) and (line[idx - 1] == ' ' or line[idx - 1] == '\t'):
+        retsarr.append('')
     return retsarr,endwords
 
 
@@ -1258,7 +1261,7 @@ def completion_format(args):
     argsopt = CompleteExtArgs(extoptions,priority)
     argsopt.load_command_line_string(args.jsonstr)
     retsarr,endwords = get_handle_args(args.line,args.index,args.subnargs)
-    logging.debug('line [%s] index [%d] retsarr (%s) endwords[%s]'%(args.line,args.index,retsarr,endwords))
+    logging.debug('line [%s][%d] index [%d] retsarr (%s) endwords[%s]'%(args.line,len(args.line),args.index,retsarr,endwords))
     completions = argsopt.get_completions(retsarr,endwords)
     logging.debug('completions (%s)'%(completions))
     for l in completions:
