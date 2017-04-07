@@ -352,7 +352,7 @@ class debug_bashcomplete_case(unittest.TestCase):
                 templatefile = os.path.join(curdir,'bashcomplete.py.tmpl')
             else:
                 logging.info('release mode')
-                pythonfile = os.path.join(curdir,'bashcomplete_format.py')
+                pythonfile = os.path.join(curdir,'bashcomplete_format')
                 templatefile = None
         else:
             if relasemode is None:
@@ -543,8 +543,22 @@ class debug_bashcomplete_case(unittest.TestCase):
             return True
         return False
 
+    def __expect_bash_supported(self):
+        plat = sys.platform.lower()
+        if not pexpectimported:
+            logging.error('no pexpect imported')
+            return False
+        if plat == 'win32':
+            logging.error('win32 not supported')
+            return False
+        return True
+
 
     def __check_bash_completion_output(self,jsonstr,inputargs,outputlines,valattr=None):
+        bret = self.__expect_bash_supported()
+        if not bret:
+            # nothing to handle
+            return
         prefix = 'prog'
         if valattr is None:
             valattr = ValueAttr()
@@ -695,6 +709,7 @@ class debug_bashcomplete_case(unittest.TestCase):
         if 'TEST_RELEASE' in os.environ.keys():
             valattr.releasemode = True
         self.__check_completion_output_add_files(commandline,['insertcode'],outputlines,'',valattr)
+        self.__check_bash_completion_output_add_files(commandline,['insertcode'],outputlines,'',valattr)
         outputlines = []
         # this is need long opt args
         outputlines.extend(['--help','--input','--json','--output','--pattern','--verbose'])
@@ -704,6 +719,7 @@ class debug_bashcomplete_case(unittest.TestCase):
         if 'TEST_RELEASE' in os.environ.keys():
             valattr.releasemode = True
         self.__check_completion_output_add_files(commandline,['insertcode',''],outputlines,'',valattr)
+        self.__check_bash_completion_output_add_files(commandline,['insertcode',''],outputlines,'',valattr)
         self.__resultok = True
         return
 
@@ -747,6 +763,7 @@ class debug_bashcomplete_case(unittest.TestCase):
         if 'TEST_RELEASE' in os.environ.keys():
             valattr.releasemode = True
         self.__check_completion_output(commandline,['insertcode','-'],outputlines,valattr)
+        self.__check_bash_completion_output(commandline,['insertcode','-'],outputlines,valattr)
         self.__resultok = True
         return
 
@@ -784,7 +801,9 @@ class debug_bashcomplete_case(unittest.TestCase):
         valattr = ValueAttr()
         if 'TEST_RELEASE' in os.environ.keys():
             valattr.releasemode = True
+        valattr.tabtimes = 2
         self.__check_completion_output_add_files(commandline,['insertcode','~/'],outputlines,'~/',valattr)
+        self.__check_bash_completion_output_add_files(commandline,['insertcode','~'],outputlines,'~',valattr)
         self.__resultok = True
         return
 
@@ -823,7 +842,9 @@ class debug_bashcomplete_case(unittest.TestCase):
         valattr = ValueAttr()
         if 'TEST_RELEASE' in os.environ.keys():
             valattr.releasemode = True
+        valattr.tabtimes = 2
         self.__check_completion_output_add_files(commandline,['insertcode','make'],outputlines,'make',valattr)
+        self.__check_bash_completion_output_add_files(commandline,['insertcode','make'],outputlines,'make',valattr)
         self.__resultok = True
         return
 
@@ -864,7 +885,9 @@ class debug_bashcomplete_case(unittest.TestCase):
         valattr.index = 13
         if 'TEST_RELEASE' in os.environ.keys():
             valattr.releasemode = True
+        valattr.tabtimes = 2
         self.__check_completion_output_add_files(commandline,['insertcode','make'],outputlines,'make',valattr)
+        self.__check_bash_completion_output_add_files(commandline,['insertcode','make'],outputlines,'mak',valattr)
         self.__resultok = True
         return
 
@@ -905,6 +928,7 @@ class debug_bashcomplete_case(unittest.TestCase):
         if 'TEST_RELEASE' in os.environ.keys():
             valattr.releasemode = True
         self.__check_completion_output(commandline,['insertcode','--verbose','-'],outputlines,valattr)
+        self.__check_bash_completion_output(commandline,['insertcode','--verbose','-'],outputlines,valattr)
         self.__resultok = True
         return
 
@@ -945,339 +969,6 @@ class debug_bashcomplete_case(unittest.TestCase):
         if 'TEST_RELEASE' in os.environ.keys():
             valattr.releasemode = True
         self.__check_completion_output(commandline,['insertcode','--verbose','-v','-'],outputlines,valattr)
-        self.__resultok = True
-        return
-
-    #############################################
-    ## these are the pexpect to handle
-    ##
-    #############################################
-    def __expect_bash_supported(self):
-        plat = sys.platform.lower()
-        if not pexpectimported:
-            logging.error('no pexpect imported')
-            return False
-        if plat == 'win32':
-            logging.error('win32 not supported')
-            return False
-        return True
-
-
-    def test_B001(self):
-        supported = self.__expect_bash_supported()
-        if not supported:
-            return
-        commandline='''
-        {
-            "verbose|v": "+",
-            "input|i##default (stdin)##": null,
-            "output|o##default (stdout)##": null,
-            "pattern|p": "%REPLACE_PATTERN%",
-            "bashinsert<bashinsert_handler>": {
-                "$": "*"
-            },
-            "bashstring<bashstring_handler>": {
-                "$": "*"
-            },
-            "makepython<makepython_handler>": {
-                "$": "*"
-            },
-            "makeperl<makeperl_handler>": {
-                "$": "*"
-            },
-            "shperl<shperl_handler>": {
-                "$": "*"
-            },
-            "shpython<shpython_handler>": {
-                "$": "*"
-            },
-            "pythonperl<pythonperl_handler>": {
-                "$": "*"
-            }
-        }
-        '''
-        outputlines = []
-        # this is need long opt args
-        outputlines.extend(['--help','--input','--json','--output','--pattern','--verbose'])
-        outputlines.extend(['-h','-i','-o','-p','-v'])
-        outputlines.extend(['bashinsert','bashstring','makeperl','makepython','pythonperl','shperl','shpython'])
-        valattr = ValueAttr()
-        if 'TEST_RELEASE' in os.environ.keys():
-            valattr.releasemode = True
-        self.__check_bash_completion_output_add_files(commandline,['insertcode'],outputlines,'',valattr)
-        outputlines = []
-        # this is need long opt args
-        outputlines.extend(['--help','--input','--json','--output','--pattern','--verbose'])
-        outputlines.extend(['-h','-i','-o','-p','-v'])
-        outputlines.extend(['bashinsert','bashstring','makeperl','makepython','pythonperl','shperl','shpython'])
-        valattr = ValueAttr()
-        if 'TEST_RELEASE' in os.environ.keys():
-            valattr.releasemode = True
-        self.__check_bash_completion_output_add_files(commandline,['insertcode',''],outputlines,'',valattr)
-        self.__resultok = True
-        return
-
-
-    def test_B002(self):
-        supported = self.__expect_bash_supported()
-        if not supported:
-            return
-        commandline='''
-        {
-            "verbose|v": "+",
-            "input|i##default (stdin)##": null,
-            "output|o##default (stdout)##": null,
-            "pattern|p": "%REPLACE_PATTERN%",
-            "bashinsert<bashinsert_handler>": {
-                "$": "*"
-            },
-            "bashstring<bashstring_handler>": {
-                "$": "*"
-            },
-            "makepython<makepython_handler>": {
-                "$": "*"
-            },
-            "makeperl<makeperl_handler>": {
-                "$": "*"
-            },
-            "shperl<shperl_handler>": {
-                "$": "*"
-            },
-            "shpython<shpython_handler>": {
-                "$": "*"
-            },
-            "pythonperl<pythonperl_handler>": {
-                "$": "*"
-            }
-        }
-        '''
-        outputlines = []
-        # this is need long opt args
-        outputlines.extend(['--help','--input','--json','--output','--pattern','--verbose'])
-        # short flag for need args
-        outputlines.extend(['-h','-i','-o','-p','-v'])
-        # to make the command
-        valattr = ValueAttr()
-        if 'TEST_RELEASE' in os.environ.keys():
-            valattr.releasemode = True
-        self.__check_bash_completion_output(commandline,['insertcode','-'],outputlines,valattr)
-        self.__resultok = True
-        return
-
-    def test_B003(self):
-        supported = self.__expect_bash_supported()
-        if not supported:
-            return
-        commandline='''
-        {
-            "verbose|v": "+",
-            "input|i##default (stdin)##": null,
-            "output|o##default (stdout)##": null,
-            "pattern|p": "%REPLACE_PATTERN%",
-            "bashinsert<bashinsert_handler>": {
-                "$": "*"
-            },
-            "bashstring<bashstring_handler>": {
-                "$": "*"
-            },
-            "makepython<makepython_handler>": {
-                "$": "*"
-            },
-            "makeperl<makeperl_handler>": {
-                "$": "*"
-            },
-            "shperl<shperl_handler>": {
-                "$": "*"
-            },
-            "shpython<shpython_handler>": {
-                "$": "*"
-            },
-            "pythonperl<pythonperl_handler>": {
-                "$": "*"
-            }
-        }
-        '''
-        outputlines = []
-        valattr = ValueAttr()
-        valattr.tabtimes = 2
-        if 'TEST_RELEASE' in os.environ.keys():
-            valattr.releasemode = True
-        self.__check_bash_completion_output_add_files(commandline,['insertcode','~'],outputlines,'~',valattr)
-        self.__resultok = True
-        return
-
-    def test_B004(self):
-        supported = self.__expect_bash_supported()
-        if not supported:
-            return
-        commandline='''
-        {
-            "verbose|v": "+",
-            "input|i##default (stdin)##": null,
-            "output|o##default (stdout)##": null,
-            "pattern|p": "%REPLACE_PATTERN%",
-            "bashinsert<bashinsert_handler>": {
-                "$": "*"
-            },
-            "bashstring<bashstring_handler>": {
-                "$": "*"
-            },
-            "makepython<makepython_handler>": {
-                "$": "*"
-            },
-            "makeperl<makeperl_handler>": {
-                "$": "*"
-            },
-            "shperl<shperl_handler>": {
-                "$": "*"
-            },
-            "shpython<shpython_handler>": {
-                "$": "*"
-            },
-            "pythonperl<pythonperl_handler>": {
-                "$": "*"
-            }
-        }
-        '''
-        outputlines = []
-        outputlines.extend(['makeperl','makepython'])
-        valattr = ValueAttr()
-        valattr.tabtimes = 2
-        if 'TEST_RELEASE' in os.environ.keys():
-            valattr.releasemode = True
-        self.__check_bash_completion_output_add_files(commandline,['insertcode','make'],outputlines,'make',valattr)
-        self.__resultok = True
-        return
-
-
-    def test_B005(self):
-        supported = self.__expect_bash_supported()
-        if not supported:
-            return
-        commandline='''
-        {
-            "verbose|v": "+",
-            "input|i##default (stdin)##": null,
-            "output|o##default (stdout)##": null,
-            "pattern|p": "%REPLACE_PATTERN%",
-            "bashinsert<bashinsert_handler>": {
-                "$": "*"
-            },
-            "bashstring<bashstring_handler>": {
-                "$": "*"
-            },
-            "makepython<makepython_handler>": {
-                "$": "*"
-            },
-            "makeperl<makeperl_handler>": {
-                "$": "*"
-            },
-            "shperl<shperl_handler>": {
-                "$": "*"
-            },
-            "shpython<shpython_handler>": {
-                "$": "*"
-            },
-            "pythonperl<pythonperl_handler>": {
-                "$": "*"
-            }
-        }
-        '''
-        outputlines = []
-        outputlines.extend(['makeperl','makepython'])
-        valattr = ValueAttr()
-        valattr.tabtimes = 2
-        valattr.index = 13
-        valattr.line = 'insertcode make'
-        if 'TEST_RELEASE' in os.environ.keys():
-            valattr.releasemode = True
-        self.__check_bash_completion_output_add_files(commandline,['insertcode','make'],outputlines,'mak',valattr)
-        self.__resultok = True
-        return
-
-
-    def test_B006(self):
-        supported = self.__expect_bash_supported()
-        if not supported:
-            return
-        commandline='''
-        {
-            "verbose|v": "+",
-            "input|i##default (stdin)##": null,
-            "output|o##default (stdout)##": null,
-            "pattern|p": "%REPLACE_PATTERN%",
-            "bashinsert<bashinsert_handler>": {
-                "$": "*"
-            },
-            "bashstring<bashstring_handler>": {
-                "$": "*"
-            },
-            "makepython<makepython_handler>": {
-                "$": "*"
-            },
-            "makeperl<makeperl_handler>": {
-                "$": "*"
-            },
-            "shperl<shperl_handler>": {
-                "$": "*"
-            },
-            "shpython<shpython_handler>": {
-                "$": "*"
-            },
-            "pythonperl<pythonperl_handler>": {
-                "$": "*"
-            }
-        }
-        '''
-        outputlines = []
-        outputlines.extend(['--help','--input','--json','--output','--pattern'])
-        outputlines.extend(['-h','-i','-o','-p'])
-        valattr = ValueAttr()
-        if 'TEST_RELEASE' in os.environ.keys():
-            valattr.releasemode = True
-        self.__check_bash_completion_output(commandline,['insertcode','--verbose','-'],outputlines,valattr)
-        self.__resultok = True
-        return
-
-    def test_B007(self):
-        supported = self.__expect_bash_supported()
-        if not supported:
-            return
-        commandline='''
-        {
-            "verbose|v": "+",
-            "input|i##default (stdin)##": null,
-            "output|o##default (stdout)##": null,
-            "pattern|p": "%REPLACE_PATTERN%",
-            "bashinsert<bashinsert_handler>": {
-                "$": "*"
-            },
-            "bashstring<bashstring_handler>": {
-                "$": "*"
-            },
-            "makepython<makepython_handler>": {
-                "$": "*"
-            },
-            "makeperl<makeperl_handler>": {
-                "$": "*"
-            },
-            "shperl<shperl_handler>": {
-                "$": "*"
-            },
-            "shpython<shpython_handler>": {
-                "$": "*"
-            },
-            "pythonperl<pythonperl_handler>": {
-                "$": "*"
-            }
-        }
-        '''
-        outputlines = []
-        outputlines.extend(['--help','--input','--json','--output','--pattern'])
-        outputlines.extend(['-h','-i','-o','-p'])
-        valattr = ValueAttr()
-        if 'TEST_RELEASE' in os.environ.keys():
-            valattr.releasemode = True
         self.__check_bash_completion_output(commandline,['insertcode','--verbose','-v','-'],outputlines,valattr)
         self.__resultok = True
         return
@@ -1291,7 +982,7 @@ class debug_bashcomplete_case(unittest.TestCase):
             return
         versionstr = ''
         versionfile = os.path.join(os.path.dirname(os.path.realpath(__file__)),'VERSION')
-        format_release= os.path.join(os.path.dirname(os.path.realpath(__file__)),'bashcomplete_format.py')
+        format_release= os.path.join(os.path.dirname(os.path.realpath(__file__)),'bashcomplete_format')
         cmds = []
         cmds.append('%s'%(sys.executable))
         cmds.append(format_release)

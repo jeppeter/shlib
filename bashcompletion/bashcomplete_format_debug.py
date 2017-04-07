@@ -355,15 +355,19 @@ def output_handler(args,parser):
     # now w
     newargspattern = 'REPLACE_PATTERN'
     dummystr = get_bash_complete_string(args.prefix,newargspattern,args.jsonstr,args.extoptions)
+    shpython_string = __get_sh_python(python_string)
     while True:
         newstr = dummystr.replace('%s'%(newargspattern),'')
         # it means that we no match
         if newstr != dummystr:
             newargspattern = get_temp_value()
             continue
+        newstr = shpython_string.replace('%s'%(newargspattern),'')
+        if newstr != shpython_string:
+            newargspattern = get_temp_value()
+            continue
         break        
     bash_base_string=get_bash_complete_string(args.prefix,newargspattern,args.jsonstr,args.extoptions)
-    shpython_string = __get_sh_python(python_string)
     bash_complete_string = replace_outputs(shpython_string,'%%%s%%'%(newargspattern),bash_base_string)
     bash_complete_string = bash_complete_string.replace('\r','')
     write_file(bash_complete_string,args.output)
@@ -431,7 +435,10 @@ def release_handler(args,parser):
     logging.info('basestring (%s)'%(basestr))
     basestr = bzip2_base64_encode(basestr)
     logging.info('basestring (%s)'%(basestr))
-    tofile = os.path.join(os.path.dirname(os.path.realpath(__file__)),'bashcomplete_format.py')
+    if args.output is None:
+        tofile = os.path.join(os.path.dirname(os.path.realpath(__file__)),'bashcomplete_format')
+    else:
+        tofile = args.output
     keyname = r'%BASH'
     keyname += r'_COMPLETE_STRING%'
     repls = dict()
@@ -479,6 +486,35 @@ def version_handler(args,parser):
     sys.exit(0)
     return
 
+def selfcomp_handler(args,parser):
+    set_log_level(args)
+    args.pattern = "extended_opt_code=''"
+    extrastr = ''
+    base_string = read_basefile(args)
+    logging.info('base_string (%d)'%(len(base_string)))
+    python_string = replace_outputs(extrastr,args.pattern,base_string)
+    check_functions(global_commandline,python_string,None)
+    # now w
+    newargspattern = 'REPLACE_PATTERN'
+    dummystr = get_bash_complete_string('bashcomplete_format',newargspattern,global_commandline,None)
+    shpython_string = __get_sh_python(python_string)
+    while True:
+        newstr = dummystr.replace('%s'%(newargspattern),'')
+        # it means that we no match
+        if newstr != dummystr:
+            newargspattern = get_temp_value()
+            continue
+        newstr = shpython_string.replace('%s'%(newargspattern),'')
+        if newstr != shpython_string:
+            newargspattern = get_temp_value()
+            continue
+        break        
+    bash_base_string=get_bash_complete_string('bashcomplete_format',newargspattern,global_commandline,None)
+    bash_complete_string = replace_outputs(shpython_string,'%%%s%%'%(newargspattern),bash_base_string)
+    bash_complete_string = bash_complete_string.replace('\r','')
+    write_file(bash_complete_string,args.output)
+    sys.exit(0)
+    return
 
 global_commandline='''
 {
@@ -505,6 +541,9 @@ global_commandline='''
     },
     "version<version_handler>" : {
         "$" : 0
+    },
+    "selfcomp<selfcomp_handler>" : {
+        "$" : 0
     }
 }
 '''
@@ -529,6 +568,9 @@ global_commandline='''
     },
     "debug<debug_handler>" : {
         "$" : "*"
+    },
+    "selfcomp<selfcomp_handler>" : {
+        "$" : 0
     }
 }
 '''

@@ -17,15 +17,15 @@ else
 PYTHON_CALL:=${P}
 endif
 
-all:bashcomplete_format.py bashcomplete_test.py
-	$(call call_exec,${PYTHON_CALL} ${CURDIR}/bashcomplete_test.py -v -f --releasemode,"TEST","bashcomplete_format.py")
+all:bashcomplete_format bashcomplete_test.py
+	$(call call_exec,${PYTHON_CALL} ${CURDIR}/bashcomplete_test.py -v -f --releasemode,"TEST","bashcomplete_format")
 
-bashcomplete_format.py:bashcomplete_format_debug.py bashcomplete_format.py.tmpl
-	$(call call_exec,${PYTHON_CALL} bashcomplete_format_debug.py --basefile ${CURDIR}/bashcomplete.py.tmpl release;\
+bashcomplete_format:bashcomplete_format_debug.py bashcomplete_format.py.tmpl
+	$(call call_exec,${PYTHON_CALL} bashcomplete_format_debug.py --basefile ${CURDIR}/bashcomplete.py.tmpl --output $@ release;\
 		_testcnt=0 ; _succ=0 ; \
 		while [ $${_testcnt} -lt 10 ];\
 		do \
-		  if [ -f ${CURDIR}/bashcomplete_format.py.touched ]; \
+		  if [ -f ${CURDIR}/bashcomplete_format.touched ]; \
 		   then \
 		   _succ=1 ;\
 		   break ;\
@@ -35,10 +35,11 @@ bashcomplete_format.py:bashcomplete_format_debug.py bashcomplete_format.py.tmpl
 		 done; \
 		 if [ $${_succ} -ne 1 ];\
 		 then \
-		 	${ECHO} "can not make bashcomplete_format.py" ;\
-		 fi,"RELEASE","bashcomplete_format.py")
-	$(call call_exec,${PYTHON_CALL} bashcomplete_format.py verify | ${DIFF} - ${CURDIR}/bashcomplete.py.tmpl,"VERIFY","bashcomplete_format.py")
+		 	${ECHO} "can not make bashcomplete_format" ;\
+		 fi,"RELEASE","bashcomplete_format")
+	$(call call_exec,${PYTHON_CALL} $@ verify | ${DIFF} - ${CURDIR}/bashcomplete.py.tmpl,"VERIFY","bashcomplete_format")
+	$(call call_exec,chmod +x $@,"CHX","bashcomplete_format")
 
 clean:
-	$(call call_exec,${RM} -f bashcomplete_format.py.touched,"RM","bashcomplete_format.py.touched")
-	$(call call_exec,${RM} -f bashcomplete_format.py,"RM","bashcomplete_format.py")
+	$(call call_exec,${RM} -f bashcomplete_format.touched,"RM","bashcomplete_format.touched")
+	$(call call_exec,${RM} -f bashcomplete_format,"RM","bashcomplete_format")
