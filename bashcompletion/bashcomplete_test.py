@@ -1277,6 +1277,73 @@ class debug_bashcomplete_case(unittest.TestCase):
         self.__resultok = True
         return
 
+    def test_A013(self):
+        options='''
+        {
+            "longprefix" : "-",
+            "shortprefix" : "-",
+            "nojsonoption" : true,
+            "cmdprefixadded" : false
+        }
+        '''
+        commandline='''
+        {
+            "asn1parse" : {
+                "$" : 0,
+                "$inform!optparse=inform_optparse;completefunc=inform_complete!" : null,
+                "$in" : null,
+                "$out" : null,
+                "$noout" : false,
+                "$offset" : 0,
+                "$length" : -1,
+                "$dump" : false,
+                "$dlimit" : -1,
+                "$oid" : null,
+                "$strparse" : 0,
+                "$genstr" : null,
+                "$genconf" : null
+            }
+        }
+        '''
+        outputlines = []
+        outputlines.extend(['-dlimit','-dump','-genconf','-genstr','-in','-inform','-length'])
+        outputlines.extend(['-noout','-offset','-oid','-out','-strparse'])
+        outputlines.extend(['-h','-help'])
+        valattr = ValueAttr()
+        if 'TEST_RELEASE' in os.environ.keys():
+            valattr.releasemode = True
+        valattr.additioncode='''
+def inform_optparse(extparser,validx,keycls,params,firstcheck):
+    extparser.warn_override(keycls,firstcheck)
+    if validx >= (len(params) -1):
+        # we do not check at the end of the file
+        return 1
+    valueform = params[validx]
+    if valueform != 'DER' and valueform != 'PEM':
+        message = '[%s'%(keycls.longopt)
+        if keycls.shortflag is not None:
+            message += '|%s'%(keycls.shortopt)
+        message += '] must DER|PEM format'
+        self.warn_message(message)
+    if firstcheck:
+        self.set_access(keycls)
+    return 1
+
+def inform_complete(extparser,validx,keycls,params,endwords=''):
+    completions = []
+    filtername = ''
+    if len(params) > 0:
+        filtername = params[-1]
+    for c in ['PEM','DER']:
+        retc = extparser.get_filter_name(c,filtername,endwords)
+        if retc is not None:
+            completions.append(retc)
+    return completions
+'''
+        valattr.extoptions=options
+        self.__check_completion_output(commandline,['openssl','-'],outputlines,valattr)
+        return
+
 
     ##################################
     ## to check version

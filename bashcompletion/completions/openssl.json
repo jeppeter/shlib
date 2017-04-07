@@ -1,0 +1,17 @@
+{
+    "asn1parse" : {
+        "$" : 0,
+        "$inform!optparse=inform_optparse;completefunc=inform_complete!" : null,
+        "$in" : null,
+        "$out" : null,
+        "$noout" : false,
+        "$offset" : 0,
+        "$length" : -1,
+        "$dump" : false,
+        "$dlimit" : -1,
+        "$oid" : null,
+        "$strparse" : 0,
+        "$genstr" : null,
+        "$genconf" : null
+    }
+}
