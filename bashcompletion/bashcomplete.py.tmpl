@@ -252,6 +252,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
     def __init__(self,options=None,priority=None):
         super(CompleteExtArgs,self).__init__(options,priority)
         self.options = options
+        logging.info('options [%s]'%(self.options))
         if self.options is None:
             self.options = extargsparse.ExtArgOptions()
         if self.options.longprefix is None:
@@ -260,6 +261,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
             self.options.bundled = False
         else:
             self.options.bundled = True
+        logging.info('bundled [%s]'%(self.options.bundled))
         if self.options.endwordshandle is None:
             self.options.endwordshandle = False
         self.priority = priority
@@ -1153,6 +1155,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
             if opt is not None:
                 if not getattr(self.optaccess,opt.optdest,False) or opt.type == 'list':
                     curl = self.get_filter_name(l,filtername,endwords)
+                    logging.info('[%s] curl [%s]'%(l,curl))
                     if curl is not None:
                         curcompletions.append(curl)
         return curcompletions
@@ -1376,7 +1379,7 @@ def completion_format(args):
         args.jsonstr = read_file(args.jsonfile)
     if args.optfile is not None:
         args.options = read_file(args.optfile)
-    logging.info('jsonstr (%s)'%(args.jsonstr))
+    logging.info('jsonstr (%s) options (%s)'%(args.jsonstr,args.options))
     extoptions = extargsparse.ExtArgsOptions(args.options)
     priority = None
     if extoptions.priority is not None:

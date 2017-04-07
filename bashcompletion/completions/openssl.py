@@ -10,9 +10,9 @@ def inform_optparse(extparser,validx,keycls,params,firstcheck):
         if keycls.shortflag is not None:
             message += '|%s'%(keycls.shortopt)
         message += '] must DER|PEM format'
-        self.warn_message(message)
+        extparser.warn_message(message)
     if firstcheck:
-        self.set_access(keycls)
+        extparser.set_access(keycls)
     return 1
 
 def inform_complete(extparser,validx,keycls,params,endwords=''):

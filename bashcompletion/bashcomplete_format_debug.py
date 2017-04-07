@@ -200,7 +200,7 @@ def get_bash_complete_string(prefix,newargspattern,jsonstr,extoptions=None):
     s += __format_tab_line('',1)
     s += __format_tab_line('IFS=$\'\n\'',1)
     if extoptions is not None:
-        s += __format_tab_line('COMPREPLY=($(echo -n "$%s_COMMAND_JSON_OPTIONS" | $PYTHON -c "$%s_PYTHON_COMPLETE_STR" $_verbosemode --options "%s_COMMAND_JSON_EXTOPTIONS" --line "${COMP_LINE}" --index "${COMP_POINT}" complete --  "${COMP_WORDS[@]}"))'%(hprefix,hprefix,hprefix),1)
+        s += __format_tab_line('COMPREPLY=($(echo -n "$%s_COMMAND_JSON_OPTIONS" | $PYTHON -c "$%s_PYTHON_COMPLETE_STR" $_verbosemode --options "$%s_COMMAND_JSON_EXTOPTIONS" --line "${COMP_LINE}" --index "${COMP_POINT}" complete --  "${COMP_WORDS[@]}"))'%(hprefix,hprefix,hprefix),1)
     else:
         s += __format_tab_line('COMPREPLY=($(echo -n "$%s_COMMAND_JSON_OPTIONS" | $PYTHON -c "$%s_PYTHON_COMPLETE_STR" $_verbosemode --line "${COMP_LINE}" --index "${COMP_POINT}" complete --  "${COMP_WORDS[@]}"))'%(hprefix,hprefix),1)
     s += __format_tab_line('IFS=$_origifs',1)
