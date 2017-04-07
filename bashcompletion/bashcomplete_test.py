@@ -1042,6 +1042,96 @@ class debug_bashcomplete_case(unittest.TestCase):
         self.__resultok = True
         return
 
+    def test_A009(self):
+        commandline='''
+        {
+            "verbose|v" : "+",
+            "jsonstr|j##jsonstr to read  none read from input or stdin##" : null,
+            "basefile|B" : null,
+            "jsonfile" : null,
+            "optfile|F" : null,
+            "extoptions|E" : null,
+            "input|i" : null,
+            "output|o" : null,
+            "prefix|p" : null,
+            "output<output_handler>" : {
+                "$" : "*"
+            },
+            "release<release_handler>" : {
+                "$" : "*"
+            },
+            "debug<debug_handler>" : {
+                "$" : "*"
+            },
+            "verify<verify_handler>" : {
+                "$" : 0
+            },
+            "version<version_handler>" : {
+                "$" : 0
+            },
+            "selfcomp<selfcomp_handler>" : {
+                "$" : 0
+            }
+        }        
+        '''
+        outputlines = []
+        outputlines.extend(['--optfile','--output'])
+        valattr = ValueAttr()
+        if 'TEST_RELEASE' in os.environ.keys():
+            valattr.releasemode = True
+        valattr.tabtimes = 2
+        self.__check_completion_output_add_files(commandline,['bashcomplete_format','--jsonfile','test.json','--o'],outputlines,'--o',valattr)
+        self.__check_bash_completion_output_add_files(commandline,['bashcomplete_format','--jsonfile','test.json','--o'],outputlines,'--o',valattr)
+        self.__resultok = True
+        return
+
+    def test_A010(self):
+        commandline='''
+        {
+            "verbose|v" : "+",
+            "jsonstr|j##jsonstr to read  none read from input or stdin##" : null,
+            "basefile|B" : null,
+            "jsonfile" : null,
+            "optfile|F" : null,
+            "extoptions|E" : null,
+            "input|i" : null,
+            "output|o" : null,
+            "prefix|p" : null,
+            "output<output_handler>" : {
+                "$" : "*"
+            },
+            "release<release_handler>" : {
+                "$" : "*"
+            },
+            "debug<debug_handler>" : {
+                "$" : "*"
+            },
+            "verify<verify_handler>" : {
+                "$" : 0
+            },
+            "version<version_handler>" : {
+                "$" : 0
+            },
+            "selfcomp<selfcomp_handler>" : {
+                "$" : 0
+            }
+        }        
+        '''
+        outputlines = []
+        outputlines.extend(['--basefile','--extoptions','--help','--input','--json','--jsonfile','--jsonstr'])
+        outputlines.extend(['--optfile','--prefix','--selfcomp-json','--verbose'])
+        outputlines.extend(['-B','-E','-F','-h','-i','-j','-p','-v'])
+        valattr = ValueAttr()
+        if 'TEST_RELEASE' in os.environ.keys():
+            valattr.releasemode = True
+        valattr.tabtimes = 2
+        valattr.line = 'bashcomplete_format -o bashcomplete_format.completion  selfcomp '
+        valattr.index = 64
+        self.__check_completion_output_add_files(commandline,['bashcomplete_format','-o','bashcomplete_format.completion','selfcomp'],outputlines,'',valattr)
+        self.__check_bash_completion_output_add_files(commandline,['bashcomplete_format','-o','bashcomplete_format.completion','selfcomp'],outputlines,'',valattr)
+        self.__resultok = True
+        return
+
 
     ##################################
     ## to check version

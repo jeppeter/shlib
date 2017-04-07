@@ -506,7 +506,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
                 break
             if sarr[idx] == sarr[(idx+1)]:
                 del sarr[idx]
-                self.warn('[%s][%d] same'%(notice,idx))
+                self.info('[%s][%d] same [%s]'%(notice,idx,sarr[idx]))
                 continue
             idx += 1
         return sarr
@@ -891,7 +891,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
                         opt = self.__get_opt_shortflag(curch,result.cmdname)
                         if opt is not None:
                             validx = len(args)
-                            step = self.call_step_func(validx,opt,args)
+                            step = self.call_step_func(validx,opt,args,False)
                             if step < 0:
                                 result.stopped = True
                                 break
@@ -1105,7 +1105,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
     def __get_completions_cmdname(self,result,params,endwords=''):
         needopt = None
         if result.lastopt is not None and (result.lastidx < (len(params) - 1)):
-            step = self.call_step_func(result.lastidx,result.lastopt,params)
+            step = self.call_step_func(result.lastidx,result.lastopt,params,False)
             if   (result.lastidx + step) >= len(params):
                 # this means that we have not handled all the needed
                 needopt = result.lastopt
@@ -1236,6 +1236,10 @@ def get_handle_args(line,index,sarr):
         retsarr[retidx],startqs = unquote_string(retsarr[retidx])
         idx += 1
         retidx += 1
+    if idx == index and idx == len(line):
+        if line[index-1] == ' ' or line[index-1] == '\t':
+            # this means we should add one one single
+            retsarr.append('')
     return retsarr,endwords
 
 

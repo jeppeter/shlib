@@ -9,4 +9,4 @@ fi
 
 rm -f complete.py
 $PYTHON bashcomplete_format_debug.py -o complete.py --prefix bashcomplete_format --basefile bashcomplete.py.tmpl --jsonfile test.json debug
-$PYTHON complete.py --line 'insertcode ~' --index 12 --jsonfile test.json -vvvvv complete -- insertcode '~'
+$PYTHON complete.py --line 'bashcomplete_format -o bashcomplete_format.completion  selfcomp ' --index 64 --jsonfile test.json -vvvvv complete -- bashcomplete_format -o bashcomplete_format.completion  selfcomp 
