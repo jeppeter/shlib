@@ -1236,6 +1236,48 @@ class debug_bashcomplete_case(unittest.TestCase):
         return
 
 
+    def test_A012(self):
+        commandline='''
+        {
+            "verbose|v" : "+",
+            "jsonstr|j##jsonstr to read  none read from input or stdin##" : null,
+            "basefile|B" : null,
+            "jsonfile" : null,
+            "optfile|F" : null,
+            "extoptions|E" : null,
+            "input|i" : null,
+            "output|o" : null,
+            "prefix|p" : null,
+            "output<output_handler>" : {
+                "$" : "*"
+            },
+            "release<release_handler>" : {
+                "$" : "*"
+            },
+            "debug<debug_handler>" : {
+                "$" : "*"
+            },
+            "verify<verify_handler>" : {
+                "$" : 0
+            },
+            "version<version_handler>" : {
+                "$" : 0
+            },
+            "selfcomp<selfcomp_handler>" : {
+                "$" : 0
+            }
+        }        
+        '''
+        outputlines = []
+        valattr = ValueAttr()
+        if 'TEST_RELEASE' in os.environ.keys():
+            valattr.releasemode = True
+        self.__check_completion_output(commandline,['bashcomplete_format','-h','--'],outputlines,valattr)
+        self.__check_bash_completion_output(commandline,['bashcomplete_format','-h','--'],outputlines,valattr)
+        self.__resultok = True
+        return
+
+
     ##################################
     ## to check version
     ##
