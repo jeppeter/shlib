@@ -154,9 +154,10 @@ KEY_LEFT = '\x1b[D'
 
 
 class ExpLogObject(object):
-    def __init__(self,logfd=None):
+    def __init__(self,logfd=None,note='read'):
         self.__logfd= None
         self.__bmode = False
+        self.__note=note
         if logfd is not None:
             self.__logfd = logfd
             self.__bmode = False
@@ -645,6 +646,7 @@ class debug_bashcomplete_case(unittest.TestCase):
             index = len(line) 
         self.__remove_related_environ(inputargs[0])           
         child = self.__start_pexpect(runfile,timeout=exptimeout)
+        logging.info('line[%s]'%(line))
         child.send('%s'%(line))
         child.expect('%s'%(line),timeout=exptimeout)
         if index < len(line):
@@ -655,7 +657,9 @@ class debug_bashcomplete_case(unittest.TestCase):
             tabtimes = 1
         curtime = 0
         while curtime < tabtimes:
-            child.send('\t\t')
+            child.send('\t')
+            time.sleep(0.1)
+            child.send('\t')
             readbuf = get_read_completion(child,timeout=exptimeout)
             curtime += 1
         child.close()

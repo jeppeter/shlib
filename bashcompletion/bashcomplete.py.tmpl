@@ -1231,7 +1231,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
     def __get_completions_cmdname(self,result,params,endwords=''):
         needopt = None
         logging.info('[%s] lastidx[%s] len(%d)'%(result.lastopt,result.lastidx,len(params)))
-        if result.lastopt is not None and (result.lastidx < len(params):
+        if result.lastopt is not None and (result.lastidx < len(params)):
             step = self.call_step_func(result.lastidx,result.lastopt,params,False)
             logging.info('[%s] lastidx[%s] len(%d) step(%d)'%(result.lastopt,result.lastidx,len(params),step))
             if  step > 0 and (result.lastidx + step) >= len(params):
