@@ -748,7 +748,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
             return cmdname,None
         oldidx = self.__step_longopt(False)
         oldcharidx = self.__curcharidx
-        logging.info('[%d][%d] __laststepopts (%s)'%(oldidx,oldcharidx,self.__laststepopts))
+        #logging.info('[%d][%d] __laststepopts (%s)'%(oldidx,oldcharidx,self.__laststepopts))
         while True:
             if oldidx >= (len(params)-1):
                 self.__ended = 1
@@ -1230,9 +1230,11 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
 
     def __get_completions_cmdname(self,result,params,endwords=''):
         needopt = None
-        if result.lastopt is not None and (result.lastidx < (len(params) - 1)):
+        logging.info('[%s] lastidx[%s] len(%d)'%(result.lastopt,result.lastidx,len(params)))
+        if result.lastopt is not None and (result.lastidx < len(params):
             step = self.call_step_func(result.lastidx,result.lastopt,params,False)
-            if   (result.lastidx + step) >= len(params):
+            logging.info('[%s] lastidx[%s] len(%d) step(%d)'%(result.lastopt,result.lastidx,len(params),step))
+            if  step > 0 and (result.lastidx + step) >= len(params):
                 # this means that we have not handled all the needed
                 needopt = result.lastopt
         if needopt is not None:

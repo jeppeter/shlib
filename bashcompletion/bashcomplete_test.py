@@ -1375,7 +1375,7 @@ def inform_complete(extparser,validx,keycls,params,endwords=''):
         }
         '''
         outputlines = []
-        outputlines.extend(['DER','PEM'])
+        outputlines.extend(['der','pem'])
         valattr = ValueAttr()
         if 'TEST_RELEASE' in os.environ.keys():
             valattr.releasemode = True
@@ -1386,7 +1386,7 @@ def inform_optparse(extparser,validx,keycls,params,firstcheck):
         # we do not check at the end of the file
         return 1
     valueform = params[validx]
-    if valueform != 'DER' and valueform != 'PEM':
+    if valueform != 'der' and valueform != 'pem':
         message = '[%s'%(keycls.longopt)
         if keycls.shortflag is not None:
             message += '|%s'%(keycls.shortopt)
@@ -1401,17 +1401,18 @@ def inform_complete(extparser,validx,keycls,params,endwords=''):
     filtername = ''
     if len(params) > 0:
         filtername = params[-1]
-    for c in ['PEM','DER']:
+    for c in ['pem','der']:
         retc = extparser.get_filter_name(c,filtername,endwords)
         if retc is not None:
             completions.append(retc)
+    completions = sorted(completions)
     return completions
 '''
         valattr.extoptions=options
         valattr.line = 'openssl asn1parse -inform '
         valattr.index = len(valattr.line)
         self.__check_completion_output(commandline,['openssl','asn1parse','-inform'],outputlines,valattr)
-        #self.__check_bash_completion_output(commandline,['openssl','asn1parse','-'],outputlines,valattr)
+        self.__check_bash_completion_output(commandline,['openssl','asn1parse','-inform'],outputlines,valattr)
         return
 
 
