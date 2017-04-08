@@ -17,8 +17,12 @@ else
 PYTHON_CALL:=${P}
 endif
 
-all:bashcomplete_format bashcomplete_test.py
+all:bashcomplete_format.completion
+
+
+bashcomplete_format.completion : bashcomplete_format bashcomplete_test.py
 	$(call call_exec,${PYTHON_CALL} ${CURDIR}/bashcomplete_test.py -v -f --releasemode,"TEST","bashcomplete_format")
+	$(call call_exec,${PYTHON_CALL} ${CURDIR}/bashcomplete_format -o $@ selfcomp,"MAKE","bashcomplete_format.completion")
 
 bashcomplete_format:bashcomplete_format_debug.py bashcomplete_format.py.tmpl
 	$(call call_exec,${PYTHON_CALL} bashcomplete_format_debug.py --basefile ${CURDIR}/bashcomplete.py.tmpl --output $@ release;\
@@ -43,3 +47,4 @@ bashcomplete_format:bashcomplete_format_debug.py bashcomplete_format.py.tmpl
 clean:
 	$(call call_exec,${RM} -f bashcomplete_format.touched,"RM","bashcomplete_format.touched")
 	$(call call_exec,${RM} -f bashcomplete_format,"RM","bashcomplete_format")
+	$(call call_exec,${RM} -f bashcomplete_format.completion,"RM","bashcomplete_format.completion")

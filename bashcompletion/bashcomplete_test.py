@@ -705,12 +705,15 @@ class debug_bashcomplete_case(unittest.TestCase):
         logging.debug('cd (%s)'%(basedir))
         try:
             for l in os.listdir(basedir):
+                curfile = os.path.join(basedir,l)
                 if len(appenddir) == 0:
                     ll = l
                 elif specialhandle:
                     ll = '%s%c%s'%(appenddir,os.path.sep,l)
                 else:
                     ll = os.path.join(appenddir,l)
+                if os.path.isdir(curfile):
+                    ll += os.path.sep
                 logging.debug('l %s pathext(%s)'%(ll,pathext))
                 if ll.startswith(pathext):
                     if options.endwordshandle and ll.endswith(endwords):

@@ -1057,15 +1057,20 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
         try:
             for c in os.listdir(reald):
                 ok = True
+                curfile = os.path.join(reald,c)
                 if len(appenddir) == 0:
                     ofile = c
                 elif specialhandle:                    
                     ofile = '%s%c%s'%(appenddir,os.path.sep,c)
                 else:
                     ofile = os.path.join(basedir,c)
-                logging.debug('c [%s] ofile[%s]'%(c,ofile))
+
                 if filterop is not None:
                     ok = filterop(ofile)
+
+                if os.path.isdir(curfile):
+                    ofile += os.path.sep
+                logging.debug('c [%s] ofile[%s]'%(c,ofile))
                 if ok and (len(pathpat) == 0 or ofile.startswith(pathpat)):
                     retfiles.append(ofile)
         except:
