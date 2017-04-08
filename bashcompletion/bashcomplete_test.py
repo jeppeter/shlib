@@ -303,6 +303,8 @@ class debug_bashcomplete_case(unittest.TestCase):
         self.__tempfiles = []
         self.__resultok = False
         self.__verbose = 0
+        self.__infomsg = None
+        self.__infomsg = extargsparse.ExtArgsParse()
         if 'TEST_VERBOSE' in os.environ.keys():
             self.__verbose = int(os.environ['TEST_VERBOSE'])
         return
@@ -520,6 +522,7 @@ class debug_bashcomplete_case(unittest.TestCase):
                 rewithstart=re.compile('^%s\s+.*'%(reorigin),re.S)
                 reendwith = re.compile('.*\s+%s$'%(reorigin),re.S)
                 reonly = re.compile('^%s$'%(reorigin))
+                logging.info('l[%s]reorigin [%s]'%(l,reorigin))
                 if respaces.match(sl) or rewithstart.match(sl) or \
                     reendwith.match(sl) or reonly.match(sl):
                     return True
@@ -616,6 +619,7 @@ class debug_bashcomplete_case(unittest.TestCase):
         if not bret:
             # nothing to handle
             return
+        self.__debug_list(outputlines,'outputlines')
         prefix = 'prog'
         if valattr is None:
             valattr = ValueAttr()
@@ -639,12 +643,14 @@ class debug_bashcomplete_case(unittest.TestCase):
                 # we add one in the last
                 line += ' '
         index = valattr.index
+        self.__debug_list(outputlines,'outputlines')
         exptimeout = valattr.timeout
         if exptimeout is None:
             exptimeout = 0.3
         if index is None:
             index = len(line) 
-        self.__remove_related_environ(inputargs[0])           
+        self.__remove_related_environ(inputargs[0])
+        logging.info('outputlines (%s)'%(outputlines))
         child = self.__start_pexpect(runfile,timeout=exptimeout)
         logging.info('line[%s]'%(line))
         child.send('%s'%(line))
@@ -656,6 +662,7 @@ class debug_bashcomplete_case(unittest.TestCase):
         if tabtimes is None:
             tabtimes = 1
         curtime = 0
+        self.__debug_list(outputlines,'outputlines')
         while curtime < tabtimes:
             child.send('\t')
             time.sleep(0.1)
@@ -671,17 +678,28 @@ class debug_bashcomplete_case(unittest.TestCase):
             if len(l) == 0:
                 continue
             sarr.append(l)
-
+        self.__debug_list(outputlines,'outputlines')
+        idx = 0
         for l in outputlines:
+            logging.info('[%d][%s]'%(idx,l))
             bret = self.__check_line_in_completion(l,sarr)
             self.assertEqual(bret,True)
+            idx += 1
 
         for l in sarr:
             bret = self.__check_line_in_outlines(l,outputlines)
             self.assertEqual(bret,True)
         return
 
-    def __get_list_dir(self,pathext,endwords='',extoptions=None):
+    def __debug_list(self,sarr,note=''):
+        idx = 0
+        msg = self.__infomsg.format_call_msg('',2)
+        for l in sarr:
+            logging.info('%s%s[%s][%s]'%(msg,note,idx,l))
+            idx += 1
+        return
+
+    def __get_list_dir(self,pathext,endwords='',extoptions=None,bashmode=False):
         retd = []
         options = extargsparse.ExtArgsOptions(extoptions)
         if options.endwordshandle is None:
@@ -712,29 +730,32 @@ class debug_bashcomplete_case(unittest.TestCase):
                     ll = '%s%c%s'%(appenddir,os.path.sep,l)
                 else:
                     ll = os.path.join(appenddir,l)
-                if os.path.isdir(curfile):
-                    ll += os.path.sep
+                if bashmode:
+                    if os.path.isdir(curfile):
+                        ll += os.path.sep
                 logging.debug('l %s pathext(%s)'%(ll,pathext))
                 if ll.startswith(pathext):
                     if options.endwordshandle and ll.endswith(endwords):
-                        retd.append(re.sub('%s$'%(endwords),'',ll))
+                        curf = re.sub('%s$'%(endwords),'',ll)
+                        logging.info('append [%s]'%(curf))
+                        retd.append(curf)
                     elif not options.endwordshandle:
+                        logging.info('append [%s]'%(ll))
                         retd.append(ll)
         except:
             pass
-        retd = sorted(retd)
+        retd = sorted(retd)        
+        self.__debug_list(retd,'retd')
         logging.debug('retd (%s)'%(retd))
         return retd
 
     def __check_completion_output_add_files(self,jsonstr,inputargs,outputlines,pathset='',valattr=None):
         outputlines.extend(self.__get_list_dir(pathset))
-        logging.debug('outputlines (%s)'%(outputlines))
         self.__check_completion_output(jsonstr,inputargs,outputlines,valattr)
         return
 
     def __check_bash_completion_output_add_files(self,jsonstr,inputargs,outputlines,pathset='',valattr=None):
-        outputlines.extend(self.__get_list_dir(pathset))
-        logging.debug('outputlines (%s)'%(outputlines))
+        outputlines.extend(self.__get_list_dir(pathset,bashmode=True))
         self.__check_bash_completion_output(jsonstr,inputargs,outputlines,valattr)
         return
 
@@ -778,6 +799,14 @@ class debug_bashcomplete_case(unittest.TestCase):
         if 'TEST_RELEASE' in os.environ.keys():
             valattr.releasemode = True
         self.__check_completion_output_add_files(commandline,['insertcode'],outputlines,'',valattr)
+        outputlines = []
+        # this is need long opt args
+        outputlines.extend(['--help','--input','--json','--output','--pattern','--verbose'])
+        outputlines.extend(['-h','-i','-o','-p','-v'])
+        outputlines.extend(['bashinsert','bashstring','makeperl','makepython','pythonperl','shperl','shpython'])
+        valattr =ValueAttr()
+        if 'TEST_RELEASE' in os.environ.keys():
+            valattr.releasemode = True
         self.__check_bash_completion_output_add_files(commandline,['insertcode'],outputlines,'',valattr)
         outputlines = []
         # this is need long opt args
@@ -788,6 +817,14 @@ class debug_bashcomplete_case(unittest.TestCase):
         if 'TEST_RELEASE' in os.environ.keys():
             valattr.releasemode = True
         self.__check_completion_output_add_files(commandline,['insertcode',''],outputlines,'',valattr)
+        outputlines = []
+        # this is need long opt args
+        outputlines.extend(['--help','--input','--json','--output','--pattern','--verbose'])
+        outputlines.extend(['-h','-i','-o','-p','-v'])
+        outputlines.extend(['bashinsert','bashstring','makeperl','makepython','pythonperl','shperl','shpython'])
+        valattr =ValueAttr()
+        if 'TEST_RELEASE' in os.environ.keys():
+            valattr.releasemode = True
         self.__check_bash_completion_output_add_files(commandline,['insertcode',''],outputlines,'',valattr)
         self.__resultok = True
         return
@@ -871,8 +908,17 @@ class debug_bashcomplete_case(unittest.TestCase):
         if 'TEST_RELEASE' in os.environ.keys():
             valattr.releasemode = True
         valattr.tabtimes = 2
-        self.__check_completion_output_add_files(commandline,['insertcode','~/'],outputlines,'~/',valattr)
-        self.__check_bash_completion_output_add_files(commandline,['insertcode','~'],outputlines,'~',valattr)
+        self.__check_completion_output_add_files(commandline,['insertcode','~'],outputlines,'~',valattr)
+        outputlines = []
+        valattr = ValueAttr()
+        if 'TEST_RELEASE' in os.environ.keys():
+            valattr.releasemode = True
+        valattr.tabtimes = 2
+        # in the 
+        retd = self.__get_list_dir('~',bashmode=True)
+        for l in retd:
+            outputlines.append(re.sub('^~/','',l))
+        self.__check_bash_completion_output(commandline,['insertcode','~'],outputlines,valattr)
         self.__resultok = True
         return
 
@@ -913,6 +959,12 @@ class debug_bashcomplete_case(unittest.TestCase):
             valattr.releasemode = True
         valattr.tabtimes = 2
         self.__check_completion_output_add_files(commandline,['insertcode','make'],outputlines,'make',valattr)
+        outputlines = []
+        outputlines.extend(['makeperl','makepython'])
+        valattr = ValueAttr()
+        if 'TEST_RELEASE' in os.environ.keys():
+            valattr.releasemode = True
+        valattr.tabtimes = 2
         self.__check_bash_completion_output_add_files(commandline,['insertcode','make'],outputlines,'make',valattr)
         self.__resultok = True
         return
@@ -956,6 +1008,14 @@ class debug_bashcomplete_case(unittest.TestCase):
             valattr.releasemode = True
         valattr.tabtimes = 2
         self.__check_completion_output_add_files(commandline,['insertcode','make'],outputlines,'make',valattr)
+        outputlines = []
+        outputlines.extend(['makeperl','makepython'])
+        valattr = ValueAttr()
+        valattr.line = 'insertcode make'
+        valattr.index = 13
+        if 'TEST_RELEASE' in os.environ.keys():
+            valattr.releasemode = True
+        valattr.tabtimes = 2
         self.__check_bash_completion_output_add_files(commandline,['insertcode','make'],outputlines,'mak',valattr)
         self.__resultok = True
         return
@@ -1170,6 +1230,16 @@ class debug_bashcomplete_case(unittest.TestCase):
         valattr.line = 'bashcomplete_format -o bashcomplete_format.completion  selfcomp '
         valattr.index = 64
         self.__check_completion_output_add_files(commandline,['bashcomplete_format','-o','bashcomplete_format.completion','selfcomp'],outputlines,'',valattr)
+        outputlines = []
+        outputlines.extend(['--basefile','--extoptions','--help','--input','--json','--jsonfile','--jsonstr'])
+        outputlines.extend(['--optfile','--prefix','--selfcomp-json','--verbose'])
+        outputlines.extend(['-B','-E','-F','-h','-i','-j','-p','-v'])
+        valattr = ValueAttr()
+        if 'TEST_RELEASE' in os.environ.keys():
+            valattr.releasemode = True
+        valattr.tabtimes = 2
+        valattr.line = 'bashcomplete_format -o bashcomplete_format.completion  selfcomp '
+        valattr.index = 64
         self.__check_bash_completion_output_add_files(commandline,['bashcomplete_format','-o','bashcomplete_format.completion','selfcomp'],outputlines,'',valattr)
         self.__resultok = True
         return
