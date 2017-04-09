@@ -892,7 +892,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
                             logging.info(' ')
                             return cmdname,None
 
-                    if len(curopt) == (shortlen + 1):
+                    if len(curopt) == (shortlen + 1) and curopt.startswith(self.options.shortprefix):
                         curch = curopt[shortlen]
                         if curch in self.__get_shortflags(cmdname):
                             opt = self.__get_opt_shortflag(curch,cmdname)

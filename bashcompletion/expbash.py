@@ -148,10 +148,12 @@ class RunObject(object):
 
     def run_code(self,runfile,timeout=0.3):
         child = self.__start_pexpect(runfile)
-        child.send('bashcomplete_format -o \'ZmyHjRTwfpJS ')
-        child.expect('bashcomplete_format -o \'ZmyHjRTwfpJS ',timeout=timeout)
+        child.send('openssl ca -')
+        child.expect('openssl ca -',timeout=timeout)
         child.send('\t')
-        #time.sleep(0.3)
+        readbuf = get_read_completion(child,timeout=timeout)
+        child.send('\t')
+        readbuf = get_read_completion(child,timeout=timeout)
         child.send('\t')
         readbuf = get_read_completion(child,timeout=timeout)
         idx = 0

@@ -304,7 +304,7 @@ class debug_bashcomplete_case(unittest.TestCase):
         self.__resultok = False
         self.__verbose = 0
         self.__infomsg = None
-        self.__infomsg = extargsparse.ExtArgsParse()
+        self.__infomsg = extargsparse.ExtArgsParse()        
         if 'TEST_VERBOSE' in os.environ.keys():
             self.__verbose = int(os.environ['TEST_VERBOSE'])
         return
@@ -328,6 +328,10 @@ class debug_bashcomplete_case(unittest.TestCase):
                 rets += c
         return rets
 
+    def __get_casename(self):
+        sarr = re.split('\.',self.id())
+        return sarr[-1]
+
 
     def __remove_file_safe_ok(self,f=None,ok=True):
         if ok and f is not None:
@@ -341,7 +345,7 @@ class debug_bashcomplete_case(unittest.TestCase):
             else:
                 logging.debug('[%s] not exists'%(f))
         else:
-            logging.error('not remove [%s]'%(f))
+            logging.error('[%s]not remove [%s]'%(self.__get_casename(),f))
         return
 
     def tearDown(self):
@@ -626,6 +630,7 @@ class debug_bashcomplete_case(unittest.TestCase):
             prefix = os.path.basename(inputargs[0])
             prefix = prefix.replace('\.','_')
         jsonfile,runfile,templatefile,codef,optfile = self.__write_basic_files('output',jsonstr,prefix,valattr.additioncode,valattr.outfile,valattr.extoptions,valattr.releasemode)
+        logging.info('valattr %s'%(valattr))
         line = valattr.line
         if line is None:
             line = ''
@@ -642,7 +647,6 @@ class debug_bashcomplete_case(unittest.TestCase):
                 # we add one in the last
                 line += ' '
         index = valattr.index
-        self.__debug_list(outputlines,'outputlines')
         exptimeout = valattr.timeout
         if exptimeout is None:
             exptimeout = 0.3
@@ -1439,6 +1443,7 @@ def inform_complete(extparser,validx,keycls,params,endwords=''):
         valattr.extoptions=options
         self.__check_completion_output(commandline,['openssl','asn1parse','-'],outputlines,valattr)
         self.__check_bash_completion_output(commandline,['openssl','asn1parse','-'],outputlines,valattr)
+        self.__resultok = True
         return
 
 
@@ -1509,6 +1514,126 @@ def inform_complete(extparser,validx,keycls,params,endwords=''):
         valattr.index = len(valattr.line)
         self.__check_completion_output(commandline,['openssl','asn1parse','-inform'],outputlines,valattr)
         self.__check_bash_completion_output(commandline,['openssl','asn1parse','-inform'],outputlines,valattr)
+        self.__resultok = True
+        return
+
+
+    def test_A015(self):
+        options='''
+        {
+            "longprefix" : "-",
+            "shortprefix" : "-",
+            "nojsonoption" : true,
+            "cmdprefixadded" : false,
+            "flagnochange" : true
+        }
+        '''
+        commandline='''
+        {
+            "asn1parse" : {
+                "$" : 0,
+                "$inform!optparse=inform_optparse;completefunc=inform_complete!" : null,
+                "$in" : null,
+                "$out" : null,
+                "$noout" : false,
+                "$offset" : 0,
+                "$length" : -1,
+                "$dump" : false,
+                "$dlimit" : -1,
+                "$oid" : null,
+                "$strparse" : 0,
+                "$genstr" : null,
+                "$genconf" : null
+            },
+            "ca" : {
+                "$" : 0,
+                "$config" : null,
+                "$name" : null,
+                "$in" : null,
+                "$ss_cert" : null,
+                "$spkac" : null,
+                "$infiles" : null,
+                "$out" : null,
+                "$outdir" : null,
+                "$cert" : null,
+                "$keyfile" : null,
+                "$keyform!optparse=inform_optparse;completefunc=inform_complete!" : null,
+                "$key" : null,
+                "$selfsign" : false,
+                "$passin" : null,
+                "$verbose" : "+",
+                "$notext" : false,
+                "$startdate" : null,
+                "$enddate" : null,
+                "$days" : 30,
+                "$md" : null,
+                "$policy" : null,
+                "$preserveDN" : false,
+                "$msie_hack" : false,
+                "$noemailDN" : false,
+                "$batch" : false,
+                "$extensions" : null,
+                "$extfile" : null,
+                "$engine" : null,
+                "$subj" : null,
+                "$utf8" : false,
+                "$multivalue-rdn" : false,
+                "$gencrl" : false,
+                "$crldays" : 30,
+                "$crlhours" : -1,
+                "$revoke" : null,
+                "$status" : null,
+                "$updatedb" : false,
+                "$crl_reason" : null,
+                "$crl_hold" : null,
+                "$crl_compromise" : null,
+                "$crl_CA_compromise" : null,
+                "$crlexts" : null
+            }
+        }
+        '''
+        valattr = ValueAttr()
+        if 'TEST_RELEASE' in os.environ.keys():
+            valattr.releasemode = True
+        valattr.additioncode='''
+def inform_optparse(extparser,validx,keycls,params,firstcheck):
+    extparser.warn_override(keycls,firstcheck)
+    if validx >= (len(params) -1):
+        # we do not check at the end of the file
+        return 1
+    valueform = params[validx]
+    if valueform != 'der' and valueform != 'pem':
+        message = '[%s'%(keycls.longopt)
+        if keycls.shortflag is not None:
+            message += '|%s'%(keycls.shortopt)
+        message += '] must DER|PEM format'
+        extparser.warn_message(message)
+    if firstcheck:
+        extparser.set_access(keycls)
+    return 1
+
+def inform_complete(extparser,validx,keycls,params,endwords=''):
+    completions = []
+    filtername = ''
+    if len(params) > 0:
+        filtername = params[-1]
+    for c in ['pem','der']:
+        retc = extparser.get_filter_name(c,filtername,endwords)
+        if retc is not None:
+            completions.append(retc)
+    completions = sorted(completions)
+    return completions
+'''
+        valattr.extoptions=options
+        valattr.line = 'openssl ca -'
+        valattr.index = len(valattr.line)
+        outputlines = []
+        outputlines.extend(['-batch' ,'-cert' ,'-config' ,'-crl_CA_compromise' ,'-crl_compromise' ,'-crl_hold' ,'-crl_reason' ,'-crldays' ,'-crlexts','-crlhours' ,'-days' ,'-enddate' ,'-engine' ,'-extensions' ,'-extfile' ,'-gencrl' ,'-help','-in' ,'-infiles' ,'-key' ,'-keyfile' ,'-keyform' ,'-md' ,'-msie_hack' ,'-multivalue-rdn' ,'-name' ,'-noemailDN' ,'-notext' ,'-out' ,'-outdir' ,'-passin' ,'-policy' ,'-preserveDN' ,'-revoke' ,'-selfsign' ,'-spkac' ,'-ss_cert' ,'-startdate' ,'-status' ,'-subj' ,'-updatedb' ,'-utf8' ,'-verbose'])
+        outputlines.extend(['-h'])
+        valattr.tabtimes = 2
+        self.__check_completion_output(commandline,['openssl','ca','-'],outputlines,valattr)
+        self.__check_bash_completion_output(commandline,['openssl','ca','-'],outputlines,valattr)
+        self.__resultok = True
         return
 
 
@@ -1599,6 +1724,35 @@ def set_log_level(args):
     logging.basicConfig(level=loglvl,format='%(asctime)s:%(filename)s:%(funcName)s:%(lineno)d\t%(message)s')
     return
 
+def get_ver_tuple(ver):
+    sarr = re.split('\.',ver)
+    i = 0
+    while i < len(sarr):
+        sarr[i] = int(sarr[i])
+        i += 1
+    return sarr
+
+
+def check_extargs_version(verleast):
+    try:
+        vernum = extargsparse.__version__
+        leasttuple = get_ver_tuple(verleast)
+        vertuple = get_ver_tuple(vernum)
+        ok = True
+        if vertuple[0] < leasttuple[0]:
+            ok = False
+        elif vertuple[0] == leasttuple[0]:
+            if vertuple[1] < leasttuple[1]:
+                ok = False
+            elif vertuple[1] == leasttuple[1]:
+                if vertuple[2] < leasttuple[2]:
+                    ok = False              
+        if not ok :
+            raise Exception('version %s < %s'%(vernum,verleast))
+    except:
+        raise Exception('must at lease %s version of extargsparse'%(verleast))
+    return
+
 
 def main():
     commandline='''
@@ -1611,6 +1765,7 @@ def main():
         "$" : "*"
     }
     '''
+    check_extargs_version('1.0.2')
     parser = extargsparse.ExtArgsParse(None,priority=[])
     parser.load_command_line_string(commandline)
     args = parser.parse_command_line(None,parser)
