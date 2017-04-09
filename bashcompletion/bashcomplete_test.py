@@ -329,8 +329,8 @@ class debug_bashcomplete_case(unittest.TestCase):
         return rets
 
 
-    def __remove_file_safe(self,f=None):
-        if 'TEST_RESERVED' not in os.environ.keys() and f is not None:
+    def __remove_file_safe_ok(self,f=None,ok=True):
+        if ok and f is not None:
             if os.path.exists(f):
                 if os.path.isdir(f):
                     logging.debug('remove %s'%(f))
@@ -341,13 +341,12 @@ class debug_bashcomplete_case(unittest.TestCase):
             else:
                 logging.debug('[%s] not exists'%(f))
         else:
-            logging.debug('not remove [%s]'%(f))
+            logging.error('not remove [%s]'%(f))
         return
 
     def tearDown(self):
-        if 'TEST_RESERVED' not in os.environ.keys() and self.__resultok :
-            for f in self.__tempfiles :
-                self.__remove_file_safe(f)
+        for f in self.__tempfiles:
+            self.__remove_file_safe_ok(f,self.__resultok)
 
         self.__tempfiles = []
         return
