@@ -526,6 +526,7 @@ def format_completion_byname(base_string,name,directory):
     cnffile = os.path.join(directory,'%s.cnf'%(name))
     pyfile = os.path.join(directory,'%s.py'%(name))
     outfile = os.path.join(directory,'%s.completion'%(name))
+    logging.warn('make [%s]'%(name))
     if not os.path.isfile(jsonfile):
         raise Exception('[%s] not exists'%(jsonfile))
     extrastr = ''
@@ -562,7 +563,7 @@ def get_names_ok(directory):
     retnames = []
     if os.path.isdir(directory):
         for f in os.listdir(directory):
-            if f.endswith('\.json'):
+            if f.endswith('.json'):
                 retnames.append(re.sub('\.json$','',f))
     return retnames
 
