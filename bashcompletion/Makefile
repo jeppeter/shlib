@@ -17,11 +17,17 @@ else
 PYTHON_CALL:=${P}
 endif
 
+ifeq (${T},)
+TABTIMES=
+else
+TABTIMES=--tabtimes ${T}
+endif
+
 all:bashcomplete_format.completion
 
 
 bashcomplete_format.completion : bashcomplete_format bashcomplete_test.py
-	$(call call_exec,${PYTHON_CALL} ${CURDIR}/bashcomplete_test.py -v -f --releasemode,"TEST","bashcomplete_format")
+	$(call call_exec,${PYTHON_CALL} ${CURDIR}/bashcomplete_test.py -v -f ${TABTIMES} --releasemode,"TEST","bashcomplete_format")
 	$(call call_exec,${PYTHON_CALL} ${CURDIR}/bashcomplete_format -o $@ selfcomp,"MAKE","bashcomplete_format.completion")
 
 bashcomplete_format:bashcomplete_format_debug.py bashcomplete_format.py.tmpl

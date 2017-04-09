@@ -1073,6 +1073,7 @@ class CompleteExtArgs(extargsparse.ExtArgsParse):
         except:
             # nothing to handle 
             retfiles = []
+        retfiles = sorted(retfiles)
         return retfiles
 
 

@@ -660,6 +660,8 @@ class debug_bashcomplete_case(unittest.TestCase):
         tabtimes = valattr.tabtimes
         if tabtimes is None:
             tabtimes = 1
+        if 'TEST_TABTIMES' in os.environ.keys():
+            tabtimes += int(os.environ['TEST_TABTIMES'])
         curtime = 0
         self.__debug_list(outputlines,'outputlines')
         while curtime < tabtimes:
@@ -743,7 +745,7 @@ class debug_bashcomplete_case(unittest.TestCase):
                         retd.append(ll)
         except:
             pass
-        retd = sorted(retd)        
+        retd = sorted(retd)
         self.__debug_list(retd,'retd')
         logging.debug('retd (%s)'%(retd))
         return retd
@@ -1139,6 +1141,11 @@ class debug_bashcomplete_case(unittest.TestCase):
             valattr.releasemode = True
         valattr.tabtimes = 2
         self.__check_completion_output_add_files(commandline,['bashcomplete_format','-o','ba'],outputlines,'ba',valattr)
+        outputlines = []
+        valattr = ValueAttr()
+        if 'TEST_RELEASE' in os.environ.keys():
+            valattr.releasemode = True
+        valattr.tabtimes = 2
         self.__check_bash_completion_output_add_files(commandline,['bashcomplete_format','-o','ba'],outputlines,'ba',valattr)
         self.__resultok = True
         return
@@ -1301,6 +1308,15 @@ class debug_bashcomplete_case(unittest.TestCase):
         valattr.index = len(valattr.line)
         outputlines.append(_newtempfile)
         self.__check_completion_output(commandline,['bashcomplete_format','-o','%s '%(_tempfile)],outputlines,valattr)
+        valattr = ValueAttr()
+        if 'TEST_RELEASE' in os.environ.keys():
+            valattr.releasemode = True
+        valattr.line = 'bashcomplete_format -o \'%s '%(_tempfile)
+        valattr.index = len(valattr.line)
+        orig_tabtimes = None
+        if 'TEST_TABTIMES' in os.environ.keys():
+            orig_tabtimes = os.environ['TEST_TABTIMES']
+        os.environ['TEST_TABTIMES'] = '0'
         outputlines.remove(_newtempfile)
         # for the handling ,we should make it for the next
         _val = _newtempfile.replace('%s '%(_tempfile),'')
@@ -1308,6 +1324,10 @@ class debug_bashcomplete_case(unittest.TestCase):
         _val += '\' '
         outputlines.append(_val)
         self.__check_bash_completion_output(commandline,['bashcomplete_format','-o','%s '%(_tempfile)],outputlines,valattr)
+        if orig_tabtimes is not None:
+            os.environ['TEST_TABTIMES'] = orig_tabtimes
+        else:
+            del os.environ['TEST_TABTIMES']
         self.__resultok = True
         return
 
@@ -1587,6 +1607,7 @@ def main():
         "failfast|f" : false,
         "reserved|r" : false,
         "releasemode" : false,
+        "tabtimes" : 0,
         "$" : "*"
     }
     '''
@@ -1605,6 +1626,7 @@ def main():
     else:
         if 'TEST_RELEASE' in os.environ.keys():
             del os.environ['TEST_RELEASE']
+    os.environ['TEST_TABTIMES'] = '%d'%(args.tabtimes)
     newargs = []
     newargs.extend(args.args)
     sys.argv[1:]=newargs
