@@ -15,6 +15,7 @@ ORIG_PERLS = dos2unix.pl iscsiinfo.pl replacedir.pl
 
 TEMPLATE_PERLS = basename.pl defval.pl dephandle.pl exename.pl filterop.pl getdep.pl maketarget.pl mountcheck.pl 
 TEMPLATE_PERLS += readlink.pl shortname.pl subpath.pl toobj.pl getsoname.pl reextract.pl
+TEMPLATE_PERLS += mkdirsafe.pl
 
 PERL_FILES =  ${ORIG_PERLS} ${TEMPLATE_PERLS}
 

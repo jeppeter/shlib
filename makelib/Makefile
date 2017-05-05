@@ -50,14 +50,15 @@ basedef.mak:basedef.mak.tmpl ${CURDIR}/VERSION
 
 fileop.mak:fileop.mak.tmpl ${TOPDIR}/perlsrc/readlink.pl ${TOPDIR}/perlsrc/exename.pl  \
 	${TOPDIR}/perlsrc/toobj.pl ${TOPDIR}/perlsrc/filterop.pl ${TOPDIR}/perlsrc/basename.pl ${TOPDIR}/perlsrc/getdep.pl \
-	${TOPDIR}/perlsrc/getsoname.pl
-	$(call call_exec,${MAKE} --no-print-directory -C . check_pl_readlink_mak check_pl_exename_mak check_pl_toobj_mak  check_pl_filterop_mak check_pl_basename_mak check_pl_getdep_mak check_pl_getsoname_mak,"CHECKPL","fileop.mak")
+	${TOPDIR}/perlsrc/getsoname.pl ${TOPDIR}/perlsrc/mkdirsafe.pl
+	$(call call_exec,${MAKE} --no-print-directory -C . check_pl_readlink_mak check_pl_exename_mak check_pl_toobj_mak  check_pl_filterop_mak check_pl_basename_mak check_pl_getdep_mak check_pl_getsoname_mak check_pl_mkdirsafe_mak,"CHECKPL","fileop.mak")
 	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode  -i $< -p '%PERL_READLINK_STR%' makeperl ${TOPDIR}/perlsrc/readlink.pl | \
 			${PYTHON} ${TOPDIR}/insertcode -p '%PERL_EXENAME_STR%' makeperl ${TOPDIR}/perlsrc/exename.pl | \
 			${PYTHON} ${TOPDIR}/insertcode -p '%PERL_TOOBJ_STR%' makeperl ${TOPDIR}/perlsrc/toobj.pl | \
 			${PYTHON} ${TOPDIR}/insertcode -p '%PERL_FILTEROP_STR%' makeperl ${TOPDIR}/perlsrc/filterop.pl | \
 			${PYTHON} ${TOPDIR}/insertcode -p '%PERL_GETDEP_STR%' makeperl ${TOPDIR}/perlsrc/getdep.pl | \
 			${PYTHON} ${TOPDIR}/insertcode -p '%PERL_GETSONAME_STR%' makeperl ${TOPDIR}/perlsrc/getsoname.pl | \
+			${PYTHON} ${TOPDIR}/insertcode -p '%PERL_MKDIR_SAFE%' makeperl ${TOPDIR}/perlsrc/mkdirsafe.pl | \
 			${PYTHON} ${TOPDIR}/insertcode -p '%PERL_BASENAME_STR%' -o $@ makeperl ${TOPDIR}/perlsrc/basename.pl,"MAK","$(@F)")
 
 exec.mak:exec.mak.tmpl ${TOPDIR}/pysrc/osname.py
@@ -87,6 +88,8 @@ check_pl_basename_mak:${TOPDIR}/perlsrc/basename.pl
 check_pl_shortname_mak:${TOPDIR}/perlsrc/shortname.pl
 
 check_pl_defval_mak:${TOPDIR}/perlsrc/defval.pl
+
+check_pl_mkdirsafe_mak:${TOPDIR}/perlsrc/mkdirsafe.pl
 
 check_pl_%_mak:${TOPDIR}/perlsrc/%.pl
 	$(call call_exec,(${PYTHON} ${TOPDIR}/insertcode -i  ${TOPDIR}/echocode_perl.mak.tmpl -p '%REPLACE_PATTERN%' \

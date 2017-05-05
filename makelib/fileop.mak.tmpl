@@ -19,6 +19,10 @@ define get_toobj
 $(shell ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_TOOBJ_STR%\";eval \$$cmd;" --  ${MAKELIB_VERBOSE} --fromdir "$(2)" --todir "$(3)" -- $(1))
 endef
 
+define get_binname
+$(shell ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_TOOBJ_STR%\";eval \$$cmd;" --  ${MAKELIB_VERBOSE} --fromdir "$(2)" --todir "$(3)" -n -- $(1))
+endef
+
 define get_cfile
 $(shell ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_FILTEROP_STR%\";eval \$$cmd;" -- ${MAKELIB_VERBOSE} cfile $(1))
 endef
@@ -49,6 +53,14 @@ endef
 
 define get_soname
 $(shell ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_GETSONAME_STR%\";eval \$$cmd;" -- ${MAKELIB_VERBOSE} --fromdir "$(2)" -- $(1))
+endef
+
+define mkdir_safe_file
+$(shell ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_MKDIR_SAFE%\";eval \$$cmd;" -- ${MAKELIB_VERBOSE} -f -- "$(1)" )
+endef
+
+define mkdir_safe
+$(shell ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_MKDIR_SAFE%\";eval \$$cmd;" -- ${MAKELIB_VERBOSE} -- "$(1)" )
 endef
 
 

@@ -1,0 +1,81 @@
+#! /usr/bin/env perl
+
+use strict;
+use File::Basename;
+use Getopt::Long;
+use File::Path qw(make_path);
+use Data::Dumper;
+
+sub Usage($$)
+{
+	my ($ec,$fmt)=@_;
+	my ($fp)=\*STDERR;
+
+	if ($ec == 0) {
+		$fp =\*STDOUT;
+	}
+
+	if (length($fmt) > 0) {
+		print $fp "$fmt\n";
+	}
+
+	print $fp "$0 [OPTIONS]  [dirs|files]...\n";
+	print $fp "[OPTIONS]\n";
+	print $fp "\t-h|--help               to give this help information\n";
+	print $fp "\t-v|--verbose            to make verbose mode\n";
+	print $fp "\t-f|--file               input mode is file\n";
+	print $fp "\n";
+
+	exit($ec);
+}
+
+my $logo="mkdirsafe";
+
+%COMMON_PL_CODE%
+
+my ($filemode)=0;
+my %opts;
+Getopt::Long::Configure("no_ignorecase","bundling");
+Getopt::Long::GetOptions(\%opts,"help|h",
+	"verbose|v" => sub {
+		if (!defined($opts{"verbose"})) {
+			$opts{"verbose"} = 0;
+		}
+		${opts{"verbose"}} ++;
+	},
+	"file|f");
+
+if (defined($opts{"help"})) {
+	Usage(0,"");
+}
+
+if (defined($opts{"verbose"})) {
+	$verbose = $opts{"verbose"};
+}
+
+if (defined($opts{"file"})){
+	$filemode = 1;
+}
+
+foreach (@ARGV) {
+	my ($c) = $_;
+	my ($d) = $c;
+	my ($err)=0;
+	my @created;
+
+	if ($filemode > 0) {
+		$d = dirname($c);
+	}
+
+	if ( -d "$d") {
+		# we do not create this directory already
+		next;
+	}
+
+	@created = make_path($d,{error => \$err});
+	if (scalar(@{$err}) > 0) {
+		Error("can not make_path [$d] error ".Dumper($err));
+		exit(3);
+	}
+	Debug("mkdir [$d] succ");
+}

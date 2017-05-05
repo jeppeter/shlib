@@ -20,6 +20,18 @@ sub Debug($)
 	}
 }
 
+sub Error($)
+{
+	my ($fmt)=@_;
+	my ($fmtstr)="$logo ";
+	if ($verbose >= 3) {
+		my ($p,$f,$l) = caller;
+		$fmtstr .= "[$f:$l] ";
+	}
+	$fmtstr .= $fmt;
+	print STDERR "$fmtstr\n";
+}
+
 sub FinalOutput($)
 {
 	my ($output) = @_;

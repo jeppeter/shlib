@@ -22,6 +22,7 @@ sub Usage($$)
 	print $fp "\t-v|--verbose            to make verbose mode\n";
 	print $fp "\t-f|--fromdir [fromdir]  to fromdir\n";
 	print $fp "\t-t|--todir   [todir]    to todir\n";
+	print $fp "\t-n|--noendreplace       to not replace ending\n";
 	print $fp "\n";
 	print $fp "\t[files]                 if will give object\n";
 
@@ -34,6 +35,7 @@ my $logo = "toobj";
 
 my %opts;
 my ($fromdir,$todir);
+my ($endreplace)=1;
 $fromdir="";
 $todir="";
 Getopt::Long::Configure("no_ignorecase","bundling");
@@ -45,7 +47,8 @@ Getopt::Long::GetOptions(\%opts,"help|h",
 		${opts{"verbose"}} ++;
 	},
 	"todir|t=s",
-	"fromdir|f=s");
+	"fromdir|f=s",
+	"noendreplace|n");
 
 if (defined($opts{"help"})) {
 	Usage(0,"");
@@ -57,22 +60,31 @@ if (defined($opts{"verbose"})) {
 
 if (defined($opts{"fromdir"})) {
 	$fromdir=$opts{"fromdir"};
+	$fromdir=GetFullPath($fromdir);
 }
 
 if (defined($opts{"todir"})) {
 	$todir = $opts{"todir"};
+	$todir = GetFullPath($todir);
+}
+
+if (defined($opts{"noendreplace"})) {
+	$endreplace = 0;
 }
 
 my ($cnt)=0;
 foreach(@ARGV) {
 	my ($c) = $_;
 
+	Debug("fromdir [$fromdir] todir [$todir]");
 	if (length($fromdir) > 0 && length($todir) > 0) {
 		$c = GetFullPath($c);
 		$c =~ s/^$fromdir/$todir/;
 	}
 
-	$c =~ s/\.[cS](pp)?$/.o/;
+	if ($endreplace > 0) {
+		$c =~ s/\.[cS](pp)?$/.o/;
+	}
 	Debug("[$c]");
 	if ($cnt > 0){
 		print " ";
