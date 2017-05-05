@@ -56,7 +56,7 @@ $(shell ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_GETSONAME_STR%\";eval \$$cmd;
 endef
 
 define mkdir_safe_file
-$(shell ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_MKDIR_SAFE%\";eval \$$cmd;" -- ${MAKELIB_VERBOSE} -f -- "$(1)" )
+$(shell ${PERL} -e "use strict;my (\$$cmd)=\"%PERL_MKDIR_SAFE%\";eval \$$cmd;" -- ${MAKELIB_VERBOSE} -f -- "$(1)")
 endef
 
 define mkdir_safe

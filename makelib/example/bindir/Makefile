@@ -12,7 +12,8 @@ endif
 
 
 main_SRCS:= a.c main.c c.link.c
-main_BINDIR:=${TOPDIR}/bin
+main_BINDIR:=${TOPDIR}
+main_BASEDIR:=${TOPDIR}
 
 c_link_c_SRC:= cl.c
 main_CFLAGS := -Wall -I${TOPDIR}/inc
@@ -22,7 +23,7 @@ CFLAGS += -I${TOPDIR}/inc
 main_LDFLAGS:= -Wall
 MAKEDEPS += ${TOPDIR}/Makefile
 
-all:main${exesuffix}
+all:${main_BINDIR}/main${exesuffix}
 
 $(eval $(call simple_makefile_exe_whole,main${exesuffix}))
 
