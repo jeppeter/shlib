@@ -11,14 +11,16 @@ exesuffix:=
 endif
 
 
-main_SRCS:= a.c main.c c.link.c
+main_SRCS:= a.c main.c c.link.c ia.S ib.link.S ca.cpp cb.link.cpp
 main_BINDIR:=${TOPDIR}/bin
 main_BASEDIR:=${TOPDIR}
 
+ib_link_S_SRC:=ib.S
 c_link_c_SRC:= cl.c
+cb_link_cpp_SRC:=cb.cpp
 main_CFLAGS := -Wall -I${TOPDIR}/inc
-main_GCC:=${GCC}
-main_LD:=${GCC}
+main_GCC:=${GPP}
+main_LD:=${GPP}
 CFLAGS += -I${TOPDIR}/inc
 main_LDFLAGS:= -Wall
 MAKEDEPS += ${TOPDIR}/Makefile

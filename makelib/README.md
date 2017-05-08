@@ -185,6 +185,9 @@ clean:clean_post_setjjk clean_main
 └── setjjk
 ```
 
+### BIN directory
+> you can specified \_BINDIR to make the compiled file into the other directory
+
 ### HOWTO Compile
 > just goto makelib directory and make all the result file is makelib.lib
 
