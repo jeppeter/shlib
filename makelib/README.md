@@ -187,6 +187,105 @@ clean:clean_post_setjjk clean_main
 
 ### BIN directory
 > you can specified \_BINDIR to make the compiled file into the other directory
+> for example directory
+
+```shell
+.
+├── a.c
+├── ca.cpp
+├── cb.cpp
+├── cl.c
+├── ia.S
+├── ib.S
+├── inc
+│   ├── a.h
+│   ├── b.h
+│   ├── c.h
+│   ├── ca.h
+│   ├── cb.h
+│   ├── ia.h
+│   └── ib.h
+├── main.c
+└── Makefile
+``` 
+
+```Makefile
+include ../../makelib.mak
+
+TOPDIR:=$(call readlink_f,.)
+
+osname:=$(call get_osname)
+
+ifneq ($(patsubst cygwin_%,%,${osname}),${osname})
+exesuffix:=.exe
+else
+exesuffix:=
+endif
+
+
+main_SRCS:= a.c main.c c.link.c ia.S ib.link.S ca.cpp cb.link.cpp
+main_BINDIR:=${TOPDIR}/bin
+main_BASEDIR:=${TOPDIR}
+
+ib_link_S_SRC:=ib.S
+c_link_c_SRC:= cl.c
+cb_link_cpp_SRC:=cb.cpp
+main_CFLAGS := -Wall -I${TOPDIR}/inc
+main_GCC:=${GPP}
+main_LD:=${GPP}
+CFLAGS += -I${TOPDIR}/inc
+main_LDFLAGS:= -Wall
+MAKEDEPS += ${TOPDIR}/Makefile
+
+all:${main_BINDIR}/main${exesuffix}
+
+$(eval $(call simple_makefile_exe_whole,main${exesuffix}))
+
+clean:clean_main
+  $(call call_exec,${RM} -rf ${main_BINDIR},"RM","bin")
+```
+
+> running make  result
+```shell
+.
+├── a.c
+├── bin
+│   ├── a.c.d
+│   ├── a.o
+│   ├── c.link.c.d
+│   ├── c.link.o
+│   ├── ca.cpp.d
+│   ├── ca.o
+│   ├── cb.link.cpp.d
+│   ├── cb.link.o
+│   ├── ia.o
+│   ├── ia.S.d
+│   ├── ib.link.o
+│   ├── ib.link.S.d
+│   ├── main.c.d
+│   ├── main.exe
+│   └── main.o
+├── c.link.c -> cl.c
+├── ca.cpp
+├── cb.cpp
+├── cb.link.cpp -> cb.cpp
+├── cl.c
+├── ia.S
+├── ib.link.S -> ib.S
+├── ib.S
+├── inc
+│   ├── a.h
+│   ├── b.h
+│   ├── c.h
+│   ├── ca.h
+│   ├── cb.h
+│   ├── ia.h
+│   └── ib.h
+├── main.c
+└── Makefile
+```
+
+> Notice ,the \_BASEDIR and \_BINDIR will give the compiled file in the \_BINDIR
 
 ### HOWTO Compile
 > just goto makelib directory and make all the result file is makelib.lib

@@ -3,6 +3,8 @@
 #include <c.h>
 #include <ia.h>
 #include <ib.h>
+#include <ca.h>
+#include <cb.h>
 
 int main(int argc,char* argv[])
 {
@@ -11,5 +13,7 @@ int main(int argc,char* argv[])
 	c_func();
 	ia_func();
 	ib_func();
+	ca_func();
+	cb_func();
 	return 0;
 }

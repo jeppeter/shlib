@@ -1,5 +1,5 @@
 
-.globl _ia_print
+.globl ia_func
 
-_ia_print:
+ia_func:
 	ret

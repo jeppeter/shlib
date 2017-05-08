@@ -1,5 +1,5 @@
 
-.globl _ib_print
+.globl ib_func
 
-_ib_print:
+ib_func:
 	ret
