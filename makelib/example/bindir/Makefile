@@ -12,7 +12,7 @@ endif
 
 
 main_SRCS:= a.c main.c c.link.c
-main_BINDIR:=${TOPDIR}
+main_BINDIR:=${TOPDIR}/bin
 main_BASEDIR:=${TOPDIR}
 
 c_link_c_SRC:= cl.c
@@ -28,3 +28,4 @@ all:${main_BINDIR}/main${exesuffix}
 $(eval $(call simple_makefile_exe_whole,main${exesuffix}))
 
 clean:clean_main
+	$(call call_exec,${RM} -rf ${main_BINDIR},"RM","bin")
