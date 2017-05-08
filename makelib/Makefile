@@ -25,7 +25,6 @@ TEMPLATE_MAKS = basedef.mak  fileop.mak varop.mak depop.mak makelib.mak exec.mak
 include ${TOPDIR}/basedef.mak
 
 
-
 remake:
 	$(call call_exec,${MAKE} --no-print-directory -C ${CURDIR} -f $(firstword ${MAKEFILE_LIST}) clean,"REMAKE","CLEAN")
 	$(call call_exec,${MAKE} --no-print-directory -C ${CURDIR} -f $(firstword ${MAKEFILE_LIST}) all,"REMAKE","ALL")
@@ -68,6 +67,7 @@ exec.mak:exec.mak.tmpl ${TOPDIR}/pysrc/osname.py
 varop.mak:varop.mak.tmpl ${TOPDIR}/perlsrc/shortname.pl ${TOPDIR}/perlsrc/defval.pl
 	$(call call_exec,${MAKE} --no-print-directory -C . check_pl_shortname_mak check_pl_defval_mak,"CHECKPL","varop.mak")
 	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode -i $< -p '%PERL_SHORTNAME_STR%'  makeperl ${TOPDIR}/perlsrc/shortname.pl | \
+		${PYTHON} ${TOPDIR}/insertcode -p '%MAKELIB_VERSION%' bashstring ${CURDIR}/VERSION | \
 		${PYTHON} ${TOPDIR}/insertcode -p '%PERL_DEFVAL_STR%' -o $@ makeperl ${TOPDIR}/perlsrc/defval.pl,"MAK","$(@F)")
 
 

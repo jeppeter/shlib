@@ -95,6 +95,7 @@ class debug_testmak_case(unittest.TestCase):
         s += self.__format_varaible_echo('LN',echobin)
         s += self.__format_varaible_echo('TRUE',echobin)
         s += self.__format_varaible_echo('TOUCH',echobin)
+        s += self.__format_varaible_echo('MAKELIB_VERSION',echobin)
         return s
 
     def __write_file(self,s,f):
@@ -218,6 +219,13 @@ class debug_testmak_case(unittest.TestCase):
             makelibdir = os.environ['MAKELIB_DIR']
         return makelibdir
 
+    def __get_makelib_version(self):
+        versionfile = os.path.join(os.path.dirname(__file__),'VERSION')
+        version = ''
+        with open(versionfile,'r') as fin:
+            version = fin.readline().rstrip('\r\n')
+        return version
+
     def test_001_basedef_case(self):
         testf=None
         osname = platform.uname()[0].lower()
@@ -256,6 +264,11 @@ class debug_testmak_case(unittest.TestCase):
             self.assertEqual(idx,self.__check_which_bin('true',outsarr))
             idx += 1
             self.assertEqual(idx,self.__check_which_bin('touch',outsarr))
+            idx += 1
+            version = self.__get_makelib_version()
+            version = 'MAKELIB_VERSION %s'%(version)
+            logging.info('version %s'%(version))
+            self.assertEqual(idx,self.__check_str_value(outsarr,version))
         finally:
             self.__remove_file_safe(testf)
         return

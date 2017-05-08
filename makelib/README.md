@@ -3,6 +3,7 @@
 
 
 ### Release History
+* May 9th 2017 Release 0.1.4 for bindir test ok in makelib
 * Feb 24th 2017 Release 0.1.2 for transport to osx and cygwin system
 * Feb 16th 2017 Release 0.1.0 for first usable version
 
