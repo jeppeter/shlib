@@ -46,7 +46,7 @@ MAKEDEPS += ${TOPDIR}/Makefile
 #ipxeload_elf_GPP = ${TOPDIR}/gpp.sh
 #ipxeload_elf_GAS = ${TOPDIR}/gas.sh
 
-all:post_ipxeload_elf main${exesuffix}
+all:post_ipxeload_elf ${TOPDIR}/main${exesuffix}
 #$(call call_all_exe,ipxeload_elf main)
 
 post_ipxeload_elf: ${TOPDIR}/ipxeload.elf${exesuffix}
@@ -64,7 +64,7 @@ clean_post_ipxeload_elf:clean_ipxeload_elf
 keygen.c:
 	$(call call_exec,${TOUCH} $@,"TOUCH","keygen.c")
 
-$(eval $(call simple_makefile_exe_whole,${TOPDIR}/ipxeload.elf${exesuffix} main${exesuffix}))
+$(eval $(call simple_makefile_exe_whole,${TOPDIR}/ipxeload.elf${exesuffix} ${TOPDIR}/main${exesuffix}))
 #$(call foreach_makefile_exe_whole,ipxeload_elf main)
 
 clean:clean_post_ipxeload_elf clean_main

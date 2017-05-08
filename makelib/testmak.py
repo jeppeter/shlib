@@ -100,7 +100,10 @@ class debug_testmak_case(unittest.TestCase):
     def __write_file(self,s,f):
         #logging.debug('write [%s] <<<EOF\n%s\nEOF'%(f,s))
         with open(f,'w+b') as fout:
-            fout.write('%s'%(s))
+            if sys.version[0] == '2':
+                fout.write('%s'%(s))
+            else:
+                fout.write(s.encode(encoding='UTF-8'))
         return f
 
 
@@ -128,7 +131,7 @@ class debug_testmak_case(unittest.TestCase):
             else:
                 stderrpipe = open(os.devnull,'w')
         logging.debug('run (%s)'%(cmds))
-        logging.debug('PATH [%s]'%(os.environ['PATH']))
+        #logging.debug('PATH [%s]'%(os.environ['PATH']))
         retcode = cmdpack.run_command_callback(cmds,read_callback,self,stdoutpipe,stderrpipe)
         self.assertEqual(retcode,0)
         logging.debug('output (%s)'%(self.__output))
@@ -434,8 +437,16 @@ class debug_testmak_case(unittest.TestCase):
                 s = s[1:]
         return s
 
+    def __get_exe_shortname(self,exename):
+        retexe = os.path.basename(exename)
+        if len(retexe) == 0:
+            retexe = exename
+        retexe = re.sub('\.exe$','',retexe)
+        return retexe
 
-    def __format_depop_make(self,makelibdir,basedir,cfilelist,Sfilelist,linkcfiles=None,linksfiles=None,mainexe='main',cflagname='CFLAGS',sflagname='ASMFLAG',ldflagname='LDFLAGS',includedir=[],definemacros=None,filespec=None):
+
+
+    def __format_depop_make(self,makelibdir,basedir,cfilelist,Sfilelist,linkcfiles=None,linksfiles=None,mainexe='main',cflagname='CFLAGS',sflagname='ASMFLAG',ldflagname='LDFLAGS',includedir=[],definemacros=None,filespec=None,bindir=None):
         s = ''
         s += self.__format_make_common('include %s'%(os.path.join(makelibdir,'basedef.mak')))
         s += self.__format_make_common('include %s'%(os.path.join(makelibdir,'varop.mak')))
@@ -444,6 +455,9 @@ class debug_testmak_case(unittest.TestCase):
         s += self.__format_make_common('include %s'%(os.path.join(makelibdir,'depop.mak')))
         s += self.__format_make_common('')
         s += self.__format_make_common('CURDIR:=$(call readlink_f,.)')
+        if bindir is not None:
+            s += self.__format_make_common('%s_BINDIR:=%s'%(self.__get_exe_shortname(mainexe),bindir))
+            s += self.__format_make_common('%s_BASEDIR:=%s'%(self.__get_exe_shortname(mainexe),basedir))
         rets = 'c_srcs_basic ='
         s += self.__format_make_common('%s'%(rets))
         if len(cfilelist) > 0:
@@ -642,9 +656,14 @@ class debug_testmak_case(unittest.TestCase):
         else:
             rn = 0
         includes = []
+        kfiles = allfiles
+        if sys.version[0] != '2':
+            kfiles = []
+            for k in allfiles:
+                kfiles.append(k)
         if rn > 0 :
             while len(includes) < rn:
-                curfile = random.choice(allfiles)
+                curfile = random.choice(kfiles)
                 if curfile not in includes:
                     includes.append(curfile)
         return includes
@@ -719,6 +738,11 @@ class debug_testmak_case(unittest.TestCase):
             linkdir = os.path.join(basedir,'link')
         curdir = linkdir
         maxlink = self.__get_random_max(self.__get_use_max_cnt(),self.__get_use_min_cnt())
+        kfiles = cfiles
+        if sys.version[0] != '2':
+            kfiles = []
+            for k in cfiles:
+                        kfiles.append(k)
         while len(linked.keys()) < maxlink:
             rn = self.__get_random_max(20)
             if rn == 0:
@@ -734,10 +758,10 @@ class debug_testmak_case(unittest.TestCase):
                         # nothing to make
                         os.remove(curfile)
                         break
-                    cursrc = random.choice(cfiles)
+                    cursrc = random.choice(kfiles)
                     linked[curfile] = cursrc
                     logging.debug('[%s] linked [%s]'%(curfile,cursrc))
-                    cfiles.remove(cursrc)
+                    kfiles.remove(cursrc)
                     os.remove(curfile)
         return linked
 
@@ -749,6 +773,11 @@ class debug_testmak_case(unittest.TestCase):
             linkdir = os.path.join(basedir,'linkS')
         curdir = linkdir
         maxlink = self.__get_random_max(self.__get_use_max_cnt(),self.__get_use_min_cnt())
+        kfiles = sfiles
+        if sys.version[0] != '2':
+            kfiles = []
+            for k in sfiles:
+                kfiles.append(k)
         while len(linked.keys()) < maxlink:
             rn = self.__get_random_max(20)
             if rn == 0:
@@ -760,14 +789,14 @@ class debug_testmak_case(unittest.TestCase):
             else:
                 curfile = make_tempfile(curdir,'.S')
                 if curfile not in linked.keys():
-                    if (len(sfiles) == 0):
+                    if (len(kfiles) == 0):
                         # nothing to make
                         os.remove(curfile)
                         break
-                    cursrc = random.choice(sfiles)
+                    cursrc = random.choice(kfiles)
                     linked[curfile] = cursrc
                     logging.debug('[%s] linked [%s]'%(curfile,cursrc))
-                    sfiles.remove(cursrc)
+                    kfiles.remove(cursrc)
                     os.remove(curfile)
         return linked
 
@@ -1202,7 +1231,140 @@ class debug_testmak_case(unittest.TestCase):
             self.__remove_file_safe(basedir)
         return
 
-    def test_006_makelib_case(self):
+    def test_006_depop_case(self):
+        random.seed(time.time())
+        basedir = None
+        longname = None
+        osname = platform.uname()[0].lower()
+        try:
+            basedir = make_tempdir()
+            headdir = make_tempdir(basedir)
+            cdir = make_tempdir(basedir)
+            linkdir = make_tempdir(basedir)
+            sdir = make_tempdir(basedir)
+            linksdir = make_tempdir(basedir)
+            headerfiles = self.__make_headers(headdir)
+            bindir = make_tempdir(basedir)
+            longname = make_tempfile(bindir)
+            mainexe = longname
+            cfiles = self.__make_c_files(mainexe,basedir,headerfiles.keys(),headdir,cdir)
+            linkcfiles = self.__make_link_c_files(basedir,cfiles.keys(),cdir,linkdir)
+            sfiles = self.__make_S_files(basedir,headerfiles.keys(),headdir,sdir)
+            linksfiles = self.__make_link_S_files(basedir,sfiles.keys(),sdir,linksdir)
+            makelibdir = self.__get_makelib_dir()
+            sortedcfiles = sorted(cfiles.keys())
+            sortedsfiles = sorted(sfiles.keys())
+            sortedhfiles = sorted(headerfiles.keys())
+            sortedsfiles = sorted(sfiles.keys())
+            for k in linkcfiles.keys():
+                linksrc = linkcfiles[k]
+                if linksrc in sortedcfiles:
+                    sortedcfiles.remove(linksrc)
+            for k in linksfiles.keys():
+                linksrc = linksfiles[k]
+                if linksrc in sortedsfiles:
+                    sortedsfiles.remove(linksrc)
+            s = self.__format_depop_make(makelibdir,basedir,sortedcfiles,sortedsfiles,linkcfiles,linksfiles,mainexe,'CFLAGS','ASMFLAG','LDFLAGS',includedir=[headdir],bindir=bindir)
+            makefile = os.path.join(basedir,'Makefile')
+            self.__write_file(s,makefile)
+            # we remove the file 
+            os.remove(longname)
+            outsarr = self.__run_make(makefile,'all')
+            # now we should get the output for handle
+            curidx = 0
+            curidx = self.__check_link_S_files_link_deps(outsarr,curidx,linksfiles)
+            curidx = self.__check_S_files_deps(outsarr,curidx,sortedsfiles)
+            curidx = self.__check_link_c_files_link_deps(outsarr,curidx,linkcfiles)
+            curidx = self.__check_c_files_deps(outsarr,curidx,sortedcfiles)
+            curidx = self.__check_c_files_cc(outsarr,curidx,sortedcfiles)
+            curidx = self.__check_S_files_cc(outsarr,curidx,sortedsfiles)
+            curidx = self.__check_link_c_files_cc(outsarr,curidx,linkcfiles)
+            curidx = self.__check_link_S_files_cc(outsarr,curidx,linksfiles)
+            curidx = self.__check_ld_main(outsarr,curidx,mainexe)
+            outsarr = self.__run_make(makefile,'all')
+            # nothing to do any more
+            self.assertEqual(1,len(outsarr))
+            matchexpr = re.compile('^make(\[\d+\])?:')
+            ok = False
+            if matchexpr.match(outsarr[0]):
+                ok = True
+            else:
+                logging.error('outsarr (%s)'%(self.__get_array(outsarr)))
+            self.assertEqual(ok,True)
+            # now we should test for part change
+            touchincs,touchcs,touchss = self.select_touch_files(sortedhfiles,sortedcfiles,sortedsfiles,linkcfiles,linksfiles)
+            logging.debug('touchincs (%s)'%(self.__get_array(touchincs)))
+            logging.debug('touchcs (%s)'%(self.__get_array(touchcs)))
+            logging.debug('touchss (%s)'%(self.__get_array(touchss)))
+            touchincs = self.make_header_expand(headerfiles,touchincs)          
+            checkc = self.__get_affected_cfiles(cfiles,touchincs,sortedcfiles)
+
+            checks = self.__get_affected_sfiles(sfiles,touchincs,sortedsfiles)
+
+            allcfiles = []
+            for c in touchcs:
+                allcfiles.append(c)
+            allcfiles.extend(checkc)
+            allcfiles = self.sorted_and_uniq(allcfiles)
+            affectlc = self.__get_affected_linkcfiles(linkcfiles,allcfiles,cfiles,touchincs)
+
+            affectlc = self.sorted_and_uniq(affectlc)
+            checkc = self.sorted_and_uniq(checkc)
+
+            checks = self.sorted_and_uniq(checks)
+            allsfiles = []
+            for c in touchss:
+                allsfiles.append(c)
+            allsfiles.extend(checks)
+            affectls = self.__get_affected_linksfiles(linksfiles,allsfiles,sfiles,touchincs)
+
+            affectls = self.sorted_and_uniq(affectls)
+
+
+            logging.debug('touchincs (%s)'%(self.__get_array(touchincs)))
+            logging.debug('touchcs (%s)'%(self.__get_array(touchcs)))
+            logging.debug('touchss (%s)'%(self.__get_array(touchss)))
+            logging.debug('checkc (%s)'%(self.__get_array(checkc)))
+            logging.debug('checks (%s)'%(self.__get_array(checks)))
+            logging.debug('affectlc (%s)'%(self.__get_array(affectlc)))
+            logging.debug('affectls (%s)'%(self.__get_array(affectls)))
+            # now we should make the affected to handle change
+            outsarr = self.__run_make(makefile,'all')
+            curidx = 0
+            curidx = self.__check_link_S_files_link_deps(outsarr,curidx,linksfiles,affectls)
+            curidx = self.__check_S_files_deps(outsarr,curidx,checks)
+            curidx = self.__check_link_c_files_link_deps(outsarr,curidx,linkcfiles,affectlc)
+            curidx = self.__check_c_files_deps(outsarr,curidx,checkc)
+
+            compilec = checkc
+            for c in touchcs:
+                if c in sortedcfiles:
+                    compilec.append(c)          
+
+            compilec = self.sorted_and_uniq(compilec)
+            logging.debug('compilec (%s)'%(self.__get_array(compilec)))
+
+            curidx = self.__check_c_files_cc(outsarr,curidx,compilec)
+
+            compiles = checks
+            logging.debug('compiles (%s)'%(self.__get_array(compiles)))
+            for c in touchss:
+                if c in sortedsfiles:
+                    logging.debug('add[%s]'%(c))
+                    compiles.append(c)
+            compiles = self.sorted_and_uniq(compiles)
+            logging.debug('compiles (%s)'%(self.__get_array(compiles)))
+            curidx = self.__check_S_files_cc(outsarr,curidx,compiles)
+            curidx = self.__check_link_c_files_cc(outsarr,curidx,linkcfiles,affectlc)
+            curidx = self.__check_link_S_files_cc(outsarr,curidx,linksfiles,affectls)
+            if len(affectls) > 0 or len(affectlc) > 0 or len(compiles) > 0 or len(compilec) > 0:
+                curidx = self.__check_ld_main(outsarr,curidx,mainexe)
+        finally:
+            self.__remove_file_safe(basedir)
+        return
+
+
+    def test_007_makelib_case(self):
         makelibdir = self.__get_makelib_dir()
         exampledir = os.path.join(makelibdir,'example')
         for root,dirs,files in os.walk(exampledir):
@@ -1227,6 +1389,8 @@ def set_log_level(args):
     elif args.verbose >= 1 :
         loglvl = logging.WARN
     # we delete old handlers ,and set new handler
+    if logging.root is not None and len(logging.root.handlers) > 0:
+        logging.root.handlers = []
     logging.basicConfig(level=loglvl,format='%(asctime)s:%(filename)s:%(funcName)s:%(lineno)d\t%(message)s')
     return
 
