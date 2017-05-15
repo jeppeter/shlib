@@ -34,5 +34,8 @@ check_%_py:${TOPDIR}/pysrc/%.py
 check_%_pl:${TOPDIR}/perlsrc/%.pl
 	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode -i ${TOPDIR}/echocode.tmpl bashstring $< | ${BASH} | ${DIFF} - $<,"CHECK","$(<F)")
 
+${TOPDIR}/perlsrc/%.pl:
+	$(call call_exec,${MAKE} --no-print-directory -C ${TOPDIR}/perlsrc all,"MAKE","PL")
+
 clean:
 	$(call call_exec,rm -f mkcode *.tmp,"RM","mkcode *.tmp")

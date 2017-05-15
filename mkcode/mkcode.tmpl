@@ -30,37 +30,48 @@ EOFMM
 function make_header()
 {
 	local _f="$1"
+	local _outf="$2"
 	local _basename=`${PERL} -e "$PERL_BASE_NAME" "$_f"`
 	local _postfix=`dd if=/dev/urandom bs=100 count=1 2>/dev/null | python -c "$PYTHON_MD5_STR" | awk '{print $1}' | tr [:lower:] [:upper:]`
 	local _h=`echo -n "${_basename}" | tr . _ | tr [:lower:] [:upper:] `
 	local _defcode="__${_h}_${_postfix}__"
+	if [ -z "$_outf" ]
+		then
+		_outf=$_f
+	fi
 	Debug "_basename ${_basename} _h ${_h} _defcode ${_defcode} _postfix ${_postfix}"
-	echo "#ifndef ${_defcode}" > "$_f"
-	echo "#define ${_defcode}" >> "$_f"
-	echo "" >> "$_f"
-	echo "#endif /* ${_defcode} */" >> "$_f"
+	echo "#ifndef ${_defcode}" > "$_outf"
+	echo "#define ${_defcode}" >> "$_outf"
+	echo "" >> "$_outf"
+	echo "#endif /* ${_defcode} */" >> "$_outf"
 	return
 }
 
 function make_make_header()
 {
 	local _f="$1"
+	local _outf="$2"
 	local _basename=`${PERL} -e "$PERL_BASE_NAME" "$_f"`
 	local _postfix=`dd if=/dev/urandom bs=100 count=1 2>/dev/null | md5sum | awk '{print $1}' | tr [:lower:] [:upper:]`
 	local _h=`echo -n "${_basename}" | tr . _ | tr [:lower:] [:upper:] `
 	local _defcode="__${_h}_${_postfix}__"
+	if [ -z "$_outf" ]
+		then
+		_outf=$_f
+	fi
 	Debug "_basename ${_basename} _h ${_h} _defcode ${_defcode} _postfix ${_postfix}"
 	echo "ifndef ${_defcode}" > "$_f"
-	echo "${_defcode}:=1" >> "$_f"
-	echo "" >> "$_f"
-	echo "## ${_defcode} ##" >> "$_f"
-	echo "endif" >> "$_f"
+	echo "${_defcode}:=1" >> "$_outf"
+	echo "" >> "$_outf"
+	echo "## ${_defcode} ##" >> "$_outf"
+	echo "endif" >> "$_outf"
 	return
 }
 
 read -r -d '' OPTIONS<<EOFMM
 	{
-		"verbose|v" : "+",		
+		"verbose|v" : "+",
+		"stdout|c##to set stdout##" : false,
 		"header<subcommand>" : {
 			"\$<headers>" : "+"
 		},
@@ -76,13 +87,23 @@ if [ "$subcommand" = "header" ]
 	then
 	for curfile in ${headers[@]}
 	do
-		make_header "$curfile"
+		if [ $stdout -ne 0 ]
+			then
+			make_header "$curfile" /dev/stdout
+		else
+			make_header "$curfile"
+		fi
 	done
 elif [ "$subcommand" = "mkheader" ]
 	then
 	for curfile in ${makeheaders[@]}
 	do
-		make_make_header "$curfile"
+		if [ $stdout -ne 0 ]
+			then
+			make_make_header "$curfile" /dev/stdout
+		else
+			make_make_header "$curfile"
+		fi
 	done
 else
 	ErrorExit 4 "not support subcommand [$subcommand]"
