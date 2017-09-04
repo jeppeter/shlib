@@ -30,6 +30,9 @@ def __get_bash_string_file(infile):
                     curs += '$'
                 elif c == '\\':
                     curs += '\\\\'
+                elif c == '`':
+                    curs += '\\'
+                    curs += '`'
                 else:
                     curs += c
             s += curs
