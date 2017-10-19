@@ -27,6 +27,22 @@ read -r -d '' PERL_BASE_NAME<<EOFMM
 %PERL_BASE_NAME%
 EOFMM
 
+
+read -r -d '' OPTIONS<<EOFMM
+	{
+		"verbose|v" : "+",
+		"stdout|c##to set stdout##" : false,
+		"externdecl|E##to make cpp file with extern##" : false,
+		"header<subcommand>" : {
+			"\$<headers>" : "+"
+		},
+		"mkheader<subcommand>" : {
+			"\$<makeheaders>" : "+"
+		}
+	}
+EOFMM
+
+
 function make_header()
 {
 	local _f="$1"
@@ -43,6 +59,23 @@ function make_header()
 	echo "#ifndef ${_defcode}" > "$_outf"
 	echo "#define ${_defcode}" >> "$_outf"
 	echo "" >> "$_outf"
+
+	if [ $externdecl -gt 0 ]
+		then
+		echo '#ifdef __cplusplus' >> $_outf
+		echo 'extern "C" {' >> $_outf
+		echo '#endif /* __cplusplus*/' >> $_outf
+
+		echo '' >> $_outf
+		echo '' >> $_outf
+
+		echo '#ifdef __cplusplus' >> $_outf
+		echo '};' >> $_outf
+		echo '#endif /* __cplusplus*/' >> $_outf
+
+		echo '' >> $_outf
+	fi
+
 	echo "#endif /* ${_defcode} */" >> "$_outf"
 	return
 }
@@ -68,18 +101,6 @@ function make_make_header()
 	return
 }
 
-read -r -d '' OPTIONS<<EOFMM
-	{
-		"verbose|v" : "+",
-		"stdout|c##to set stdout##" : false,
-		"header<subcommand>" : {
-			"\$<headers>" : "+"
-		},
-		"mkheader<subcommand>" : {
-			"\$<makeheaders>" : "+"
-		}
-	}
-EOFMM
 
 parse_command_line "$OPTIONS" "$@"
 
