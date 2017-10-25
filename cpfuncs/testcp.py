@@ -472,47 +472,42 @@ class debug_testcp_case(unittest.TestCase):
 			self.__cpout_sub()
 		return
 
-	def __cpout_subdir(self):
+	def __cpout_subdir_notexists(self):
 		# now first to make the dir to remove
 		fromdir = os.environ['CP_SMB_DIR']
 		todir = os.environ['CP_TO_DIR']
-		# now we make file
-		filenum = random.randint(20,200)
-		files = self.random_make_subs(todir,filenum)
-		files = sorted(files,reverse=True)
 		# now we should make .git file
 		# we should make this ok
 		make_dir_safe(os.path.join(todir,'.git'))
 		make_dir_safe(os.path.join(fromdir,'.git'))
-		logging.info('create on [%s] filenum[%d]'%(todir,filenum))
-		tofile = None
-		for f in files:
-			if os.path.isfile(f):
-				logging.info('f [%s] todir [%s]'%(f,todir))
-				self.cpout_call(todir,f)
-		# now we should check 
-		for f in files:
-			if os.path.isfile(f):
-				tofile = f
-				basetodir = os.path.basename(todir)
-				relpath = self.get_relpath(todir,tofile)
-				fromfile = os.path.join(fromdir,basetodir,relpath)
-				logging.info('todir[%s]basetodir[%s]tofile[%s]relpath[%s]fromfile[%s]'%(todir,basetodir,tofile,relpath,fromfile))
-				chkfile = CheckFiles(True)
-				retval = chkfile.check_file_same(tofile,fromfile)
-				self.assertEqual(retval,True)
+
+				# now we make file
+		filenum = random.randint(0,5)
+		tomakedir = make_tempdir(todir)
+		for i in range(filenum):
+			tomakedir = make_tempdir(tomakedir)
+
+		tofile = make_tempfile(tomakedir)
+		basetodir = os.path.basename(todir)
+		relpath = self.get_relpath(todir,tofile)
+		fromfile = os.path.join(fromdir,basetodir,relpath)
+		logging.info('todir[%s]basetodir[%s]tofile[%s]relpath[%s]fromfile[%s]'%(todir,basetodir,tofile,relpath,fromfile))
+		self.cpout_call(todir,relpath)
+		chkfile = CheckFiles(True)
+		retval = chkfile.check_file_same(tofile,fromfile)
+		self.assertEqual(retval,True)
 
 		self.__remove_dir(fromdir,True)
 		self.__remove_dir(todir)
 		return
 
-	def test_cpout_subdir(self):
+	def test_cpout_subdir_notexists(self):
 		if 'CP_MAX_CNT' in os.environ.keys():
 			maxnum = int(os.environ['CP_MAX_CNT'])
 		else:
 			maxnum = random.randint(1,3)
 		for i in range(maxnum):
-			self.__cpout_subdir()
+			self.__cpout_subdir_notexists()
 		return
 
 
