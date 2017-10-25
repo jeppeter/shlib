@@ -61,6 +61,7 @@ def main():
 		set_log_level(logval)
 	src = os.path.realpath(sys.argv[1])
 	dst = os.path.realpath(sys.argv[2])
+	dstd = os.path.dirname(dst)
 	if os.path.isdir(src):
 		if not os.path.isdir(dst):
 			if os.path.exists(dst):
@@ -68,6 +69,8 @@ def main():
 			make_dir_safe(dst)
 		copy_dir(src,dst)
 	elif os.path.isfile(src):
+		if not os.path.exists(dstd):
+			make_dir_safe(dstd)
 		shutil.copyfile(src,dst)
 	else:
 		raise Exception('[%s] not valid file or directory'%(src))

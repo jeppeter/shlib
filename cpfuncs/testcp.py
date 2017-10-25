@@ -33,6 +33,7 @@ class CheckFiles(object):
 
 	def check_file_same(self,leftfile,rightfile):
 		llines = []
+		logging.info('leftfile [%s] rightfile [%s]'%(leftfile,rightfile))
 		with open(leftfile,'rb') as f:
 			for l in f:
 				llines.append(l)
@@ -452,6 +453,16 @@ class debug_testcp_case(unittest.TestCase):
 		self.__remove_dir(fromdir,True)
 		return
 
+	def get_relpath(self,fromdir,fromsub):
+		if  not fromsub.startswith(fromdir):
+			raise Exception('fromsub [%s] not part [%s]'%(fromsub,fromdir))
+		pathlen = len(fromdir)
+		relpath = fromsub[pathlen:]
+		if relpath[0] == '/':
+			relpath = relpath[1:]
+		return relpath
+
+
 	def test_cpout_sub(self):
 		if 'CP_MAX_CNT' in os.environ.keys():
 			maxnum = int(os.environ['CP_MAX_CNT'])
@@ -460,6 +471,52 @@ class debug_testcp_case(unittest.TestCase):
 		for i in range(maxnum):
 			self.__cpout_sub()
 		return
+
+	def __cpout_subdir(self):
+		# now first to make the dir to remove
+		fromdir = os.environ['CP_SMB_DIR']
+		todir = os.environ['CP_TO_DIR']
+		# now we make file
+		filenum = random.randint(20,200)
+		files = self.random_make_subs(todir,filenum)
+		files = sorted(files,reverse=True)
+		# now we should make .git file
+		# we should make this ok
+		make_dir_safe(os.path.join(todir,'.git'))
+		make_dir_safe(os.path.join(fromdir,'.git'))
+		logging.info('create on [%s] filenum[%d]'%(todir,filenum))
+		tofile = None
+		for f in files:
+			if os.path.isfile(f):
+				logging.info('f [%s] todir [%s]'%(f,todir))
+				self.cpout_call(todir,f)
+		# now we should check 
+		for f in files:
+			if os.path.isfile(f):
+				tofile = f
+				basetodir = os.path.basename(todir)
+				relpath = self.get_relpath(todir,tofile)
+				fromfile = os.path.join(fromdir,basetodir,relpath)
+				logging.info('todir[%s]basetodir[%s]tofile[%s]relpath[%s]fromfile[%s]'%(todir,basetodir,tofile,relpath,fromfile))
+				chkfile = CheckFiles(True)
+				retval = chkfile.check_file_same(tofile,fromfile)
+				self.assertEqual(retval,True)
+
+		self.__remove_dir(fromdir,True)
+		self.__remove_dir(todir)
+		return
+
+	def test_cpout_subdir(self):
+		if 'CP_MAX_CNT' in os.environ.keys():
+			maxnum = int(os.environ['CP_MAX_CNT'])
+		else:
+			maxnum = random.randint(1,3)
+		for i in range(maxnum):
+			self.__cpout_subdir()
+		return
+
+
+
 
 
 def set_log_level(args):
@@ -471,6 +528,8 @@ def set_log_level(args):
     elif args.verbose >= 1 :
         loglvl = logging.WARN
     # we delete old handlers ,and set new handler
+    if logging.root and logging.root.handlers :
+    	logging.root.handlers = []
     logging.basicConfig(level=loglvl,format='%(asctime)s:%(filename)s:%(funcName)s:%(lineno)d\t%(message)s')
     return
 

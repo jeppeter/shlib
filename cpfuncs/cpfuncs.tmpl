@@ -170,7 +170,7 @@ CopyTo()
 
         if [ $_res -ne 0 ]
                 then
-                ErrorExit $_res "can not copy [$_frombase/$_todir] => [$_basedir/$_todir]"
+                ErrorExit $_res "can not copy [$_basedir/$_frombase] => [$_todir/$_frombase]"
         fi
         return
 }
