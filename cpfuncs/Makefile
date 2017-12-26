@@ -22,7 +22,8 @@ cpfuncs:cpfuncs.tmpl check_mountcheck_pl check_subpath_pl check_shcp_py
 		${PYTHON} ${TOPDIR}/insertcode -p  '%PYTHON_SHCP_STR%' bashstring -o cpfuncs ${TOPDIR}/pysrc/shcp.py,"GENSH","cpfuncs")
 
 cpin:cpin.tmpl check_dos2unix_pl
-	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode -i cpin.tmpl -o cpin -p '%PERL_DOS2UNIX_STR%'  bashstring ${TOPDIR}/perlsrc/dos2unix.pl,"GENSH","cpin")
+	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode -i cpin.tmpl  -p '%PERL_DOS2UNIX_STR%'  bashstring ${TOPDIR}/perlsrc/dos2unix.pl | \
+		${PYTHON} ${TOPDIR}/insertcode -o $@ -p '%PERL_READLINK_STR_2%' bashstring ${TOPDIR}/perlsrc/readlink.pl,"GENSH","cpin")
 
 check_dos2unix_pl:${TOPDIR}/perlsrc/dos2unix.pl
 

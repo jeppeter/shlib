@@ -20,13 +20,8 @@ function __Debug()
         _fmtstr=""
         if [ $verbose -gt $INFO_LEVEL ]
                 then
-                if [ "$_osname" = "darwin" ]
-                        then
-                        local _filestack=`expr $_backstack \+ 1`
-                        _fmtstr="${BASH_SOURCE[$_filestack]}:${BASH_LINENO[$_backstack]} "
-                else
-                        _fmtstr="${BASH_SOURCE[$_backstack]}:${BASH_LINENO[$_backstack]} "
-                fi
+                local _filestack=`expr $_backstack \+ 1`
+                _fmtstr="${BASH_SOURCE[$_filestack]}:${BASH_LINENO[$_backstack]} "
         fi
 
         _fmtstr="$_fmtstr$_fmt"

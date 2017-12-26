@@ -115,6 +115,7 @@ CopyFrom()
         local _res
         export EXTARGS_VERBOSE="$verbose"
         Debug "EXTARGS_VERBOSE=[$EXTARGS_VERBOSE]"
+        Debug "from [$_frombase/$_todir] to [$_basedir/$_todir]"
 
         ${PYTHON} -c "$PYTHON_SHCP_STR" "$_frombase/$_todir" "$_basedir/$_todir"
         _res=$?

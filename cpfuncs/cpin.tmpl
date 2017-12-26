@@ -8,8 +8,7 @@ if [ -n "$CPFUNCS_DEBUG" ] && [ $CPFUNCS_DEBUG -gt 3 ]
 fi
 
 read -r -d '' PERL_READLINK_STR_2<<EOFMM
-use Cwd "abs_path";
-print abs_path(shift);
+%PERL_READLINK_STR_2%
 EOFMM
 
 read -r -d '' PERL_DOS2UNIX_STR<<EOFMM
@@ -67,7 +66,8 @@ do
             then
             continue
         fi
-        _absitem=`perl -e "$PERL_READLINK_STR_2" $item`
+        _absitem=`perl -e "$PERL_READLINK_STR_2" -- "$item"`
+        Debug "_absitem [$_absitem] gitbase_dir [$gitbase_dir]"
         _issubdir=$(IsSub "$gitbase_dir" "$_absitem")
         if [ $_issubdir -gt 0 ]
                 then
