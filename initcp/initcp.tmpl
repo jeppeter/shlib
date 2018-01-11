@@ -59,8 +59,9 @@ CheckPackageCentOS()
 {
 	local _pkg=$1
 	local _res
-	_res=`rpm -q $_pkg | grep -e 'is not installed'`
-	if [ -n "$_res" ]
+	rpm -q $_pkg 2>/dev/null >/dev/null
+	_res=$?
+	if [ $_res -eq 0 ]
 		then
 		echo "0"
 	else
@@ -105,7 +106,7 @@ TestSudo()
 	_res=$? 
 	if [ $_res -ne 0 ]
 		then
-		cat <<EOFMM>>/dev/stderr
+		cat <<EOFMM>> /dev/stderr
 you must use visudo to add line to enable no password call sudo
 $USER ALL = NOPASSWD: ALL
 EOFMM
@@ -195,7 +196,7 @@ CheckOrInstallMustSucc()
 InstallUpgradePIPPackage()
 {
 	local _pkg=$1
-	RunSudoMustSucc pip install --upgrade $_pkg	
+	RunSudoMustSucc pip install $_pkg	
 }
 
 CheckOrCloneDir()
@@ -273,6 +274,28 @@ CopyOnDstDir()
 
 	return
 
+}
+
+CheckCPANCentOS()
+{
+	local _res
+	_res=$(RunSudoNoOut sudo timeout 1 sudo cpan -J)
+	if [ $_res -ne 0 ]
+		then
+		# to make the cpan init
+		( echo y;echo o conf prerequisites_policy follow;echo o conf commit ) | sudo cpan
+		_res=$?
+		if [ $_res -ne 0 ]
+			then
+			ErrorExit 4 "can not run cpan init ok [$_res]"
+		fi
+	fi
+}
+
+CPANInstall()
+{
+	local _pkg=$1
+	RunSudoMustSucc cpan install "$_pkg"
 }
 
 
@@ -365,7 +388,8 @@ if [ "$ENVOS" = "centos" ]
 	then
 	CheckOrInstallMustSucc epel-release
 	CheckOrInstallMustSucc perl-CPAN
-
+	CheckCPANCentOS
+	CPANInstall Data::Dumper
 fi
 
 CheckOrInstallMustSucc python-pip
