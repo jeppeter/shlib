@@ -4,6 +4,7 @@ import shutil
 import sys
 import os
 import logging
+import re
 
 def make_dir_safe(dname=None):
 	if dname is not None:
@@ -16,8 +17,9 @@ def make_dir_safe(dname=None):
 			if not os.path.isdir(dname):
 				raise Exception('can not make [%s]'%(dname))
 
-def copy_dir(src,dst,copied=[]):
+def copy_dir(src,dst,based,copied=[],isexcept=False):
 	make_dir_safe(dst)
+	totalerror = 0
 	for root,dirs,files in os.walk(src):
 		for c in dirs:
 			if c not in copied:
@@ -25,7 +27,9 @@ def copy_dir(src,dst,copied=[]):
 				subpath = os.path.relpath(nsrc,src)
 				ndst = os.path.join(dst,subpath)
 				copied.append(nsrc)
-				copy_dir(nsrc,ndst,copied)
+				curerr = copy_dir(nsrc,ndst,based,copied,isexcept)
+				if curerr != 0 :
+					totalerror = curerr
 		for f in files:
 			if f not in copied:
 				nsrc = os.path.join(root,f)
@@ -33,8 +37,19 @@ def copy_dir(src,dst,copied=[]):
 				ndst = os.path.join(dst,subpath)
 				logging.info('copy %s => %s'%(nsrc,ndst))
 				copied.append(nsrc)
-				shutil.copyfile(nsrc,ndst)
-	return
+				if isexcept:
+					shutil.copyfile(nsrc,ndst)
+				else:
+					try:
+						shutil.copyfile(nsrc,ndst)
+					except:
+						c = nsrc.replace(based,'',1)
+						if c.startswith('%s'%(os.sep)):
+							c = c.replace(os.sep,'',1)
+						sys.stderr.write('%s error\n'%(c))
+						if totalerror == 0:
+							totalerror = 3
+	return totalerror
 
 def set_log_level(verbose):
     loglvl= logging.ERROR
@@ -58,23 +73,24 @@ def main():
 			logval = int(os.environ['EXTARGS_VERBOSE'])
 		except:
 			logval = 0
-		set_log_level(logval)
+		set_log_level(logval)	
 	src = os.path.realpath(sys.argv[1])
 	dst = os.path.realpath(sys.argv[2])
 	dstd = os.path.dirname(dst)
+	err = 0
 	if os.path.isdir(src):
 		if not os.path.isdir(dst):
 			if os.path.exists(dst):
 				raise Exception('%s not directory'%(dst))
 			make_dir_safe(dst)
-		copy_dir(src,dst)
+		err = copy_dir(src,dst,src)
 	elif os.path.isfile(src):
 		if not os.path.exists(dstd):
 			make_dir_safe(dstd)
 		shutil.copyfile(src,dst)
 	else:
 		raise Exception('[%s] not valid file or directory'%(src))
-	sys.exit(0)
+	sys.exit(err)
 	return
 
 if __name__ == '__main__':
