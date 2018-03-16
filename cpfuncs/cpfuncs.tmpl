@@ -115,9 +115,9 @@ CopyFrom()
         local _res
         export EXTARGS_VERBOSE="$verbose"
         Debug "EXTARGS_VERBOSE=[$EXTARGS_VERBOSE]"
-        Debug "from [$_frombase/$_todir] to [$_basedir/$_todir]"
+        Debug "from [$_frombase/$_todir] to [$_basedir/$_todir] [$_basedir]"
 
-        ${PYTHON} -c "$PYTHON_SHCP_STR" "$_frombase/$_todir" "$_basedir/$_todir"
+        ${PYTHON} -c "$PYTHON_SHCP_STR" "$_frombase/$_todir" "$_basedir/$_todir" "$_frombase"
         _res=$?
 
         if [ -z "$_oldverbose" ]
@@ -158,8 +158,8 @@ CopyTo()
         export EXTARGS_VERBOSE="$verbose"
         Debug "EXTARGS_VERBOSE [$EXTARGS_VERBOSE]"
 
-        Debug "from $_basedir/$_frombase to $_todir/$_frombase"
-        ${SUDO_PREFIX} ${PYTHON} -c "$PYTHON_SHCP_STR" "$_basedir/$_frombase" "$_todir/$_frombase"
+        Debug "from $_basedir/$_frombase to $_todir/$_frombase [$_basedir]"
+        ${SUDO_PREFIX} ${PYTHON} -c "$PYTHON_SHCP_STR" "$_basedir/$_frombase" "$_todir/$_frombase" "$_basedir"
         _res=$?
 
         if [ -z "$_oldverbose" ]

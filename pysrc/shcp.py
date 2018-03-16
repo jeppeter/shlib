@@ -64,9 +64,12 @@ def set_log_level(verbose):
     return
 
 def main():
+	based = ''
 	if len(sys.argv[1:]) < 2:
 		sys.stderr.write('%s from to'%(sys.argv[0]))
 		sys.exit(3)
+	if len(sys.argv[1:]) >= 3:
+		based = os.path.realpath(sys.argv[3])
 	if 'EXTARGS_VERBOSE' in os.environ.keys():
 		logval = 0
 		try:
@@ -76,6 +79,8 @@ def main():
 		set_log_level(logval)	
 	src = os.path.realpath(sys.argv[1])
 	dst = os.path.realpath(sys.argv[2])
+	if len(based) == 0:
+		based = src
 	dstd = os.path.dirname(dst)
 	err = 0
 	if os.path.isdir(src):
@@ -83,7 +88,7 @@ def main():
 			if os.path.exists(dst):
 				raise Exception('%s not directory'%(dst))
 			make_dir_safe(dst)
-		err = copy_dir(src,dst,src)
+		err = copy_dir(src,dst,based)
 	elif os.path.isfile(src):
 		if not os.path.exists(dstd):
 			make_dir_safe(dstd)
