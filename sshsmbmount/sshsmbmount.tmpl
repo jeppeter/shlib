@@ -190,7 +190,7 @@ MountSmb()
 
 	else
 		Debug "call [${SUDO_PREFIX} ${MOUNT} \"$_smbdir\" \"$_mntdir\" -o username=$_user,password=$_pass]"
-		${SUDO_PREFIX} ${MOUNT} "$_smbdir" "$_mntdir" -o username=$_user,password=$_pass
+		${SUDO_PREFIX} ${MOUNT} "$_smbdir" "$_mntdir" -o username=$_user,password=$_pass,vers=2.1
 		_res=$?
 	fi
 	if [  $_res -ne 0 ]
