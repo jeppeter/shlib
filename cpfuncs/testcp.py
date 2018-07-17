@@ -15,6 +15,8 @@ import re
 import filecmp
 
 
+namechars='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+
 class CheckFiles(object):
 	def __init__(self,crignore=True):
 		self.right_only = []
@@ -111,11 +113,29 @@ def make_tempdir(prefix=None):
 	make_dir_safe(prefix)
 	return tempfile.mkdtemp(dir=prefix)
 
+
 def make_tempfile(prefix=None):
 	make_dir_safe(prefix)
 	fd,result = tempfile.mkstemp(dir=prefix)
 	os.close(fd)
 	return result
+
+def make_templink(dirn=None, tolink='.'):
+	make_dir_safe(dirn)
+	abdir = os.path.abspath(dirn)
+	existed = True
+	while existed:
+		existed = False
+		nchars = random.randint(12, 30)
+		cname = ''
+		for i in range(nchars):
+			cname += random.choice(namechars)
+		nlink = os.path.join(abdir,cname)
+		if os.path.exists(nlink):
+			existed = True
+		else:
+			os.symlink(tolink,nlink)
+	return nlink
 
 def __get_subdirs(abspath):
 	sroot = os.path.abspath(abspath)
@@ -355,6 +375,27 @@ class debug_testcp_case(unittest.TestCase):
 					logging.debug('[%s] binary'%(curfile))
 		return crfromfiles
 
+
+	def make_random_link(self,fromdir,num):
+		crfromfiles = []
+		curdir = fromdir
+		for i in range(filenum):
+			curnum = random.randint(0,20)
+			if curnum == 0:
+				curdir = os.path.abspath(os.path.join(curdir,'..'))
+				if len(curdir) < len(fromdir):
+					curdir = fromdir
+				logging.debug('curdir [%s]'%(curdir))
+			elif curnum == 1:
+				curdir = make_tempdir(curdir)
+				logging.debug('curdir [%s]'%(curdir))
+			else:
+				# this is make file
+				curfile = make_templink(curdir)
+				crfromfiles.append(curfile)
+		return crfromfiles
+
+
 	def __cpin_sub(self):
 		todir = os.environ['CP_TO_DIR']
 		fromdir = os.environ['CP_SMB_DIR']
@@ -509,6 +550,31 @@ class debug_testcp_case(unittest.TestCase):
 		for i in range(maxnum):
 			self.__cpout_subdir_notexists()
 		return
+
+	def test_003(self):
+		todir = os.environ['CP_TO_DIR']
+		fromdir = os.environ['CP_SMB_DIR']
+		fromdir = make_tempdir(fromdir)
+		frombasename = os.path.basename(fromdir)
+		fromdirgit = os.path.join(fromdir,'.git')
+		todir = os.path.join(todir,frombasename)
+		todir = os.path.abspath(todir)
+		todirgit = os.path.join(todir,'.git')
+		todirgit = os.path.abspath(todirgit)
+		todir = os.path.abspath(todir)
+		make_dir_safe(todirgit)
+		make_dir_safe(todir)
+		make_dir_safe(fromdir)
+		make_dir_safe(fromdirgit)
+		filenum = random.randint(20,100)
+		crfromfiles = []
+		crfromfiles = self.random_make_subs(todir,filenum)
+		# now we should make link
+
+		self.__remove_dir(todir)
+		self.__remove_dir(fromdir,True)
+		return
+
 
 
 

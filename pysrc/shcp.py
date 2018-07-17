@@ -5,6 +5,7 @@ import sys
 import os
 import logging
 import re
+import stat
 
 def make_dir_safe(dname=None):
 	if dname is not None:
@@ -19,20 +20,28 @@ def make_dir_safe(dname=None):
 
 def copy_dir(src,dst,based,copied=[],isexcept=False):
 	make_dir_safe(dst)
-	totalerror = 0
+	logging.info('src %s => dst %s'%(src,dst))
+	totalerror = 0	
 	for root,dirs,files in os.walk(src):
 		for c in dirs:
 			if c not in copied:
 				nsrc = os.path.join(root,c)
+				if os.path.islink(nsrc) or not (os.path.isdir(nsrc)):
+					logging.warning('%s not valid file or directory'%(nsrc))
+					continue
 				subpath = os.path.relpath(nsrc,src)
 				ndst = os.path.join(dst,subpath)
+				make_dir_safe(ndst)
 				copied.append(nsrc)
-				curerr = copy_dir(nsrc,ndst,based,copied,isexcept)
-				if curerr != 0 :
-					totalerror = curerr
+				#curerr = copy_dir(nsrc,ndst,based,copied,isexcept)
+				#if curerr != 0 :
+				#	totalerror = curerr
 		for f in files:
 			if f not in copied:
-				nsrc = os.path.join(root,f)
+				nsrc = os.path.abspath(os.path.join(root,f))
+				if not(os.path.isfile(nsrc) or os.path.isdir(nsrc)):
+					logging.warning('%s not valid file or directory'%(nsrc))
+					continue
 				subpath = os.path.relpath(nsrc,src)
 				ndst = os.path.join(dst,subpath)
 				logging.info('copy %s => %s'%(nsrc,ndst))
@@ -66,7 +75,7 @@ def set_log_level(verbose):
 def main():
 	based = ''
 	if len(sys.argv[1:]) < 2:
-		sys.stderr.write('%s from to'%(sys.argv[0]))
+		sys.stderr.write('%s from to\n'%(sys.argv[0]))
 		sys.exit(3)
 	if len(sys.argv[1:]) >= 3:
 		based = os.path.realpath(sys.argv[3])
