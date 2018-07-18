@@ -19,18 +19,9 @@ namechars='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
 
 class CheckFiles(object):
 	def __init__(self,crignore=True):
-		self.right_only = []
-		self.left_only = []
-		self.left_diffs = []
-		self.right_diffs = []
-		self.__crignore = crignore
-		return
-
-	def check_file(self,leftdir,rightdir,leftfile,rightfile):
-		if leftfile is not None:
-			self.left_only.append(os.path.join(leftdir,leftfile))
-		if rightfile is not None:
-			self.right_only.append(os.path.join(rightdir,rightfile))
+		self.only = []
+		self.diffs = []
+		self.crignore = crignore
 		return
 
 	def check_file_same(self,leftfile,rightfile):
@@ -53,7 +44,7 @@ class CheckFiles(object):
 			ll = llines[i]
 			rl = rlines[i]
 			if rl != ll:
-				if not self.__crignore:
+				if not self.crignore:
 					diffcnt = 0
 					while diffcnt < len(ll) or diffcnt < len(rl):
 						if ll[diffcnt] != rl[diffcnt]:
@@ -64,7 +55,7 @@ class CheckFiles(object):
 					s += '%s'%(ll)
 					s += 'to <<<<<<<<<<<<<<<<<<<\n'
 					s += '%s'%(rl)
-					if self.__crignore:
+					if self.crignore:
 						logging.warn('%s'%(s))
 					else:
 						logging.debug('%s'%(s))
@@ -82,7 +73,7 @@ class CheckFiles(object):
 					s += '%s'%(ll)
 					s += 'to <<<<<<<<<<<<<<<<<<<\n'
 					s += '%s'%(rl)
-					if self.__crignore:
+					if self.crignore:
 						logging.warn('%s'%(s))
 					else:
 						logging.debug('%s'%(s))
@@ -91,13 +82,37 @@ class CheckFiles(object):
 		return True
 
 
-	def diff_callback(self,leftdir,rightdir,file):
-		lfile = os.path.join(leftdir,file)
-		rfile = os.path.join(rightdir,file)
-		if not self.check_file_same(lfile,rfile):
-			self.left_diffs.append(os.path.join(leftdir,file))
-			self.right_diffs.append(os.path.join(rightdir,file))
+	def __format(self):
+		s = ''
+		s += 'only %s diffs %s'%(self.only, self.diffs)
+		return s
+
+	def __str__(self):
+		return self.__format()
+
+	def __repr__(self):
+		return self.__format()
+
+
+class CompoundCheckFiles(CheckFiles):
+	def __init__(self,crignore=True):
+		super(CompoundCheckFiles,self).__init__(crignore)
+		self.left_diffs = []
+		self.right_diffs = []
+		self.left_only = []
+		self.right_only = []
 		return
+
+	def __format(self):
+		s = ''
+		s += 'right_only %s left_only %s left_diffs %s right_diffs %s crignore %s'%(self.right_only, self.left_only, self.left_diffs,self.right_diffs,self.crignore)
+		return s
+
+	def __str__(self):
+		return self.__format()
+
+	def __repr__(self):
+		return self.__format()
 
 def make_dir_safe(dname=None):
 	if dname is not None:
@@ -179,28 +194,64 @@ class debug_testcp_case(unittest.TestCase):
 	def tearDownClass(cls):
 		return
 
-	def format_dc(self,dc,ctx=None):
-		if ctx is not None:
-			for f in dc.left_only:
-				ctx.check_file(dc.left,dc.right,f,None)
-			for f in dc.right_only:
-				ctx.check_file(dc.left,dc.right,None,f)
-		if ctx is not None:
-			for f in dc.diff_files:
-				ctx.diff_callback(dc.left,dc.right,f)
-		if ctx is not None:
-			for f in dc.funny_files:
-				ctx.check_file(dc.left,dc.right,f,f)
-		for cdc in dc.subdirs:		
-			self.format_dc(dc.subdirs[cdc],ctx)
-		return
+	def __compare_dir(self,fromdir,todir,crignore=True):
+		cfs = CheckFiles(crignore)
+		for root, dirs,files in os.walk(fromdir):
+			if root == fromdir  or root == os.path.join(fromdir,os.pathsep):
+				npart = ''
+			else:
+				npart = os.path.relpath(root,fromdir)
+			logging.info('npart %s root %s'%(npart, root))
+			for d in dirs:
+				nd = os.path.join(npart,d)
+				nfdir = os.path.join(root,d)
+				ntdir = os.path.join(todir,npart,d)
+				if not os.path.exists(ntdir):					
+					if nd not in cfs.only:
+						cfs.only.append(nd)
+					continue
+			for f in files:
+				nf = os.path.join(npart,f)
+				nffile = os.path.join(root,f)
+				ntfile = os.path.join(todir,npart,f)
+				if not os.path.exists(ntfile):
+					if nf not in cfs.only:
+						cfs.only.append(nf)
+					continue
+				# now we should check whether
+				if (os.path.islink(ntfile) and not (os.path.islink(nffile))) or (not os.path.islink(ntfile) and (os.path.islink(nffile))):
+					if nf not in cfs.diffs:
+						cfs.diffs.append(nf)
+					continue
 
+				retval = cfs.check_file_same(nffile,ntfile)	
+				if not retval:
+					if nf not in cfs.diffs:
+						cfs.diffs.append(nf)
+		return cfs
 
 	def dircompare(self,fromdir,todir,crignore=True):
-		dc = filecmp.dircmp(fromdir,todir)
-		cfs = CheckFiles(crignore)
-		self.format_dc(dc,cfs)
-		return cfs
+		compound = CompoundCheckFiles(crignore)
+		cfs = self.__compare_dir(fromdir, todir,crignore)
+		for d in cfs.diffs:
+			nd = os.path.join(fromdir,d)
+			if nd not in compound.left_diffs:
+				compound.left_diffs.append(nd)
+		for d in cfs.only:
+			nd = os.path.join(fromdir,d)
+			if nd not in compound.left_only:
+				compound.left_only.append(nd)
+
+		cfs = self.__compare_dir(todir,fromdir,crignore)
+		for d in cfs.diffs:
+			nd = os.path.join(todir,d)
+			if nd not in compound.right_diffs:
+				compound.right_diffs.append(nd)
+		for d in cfs.only:
+			nd = os.path.join(todir,d)
+			if nd not in compound.right_only:
+				compound.right_only.append(nd)
+		return compound
 
 	def get_random_chars(self,charnum,istext=True):
 		s = ''
@@ -379,7 +430,7 @@ class debug_testcp_case(unittest.TestCase):
 	def make_random_link(self,fromdir,num):
 		crfromfiles = []
 		curdir = fromdir
-		for i in range(filenum):
+		for i in range(num):
 			curnum = random.randint(0,20)
 			if curnum == 0:
 				curdir = os.path.abspath(os.path.join(curdir,'..'))
@@ -513,6 +564,7 @@ class debug_testcp_case(unittest.TestCase):
 			self.__cpout_sub()
 		return
 
+
 	def __cpout_subdir_notexists(self):
 		# now first to make the dir to remove
 		fromdir = os.environ['CP_SMB_DIR']
@@ -570,7 +622,14 @@ class debug_testcp_case(unittest.TestCase):
 		crfromfiles = []
 		crfromfiles = self.random_make_subs(todir,filenum)
 		# now we should make link
-
+		crfromlinks = []
+		crfromlinks = self.make_random_link(todir, filenum)
+		self.cpout_call(todir,'.')
+		cfs = self.dircompare(fromdir,todir,True)
+		# now to check the different files
+		self.assertEqual(len(cfs.left_diffs), len(crfromlinks))
+		for f in cfs.left_diffs:
+			self.assertTrue( f in crfromfiles)
 		self.__remove_dir(todir)
 		self.__remove_dir(fromdir,True)
 		return
