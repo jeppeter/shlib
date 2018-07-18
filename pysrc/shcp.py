@@ -69,7 +69,7 @@ def set_log_level(verbose):
     elif verbose >= 1 :
         loglvl = logging.WARN
     # we delete old handlers ,and set new handler
-    if hasattr(logging, 'root') and hasattr(logging.root, 'handlers') and len(logging.root.handlers) > 0:
+    if logging.root is not None and len(logging.root.handlers) > 0:
     	logging.root.handlers = []
     logging.basicConfig(level=loglvl,format='%(asctime)s:%(filename)s:%(funcName)s:%(lineno)d\t%(message)s')
     return

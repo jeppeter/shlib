@@ -93,7 +93,10 @@ class CompoundCheckFiles(CheckFiles):
 
 	def __format(self):
 		s = ''
-		s += 'right_only %s left_only %s left_diffs %s right_diffs %s crignore %s'%(self.right_only, self.left_only, self.left_diffs,self.right_diffs,self.crignore)
+		s += 'left_only [%d] [%s]\n'%(len(self.left_only),self.left_only)
+		s += 'left_diffs [%d] [%s]\n'%(len(self.left_diffs),self.left_diffs)
+		s += 'right_only [%d] [%s]\n'%(len(self.right_only),self.right_only)
+		s += 'right_diffs [%d] [%s]\n'%(len(self.right_diffs),self.right_diffs)
 		return s
 
 	def __str__(self):
@@ -114,11 +117,13 @@ class DiffDir(object):
 			else:
 				npart = os.path.relpath(root,fromdir)
 			logging.info('npart %s root %s'%(npart, root))
+			logging.info('dirs %s'%(dirs))
+			logging.info('files %s'%(files))
 			for d in dirs:
 				nd = os.path.join(npart,d)
 				nfdir = os.path.join(root,d)
 				ntdir = os.path.join(todir,npart,d)
-				if not os.path.exists(ntdir):					
+				if not os.path.exists(ntdir):
 					if nd not in cfs.only:
 						cfs.only.append(nd)
 					continue
@@ -148,20 +153,24 @@ class DiffDir(object):
 		for d in cfs.diffs:
 			nd = os.path.join(fromdir,d)
 			if nd not in compound.left_diffs:
+				logging.debug('left_diffs append [%s]'%(nd))
 				compound.left_diffs.append(nd)
 		for d in cfs.only:
 			nd = os.path.join(fromdir,d)
 			if nd not in compound.left_only:
+				logging.debug('left_only append [%s]'%(nd))
 				compound.left_only.append(nd)
 
 		cfs = self.__compare_dir(todir,fromdir,crignore)
 		for d in cfs.diffs:
 			nd = os.path.join(todir,d)
 			if nd not in compound.right_diffs:
+				logging.debug('right_diffs append [%s]'%(nd))
 				compound.right_diffs.append(nd)
 		for d in cfs.only:
 			nd = os.path.join(todir,d)
 			if nd not in compound.right_only:
+				logging.debug('right_only append [%s]'%(nd))
 				compound.right_only.append(nd)
 		return compound
 
