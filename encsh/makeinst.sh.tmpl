@@ -1,0 +1,184 @@
+#! /bin/bash
+
+%DEFINESH_CODE%
+
+%DEBUGSH_CODE%
+
+%DEPENDSH_CODE%
+
+read -r -d '' PYTHON_MD5_STR<<EOFMM
+%PYTHON_MD5_STR%
+EOFMM
+
+read -r -d '' PERL_READLINK_STR_2<<EOFMM
+use Cwd "abs_path";
+print abs_path(shift);
+EOFMM
+
+
+res=$(check_depend "extargsparse4sh")
+if [ $res -eq 0 ]
+	then
+	cat >&2 <<EOF
+	can not found extargsparse4sh in [$PATH]
+	please download source code from https://github.com/jeppeter/extargsparse4sh
+	and make to copy to the path
+EOF
+	exit 4
+fi
+
+source extargsparse4sh
+
+
+run_cmd()
+{
+	_cmd=$1
+	if [ -z "$_cmd" ]
+	then
+		/bin/echo "no cmd specify" >&2
+		exit 2
+	fi
+
+	/bin/echo -e -n "\e[1;37mrunning ($_cmd)\e[0m" >&2
+	eval "$_cmd"
+	_res=$?
+	
+	if [  $_res -ne 0 ]
+	then
+		/bin/echo -e "\e[31m[FAILED]\e[0m" >&2
+		exit 3
+	fi
+	/bin/echo -e "\e[32m[SUCCESS]\e[0m" >&2
+}
+
+make_bios()
+{
+	_topdir=$1
+	_instdir=$2
+	_kernver=$3
+	_conf=$4
+
+
+	run_cmd "rm -rf $_instdir"
+	run_cmd "mkdir -p $_instdir"
+	run_cmd "cp $_topdir/src/mbr/mbr.bin $_instdir/"
+	run_cmd "cp $_topdir/src/stage10/stage10.bin $_instdir/"
+	run_cmd "cp $_topdir/src/stage15/stage15.bin $_instdir/"
+	run_cmd "cp $_topdir/src/main/main.lz $_instdir/"
+	run_cmd "cp $_topdir/src/install/encutil $_instdir/"
+
+	run_cmd "$_topdir/src/install/encutil mkbios -V $_topdir/src/package/vmlinuz-${_kernver} -r $_topdir/src/package/initrd.img-${_kernver}  $_instdir/encboot.img"
+	run_cmd "$_topdir/src/install/tstefi writeconf -o $_instdir/encboot.conf '${_conf}'"
+}
+
+make_efi()
+{
+	_topdir=$1
+	_instdir=$2
+	_kernver=$3
+	_conf=$4
+
+	run_cmd "rm -rf $_instdir"
+	run_cmd "mkdir -p $_instdir"
+	run_cmd "$_topdir/src/install/encutil mkefi -V $_topdir/src/package/vmlinuz-${_kernver} -r $_topdir/src/package/initrd.img-${_kernver} --conffile \"$_instdir/bingte.conf\" \"$_instdir/bingte.img\" \"${_conf}\" "
+	run_cmd "cp $_topdir/src/efi/bingte.efi $_instdir/bingte.efi"
+	run_cmd "cp $_topdir/src/install/encutil $_instdir/encutil"
+}
+
+make_compile_all()
+{
+	_topdir=$1
+	_kernver=$2
+
+	run_cmd "make -C '${_topdir}' KERNEL_VERSION=${_kernver} all"
+}
+
+make_compile_efi()
+{
+	_topdir=$1
+	_kernver=$2
+
+	run_cmd "make -C '${_topdir}' KERNEL_VERSION=${_kernver} efi"
+}
+
+make_compile_bios()
+{
+	_topdir=$1
+	_kernver=$2
+
+	run_cmd "make -C '${_topdir}' KERNEL_VERSION=${_kernver} bios"
+}
+
+make_compile_clean()
+{
+	_topdir=$1
+	_kernver=$2
+
+	run_cmd "make -C '${_topdir}' KERNEL_VERSION=${_kernver} clean"
+}
+
+
+_curversion=`uname -r`
+script_file=`which $0`
+if [ -z "$_curfile" ]
+	then
+    script_file=`perl -e "$PERL_READLINK_STR_2" $0`
+fi
+
+_curdir=`dirname $script_file`
+
+read -r -d '' OPTIONS<<EOFMM
+	{
+		"verbose|v" : "+",
+		"kernelversion|V": "$_curversion",
+		"topdir|D##specified the top default ($_curdir)##" : "$_curdir",
+		"config|C##specified the configuration for compiling default (ro quiet) ##" : "ro quiet",
+		"efidir" : "$_curdir/efidir",
+		"biosdir" : "$_curdir/biosdir",
+		"all<subcommand>##prepare efi and bios all install package##" : {
+			"\$" : 0
+		},
+		"efi<subcommand>##prepare efi only install package##" : {
+			"\$" : 0
+		},
+		"bios<subcommand>##prepare bios only install package##" : {
+			"\$" : 0
+		},
+		"compile<subcommand>##run compile all##" : {
+			"\$" : 0
+		},
+		"clean<subcommand>##clean all the install packages##" : {
+			"\$" : 0
+		}
+	}
+EOFMM
+
+parse_command_line "$OPTIONS" "$@"
+
+
+if [ "$subcommand" = "all" ]
+	then
+	make_compile_all "$topdir" "$kernelversion"
+	make_bios "$topdir" "$biosdir" "$kernelversion" "$config"
+	make_efi  "$topdir" "$efidir" "$kernelversion" "$config"
+elif [ "$subcommand" = "efi" ]
+	then
+	make_compile_efi "$topdir" "$kernelversion"
+	make_efi  "$topdir" "$efidir" "$kernelversion" "$config"
+elif [ "$subcommand" = "bios" ]
+	then
+	make_compile_bios "$topdir" "$kernelversion"
+	make_bios "$topdir" "$biosdir" "$kernelversion" "$config"
+elif [ "$subcommand" = "compile" ]
+	then
+	make_compile_all "$topdir" "$kernelversion"
+elif [ "$subcommand" = "clean" ]
+	then
+	make_compile_clean "$topdir" "$kernelversion"
+	run_cmd "rm -rf \"$efidir\""
+	run_cmd "rm -rf \"$biosdir\""
+else
+	echo "not supported command [$subcommand]" >&2
+	exit 4
+fi
+
