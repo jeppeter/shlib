@@ -32,7 +32,10 @@ check_%_pl:${TOPDIR}/perlsrc/%.pl
 ${TOPDIR}/perlsrc/%.pl:
 	$(call call_exec,${MAKE} --no-print-directory -C ${TOPDIR}/perlsrc all,"MAKE","PL")
 
-clean:
+clean_pl:
+	$(call call_exec,${MAKE} --no-print-directory -C ${TOPDIR}/perlsrc clean,"CLEAN","PL")
+
+clean:clean_pl
 	$(call call_exec,rm -f ${ALLFILES} *.tmp,"RM","${ALLFILES} *.tmp")
 
 

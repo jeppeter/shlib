@@ -29,6 +29,7 @@ fi
 
 source extargsparse4sh
 
+verbose=
 
 run_cmd()
 {
@@ -39,16 +40,26 @@ run_cmd()
 		exit 2
 	fi
 
+	if [ $verbose -lt 3 ] ; then
 	/bin/echo -e -n "\e[1;37mrunning ($_cmd)\e[0m" >&2
-	eval "$_cmd"
+	fi
+	if [ $verbose -lt 3 ]; then
+		eval "$_cmd" >/dev/null
+	else
+		eval "$_cmd"
+	fi
 	_res=$?
 	
 	if [  $_res -ne 0 ]
 	then
-		/bin/echo -e "\e[31m[FAILED]\e[0m" >&2
+		if [ $verbose -lt 3 ] ; then
+			/bin/echo -e "\e[31m[FAILED]\e[0m" >&2
+		fi
 		exit 3
 	fi
-	/bin/echo -e "\e[32m[SUCCESS]\e[0m" >&2
+	if [ $verbose -lt 3 ] ; then
+		/bin/echo -e "\e[32m[SUCCESS]\e[0m" >&2
+	fi
 }
 
 make_bios()
