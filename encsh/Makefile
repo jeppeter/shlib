@@ -1,6 +1,6 @@
 
 TOPDIR=../
-ALLFILES=makeinst.sh
+ALLFILES=makeinst.sh init.sh
 
 include $(TOPDIR)/basedef.mak
 
@@ -15,6 +15,15 @@ makeinst.sh:makeinst.sh.tmpl ${TOPDIR}/insertcode check_libs
 		${PYTHON} ${TOPDIR}/insertcode -p '%PYTHON_MD5_STR%' bashstring ${TOPDIR}/pysrc/calcmd5.py | \
 		${PYTHON} ${TOPDIR}/insertcode -o $@ -p '%DEPENDSH_CODE%' bashinsert "${TOPDIR}/libs/dependsh","GENSH",$@)
 	$(call call_exec,${CHX} $@,"CHX",$@)
+
+init.sh:init.sh.tmpl ${TOPDIR}/insertcode check_libs
+	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode -i $<  -p '%DEBUGSH_CODE%' bashinsert "${TOPDIR}/libs/debugsh" | \
+		${PYTHON} ${TOPDIR}/insertcode -p '%DEFINESH_CODE%' bashinsert "${TOPDIR}/libs/definesh" | \
+		${PYTHON} ${TOPDIR}/insertcode -p '%PERL_BASE_NAME%' bashstring "${TOPDIR}/perlsrc/basename.pl" | \
+		${PYTHON} ${TOPDIR}/insertcode -p '%PYTHON_MD5_STR%' bashstring ${TOPDIR}/pysrc/calcmd5.py | \
+		${PYTHON} ${TOPDIR}/insertcode -o $@ -p '%DEPENDSH_CODE%' bashinsert "${TOPDIR}/libs/dependsh","GENSH",$@)
+	$(call call_exec,${CHX} $@,"CHX",$@)
+
 
 check_libs:check_calcmd5_py check_basename_pl
 
