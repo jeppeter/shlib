@@ -3,9 +3,26 @@
 verbose=0
 bindir="$HOME/bin"
 
+
 %DEFINESH_CODE%
 
 %DEBUGSH_CODE%
+
+_scriptfile=`readlink -f $0`
+if [ -z "$_scriptfile" ]
+	then
+	_scriptfile=`which $0`
+fi
+_scriptdir=`dirname $_scriptfile`
+
+declare -a DEFAULT_DPKG_FILE
+declare -a DEFAULT_PIP_FILE
+
+
+DEFAULT_DPKG_FILE[0]="$_scriptdir/dpkg.txt"
+DEFAULT_DPKG_FILE[1]="$_scriptdir/src/package/cppkgs.txt"
+
+DEFAULT_PIP_FILE[0]="$_scriptdir/pip.txt"
 
 
 SUDO_PREFIX=
@@ -101,7 +118,11 @@ CheckOrInstallMustSucc()
 InstallUpgradePIPPackage()
 {
 	local _pkg=$1
-	RunSudoMustSucc pip install $_pkg	
+	local _res=`pip show "$_pkg"`
+	if [ -z "$_res" ]
+		then
+		RunSudoMustSucc pip install $_pkg
+	fi
 }
 
 
@@ -198,13 +219,19 @@ Usage()
 		echo -e "$_fmt" >$_echoout
 	fi
 
-	echo -e "init [OPTIONS]" >$_echoout
+	echo -e "init [OPTIONS] [cmds...]" >$_echoout
 	echo -e "\t--help|-h                          to display this help information" >$_echoout
 	echo -e "\t--verbose|-v                       to make verbose mode" >$_echoout
-	echo -e "\t--bindir|-d bindir                 to specify the bin dir to install for self use\n" >$_echoout
+	echo -e "\t--bindir|-d      bindir            to specify the bin dir to install for self use" >$_echoout
+	echo -e "\t--dpkg|-D        file              to add the dpkg install files default[${DEFAULT_DPKG_FILE[@]}]" >$_echoout
+	echo -e "\t--pip|-p         file              to add pip file default [${DEFAULT_PIP_FILE[@]}]" >$_echoout
+	echo -e "" >$_echoout
+	echo -e "cmds ... will run after all installed" >$_echoout
 	exit $_ec
 }
 
+declare -a pip_install_files
+declare -a dpkg_install_files
 
 while [ $# -gt 0 ]
 do
@@ -223,18 +250,62 @@ do
 		fi
 		bindir=$2
 		shift
-	else
-		Usage 3 "unknown args[$_curarg]"
+	elif [ "$_curarg" = "--dpkg" ] || [ "$_curarg" = "-D" ]
+		then
+		if [ $# -lt 2 ]
+			then
+			Usage 3 "[$_curarg] need an arg"
+		fi
+		_num=${#dpkg_install_files[@]}
+		dpkg_install_files[$_num]=$2
+		shift
+	elif [ "$_curarg" = "--pip" ] || [ "$_curarg" = "-p" ]
+		then
+		if [ $# -lt 2 ]
+			then
+			Usage 3 "[$_curarg] need an arg"
+		fi
+		_num=${#pip_install_files[@]}
+		pip_install_files[$_num]=$2
+		shift		
+ 	elif [ "$_curarg" = "--" ]
+ 		then
+ 		shift
+ 		break
+ 	else
+		break
 	fi
 	shift
 done
 
-# first to check git
-CheckOrInstallMustSucc python-pip
-CheckOrInstallMustSucc git
-InstallUpgradePIPPackage extargsparse
-InstallUpgradePIPPackage disttools
-InstallUpgradePIPPackage cmdpack
+_num=${#dpkg_install_files[@]}
+if [  $_num -eq 0 ]
+	then
+	dpkg_install_files=$DEFAULT_DPKG_FILE
+fi
+
+_num=${#pip_install_files[@]}
+if [ $_num -eq 0 ]
+	then
+	pip_install_files=$DEFAULT_PIP_FILE
+fi
+
+for _c in ${dpkg_install_files[@]}
+do
+	for _l in $(cat $_c)
+	do
+		CheckOrInstallMustSucc "$_l"
+	done
+done
+
+for _c in ${pip_install_files[@]}
+do
+	for _l in $(cat $_c)
+	do
+		InstallUpgradePIPPackage "$_l"
+	done
+done
+
 
 _isok=`which extargsparse4sh`
 if [ -z "$_isok" ]
@@ -258,4 +329,12 @@ if [ -z "$_isok" ]
 	export PATH=\$PATH:$bindir
 EOFMM
 fi
-CheckOrInstallMustSucc gnu-efi
+
+if [ $# -gt 0 ]
+	then
+	$@
+	if [ $? -ne 0 ]
+		then
+		ErrorExit 5 "run [$@] error[$?]"
+	fi
+fi
