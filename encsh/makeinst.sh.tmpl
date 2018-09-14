@@ -177,13 +177,14 @@ function trap_exit() {
 			then
 			rm -rf "$local_tempdir"
 		else
-			echo "TEMPDIR [$local_tempdir]"
+			Debug "TEMPDIR [$local_tempdir]"
 		fi
 	fi
 }
 
 trap trap_exit EXIT
 
+Debug "obfuscated [$obfuscated]"
 
 if [ $obfuscated -ne 0 ]
 	then
@@ -194,7 +195,7 @@ if [ $obfuscated -ne 0 ]
 		exit 0
 	fi
 	local_tempdir=`mktemp -d`
-	echo "local_tempdir [$local_tempdir]"
+	Debug "local_tempdir [$local_tempdir]"
 	_verbosemode=""
 	if [ $verbose -gt 0 ]
 		then
@@ -207,10 +208,21 @@ if [ $obfuscated -ne 0 ]
 		done
 	fi
 	run_cmd "make -C \"$topdir\" \"$topdir/py-obcode/obcode.py\""
-	echo "local_tempdir [$local_tempdir] topdir [$topdir]"
+	Debug "local_tempdir [$local_tempdir] topdir [$topdir]"
 	run_cmd "python \"$topdir/py-obcode/obcode.py\" cob  $_verbosemode \"$topdir\" \"$local_tempdir\""
-	# now to make the code
-	run_cmd "\"$local_tempdir/$base_script\" $_verbosemode -C \"$config\"  -V $kernelversion \"$subcommand\" $@"
+	Debug "obfuscated [$obfuscated]"	
+	cmd_to_run="\"$local_tempdir/$base_script\" $_verbosemode -C \"$config\"  -V $kernelversion \"$subcommand\""
+	num_subnargs=${#subnargs[*]}
+	if [ $num_subnargs -gt 0 ]
+		then
+		_idx=0
+		while [ $_idx -lt $num_subnargs ]
+		do
+			cmd_to_run="$cmd_to_run ${subnargs[$_idx]}"
+			_idx=`$_idx \+ 1`
+		done
+	fi
+	run_cmd "$cmd_to_run"
 
 	if [ "$subcommand" = "all" ]
 		then
@@ -227,8 +239,7 @@ if [ $obfuscated -ne 0 ]
 		run_cmd "rm -rf \"$biosdir\""
 		run_cmd "cp -r \"$local_tempdir/biosdir\" \"$biosdir\""
 	else
-		echo "not supported command [$subcommand]"
-		exit 4
+		ErrorExit 4 "not supported command [$subcommand]"
 	fi
 
 	if [ $reserve -eq 0 ]
