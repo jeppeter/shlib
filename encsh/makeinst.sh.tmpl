@@ -149,6 +149,7 @@ read -r -d '' OPTIONS<<EOFMM
 		"biosdir" : "$_curdir/biosdir",
 		"obfuscated|O" : false,
 		"reserve|R" : true,
+		"noline" : 0,
 		"all<subcommand>##prepare efi and bios all install package##" : {
 			"\$" : 0
 		},
@@ -196,6 +197,11 @@ if [ $obfuscated -ne 0 ]
 	fi
 	local_tempdir=`mktemp -d`
 	Debug "local_tempdir [$local_tempdir]"
+	_nolinemode=""
+	if [ $noline -gt 0 ]
+		then
+		_nolinemode="--cob-noline 1"
+	fi
 	_verbosemode=""
 	if [ $verbose -gt 0 ]
 		then
@@ -209,7 +215,7 @@ if [ $obfuscated -ne 0 ]
 	fi
 	run_cmd "make -C \"$topdir\" \"$topdir/py-obcode/obcode.py\""
 	Debug "local_tempdir [$local_tempdir] topdir [$topdir]"
-	run_cmd "python \"$topdir/py-obcode/obcode.py\" cob  $_verbosemode \"$topdir\" \"$local_tempdir\""
+	run_cmd "python \"$topdir/py-obcode/obcode.py\" cob $_nolinemode $_verbosemode \"$topdir\" \"$local_tempdir\""
 	Debug "obfuscated [$obfuscated]"	
 	cmd_to_run="\"$local_tempdir/$base_script\" --efidir \"$efidir\" --biosdir \"$biosdir\" $_verbosemode -C \"$config\"  -V $kernelversion \"$subcommand\""
 	num_subnargs=${#subnargs[*]}
