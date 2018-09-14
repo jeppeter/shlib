@@ -137,6 +137,7 @@ if [ -z "$_curfile" ]
 fi
 
 _curdir=`dirname $script_file`
+base_script=`basename $script_file`
 
 read -r -d '' OPTIONS<<EOFMM
 	{
@@ -146,6 +147,8 @@ read -r -d '' OPTIONS<<EOFMM
 		"config|C##specified the configuration for compiling default (ro quiet) ##" : "ro quiet",
 		"efidir" : "$_curdir/efidir",
 		"biosdir" : "$_curdir/biosdir",
+		"obfuscated|O" : false,
+		"reserve|R" : true,
 		"all<subcommand>##prepare efi and bios all install package##" : {
 			"\$" : 0
 		},
@@ -165,6 +168,77 @@ read -r -d '' OPTIONS<<EOFMM
 EOFMM
 
 parse_command_line "$OPTIONS" "$@"
+
+local_tempdir=""
+function trap_exit() {
+	if [ -n "$local_tempdir" ]
+		then
+		if [ $reserve -eq 0 ]
+			then
+			rm -rf "$local_tempdir"
+		else
+			echo "TEMPDIR [$local_tempdir]"
+		fi
+	fi
+}
+
+trap trap_exit EXIT
+
+
+if [ $obfuscated -ne 0 ]
+	then
+	# this is the obfuscated ,so we should give the code
+	if [ $subcommand = "clean" ]
+		then
+		# nothing to do
+		exit 0
+	fi
+	local_tempdir=`mktemp -d`
+	echo "local_tempdir [$local_tempdir]"
+	_verbosemode=""
+	if [ $verbose -gt 0 ]
+		then
+		_i=0
+		_verbosemode="-"
+		while [ $_i -lt $verbose ]
+		do
+			_verbosemode=`printf "%sv" $_verbosemode`
+			_i=`expr $_i \+ 1`
+		done
+	fi
+	run_cmd "make -C \"$topdir\" \"$topdir/py-obcode/obcode.py\""
+	echo "local_tempdir [$local_tempdir] topdir [$topdir]"
+	run_cmd "python \"$topdir/py-obcode/obcode.py\" cob  $_verbosemode \"$topdir\" \"$local_tempdir\""
+	# now to make the code
+	run_cmd "\"$local_tempdir/$base_script\" $_verbosemode -C \"$config\"  -V $kernelversion \"$subcommand\" $@"
+
+	if [ "$subcommand" = "all" ]
+		then
+		run_cmd "rm -rf \"$efidir\""
+		run_cmd "rm -rf \"$biosdir\""
+		run_cmd "cp -r \"$local_tempdir/efidir\" \"$efidir\""
+		run_cmd "cp -r \"$local_tempdir/biosdir\" \"$biosdir\""
+	elif [ "$subcommand" = "efi" ]
+		then
+		run_cmd "rm -rf \"$efidir\""
+		run_cmd "cp -r \"$local_tempdir/efidir\" \"$efidir\""
+	elif [ "$subcommand" = "bios" ]
+		then
+		run_cmd "rm -rf \"$biosdir\""
+		run_cmd "cp -r \"$local_tempdir/biosdir\" \"$biosdir\""
+	else
+		echo "not supported command [$subcommand]"
+		exit 4
+	fi
+
+	if [ $reserve -eq 0 ]
+		then
+		run_cmd "rm -rf \"$_tempdir\""
+	else
+		echo "TEMPDIR [$_tempdir]"
+	fi
+	exit 0
+fi
 
 
 if [ "$subcommand" = "all" ]
