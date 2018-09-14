@@ -211,7 +211,7 @@ if [ $obfuscated -ne 0 ]
 	Debug "local_tempdir [$local_tempdir] topdir [$topdir]"
 	run_cmd "python \"$topdir/py-obcode/obcode.py\" cob  $_verbosemode \"$topdir\" \"$local_tempdir\""
 	Debug "obfuscated [$obfuscated]"	
-	cmd_to_run="\"$local_tempdir/$base_script\" $_verbosemode -C \"$config\"  -V $kernelversion \"$subcommand\""
+	cmd_to_run="\"$local_tempdir/$base_script\" --efidir \"$efidir\" --biosdir \"$biosdir\" $_verbosemode -C \"$config\"  -V $kernelversion \"$subcommand\""
 	num_subnargs=${#subnargs[*]}
 	if [ $num_subnargs -gt 0 ]
 		then
@@ -223,24 +223,6 @@ if [ $obfuscated -ne 0 ]
 		done
 	fi
 	run_cmd "$cmd_to_run"
-
-	if [ "$subcommand" = "all" ]
-		then
-		run_cmd "rm -rf \"$efidir\""
-		run_cmd "rm -rf \"$biosdir\""
-		run_cmd "cp -r \"$local_tempdir/efidir\" \"$efidir\""
-		run_cmd "cp -r \"$local_tempdir/biosdir\" \"$biosdir\""
-	elif [ "$subcommand" = "efi" ]
-		then
-		run_cmd "rm -rf \"$efidir\""
-		run_cmd "cp -r \"$local_tempdir/efidir\" \"$efidir\""
-	elif [ "$subcommand" = "bios" ]
-		then
-		run_cmd "rm -rf \"$biosdir\""
-		run_cmd "cp -r \"$local_tempdir/biosdir\" \"$biosdir\""
-	else
-		ErrorExit 4 "not supported command [$subcommand]"
-	fi
 
 	if [ $reserve -eq 0 ]
 		then
