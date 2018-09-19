@@ -22,7 +22,7 @@ PERL_FILES =  ${ORIG_PERLS} ${TEMPLATE_PERLS}
 all: ${PERL_FILES}
 
 %.pl : %.pl.tmpl
-	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode -i $< -p '%COMMON_PL_CODE%' -o $@ bashinsert ${CURDIR}/common.pl,"GENPL","$(@F)")
+	$(call call_exec,${PYTHON} -m insertcode -i $< -p '%COMMON_PL_CODE%' -o $@ bashinsert ${CURDIR}/common.pl,"GENPL","$(@F)")
 	$(call call_exec,${PERL} $@ -h >/dev/null,"CHECK","$(@F)")
 
 clean:

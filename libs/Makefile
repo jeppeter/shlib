@@ -17,8 +17,8 @@ CURDIR:=$(shell perl -e 'use Cwd "abs_path";foreach(@ARGV) { print abs_path($$_)
 all:perlcomsh
 
 perlcomsh:perlcomsh.tmpl check_readlink_pl check_basename_pl
-	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode -i perlcomsh.tmpl  -p '%PERL_READLINK_STR%' bashstring ${TOPDIR}/perlsrc/readlink.pl | \
-		 ${PYTHON} ${TOPDIR}/insertcode -p '%PERL_BASENAME_STR%' bashstring -o $@ "${TOPDIR}/perlsrc/basename.pl" , \
+	$(call call_exec,${PYTHON} -m insertcode -i perlcomsh.tmpl  -p '%PERL_READLINK_STR%' bashstring ${TOPDIR}/perlsrc/readlink.pl | \
+		 ${PYTHON} -m insertcode -p '%PERL_BASENAME_STR%' bashstring -o $@ "${TOPDIR}/perlsrc/basename.pl" , \
 		 "GENSH","$@" )
 	$(call call_exec,${CHX} $@,"CHX",$@)
 
@@ -27,7 +27,7 @@ check_readlink_pl:${TOPDIR}/perlsrc/readlink.pl
 check_basename_pl:${TOPDIR}/perlsrc/basename.pl
 
 check_%_pl:${TOPDIR}/perlsrc/%.pl
-	$(call call_exec,(${PYTHON} ${TOPDIR}/insertcode -i ${TOPDIR}/echocode.tmpl -p '%REPLACE_PATTERN%' \
+	$(call call_exec,(${PYTHON} -m insertcode -i ${TOPDIR}/echocode.tmpl -p '%REPLACE_PATTERN%' \
 		bashstring $< | ${BASH} | ${DIFF} -B - $< ) || \
 		(${ECHO} "can not make $< right" >&2 ; exit 3),\
 		"CHECK","$(basename $<)")

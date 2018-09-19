@@ -13,8 +13,8 @@ all:echotest.sh
 
 
 echotest.sh:echotest.sh.tmpl ${TOPDIR}/libs/definesh ${TOPDIR}/libs/debugsh
-	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode -i $< -p '%DEFINESH_CODE%' bashinsert ${TOPDIR}/libs/definesh | \
-			${PYTHON} ${TOPDIR}/insertcode -p '%DEBUGSH_CODE%' -o $@ bashinsert ${TOPDIR}/libs/debugsh,"GENSH","$(@F)")
+	$(call call_exec,${PYTHON} -m insertcode -i $< -p '%DEFINESH_CODE%' bashinsert ${TOPDIR}/libs/definesh | \
+			${PYTHON} -m insertcode -p '%DEBUGSH_CODE%' -o $@ bashinsert ${TOPDIR}/libs/debugsh,"GENSH","$(@F)")
 
 clean:
 	$(call call_exec,${RM} -f echotest.sh,"RM","echotest.sh")

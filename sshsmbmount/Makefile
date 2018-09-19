@@ -16,13 +16,13 @@ include ${TOPDIR}/basedef.mak
 all:sshsmbmount
 
 sshsmbmount:sshsmbmount.tmpl check_mountcheck_pl
-	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode -i sshsmbmount.tmpl -o sshsmbmount -p '%PERL_MOUNTCHECK_STR%' bashstring ${TOPDIR}/perlsrc/mountcheck.pl,"GENSH","$(@F)")
+	$(call call_exec,${PYTHON} -m insertcode -i sshsmbmount.tmpl -o sshsmbmount -p '%PERL_MOUNTCHECK_STR%' bashstring ${TOPDIR}/perlsrc/mountcheck.pl,"GENSH","$(@F)")
 	$(call call_exec,${CHX} sshsmbmount,"CHX","$(@F)")
 
 check_mountcheck_pl:${TOPDIR}/perlsrc/mountcheck.pl
 
 check_%_pl:${TOPDIR}/perlsrc/%.pl
-	$(call call_exec,(${PYTHON} ${TOPDIR}/insertcode -i ${TOPDIR}/echocode.tmpl -p '%REPLACE_PATTERN%' \
+	$(call call_exec,(${PYTHON} -m insertcode -i ${TOPDIR}/echocode.tmpl -p '%REPLACE_PATTERN%' \
 		bashstring $< | ${BASH} | ${DIFF} -B - $< ) || \
 		(${ECHO} "can not make $< right" >&2 ; exit 3),\
 		"CHECK","$(basename $<)")

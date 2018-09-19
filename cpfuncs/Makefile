@@ -16,14 +16,14 @@ all:cpfuncs cpin
 
 
 cpfuncs:cpfuncs.tmpl check_mountcheck_pl check_subpath_pl check_shcp_py
-	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode  -i cpfuncs.tmpl  -p '%PERL_MOUNTCHECK_STR%' bashstring ${TOPDIR}/perlsrc/mountcheck.pl | \
-		${PYTHON} ${TOPDIR}/insertcode -p  '%PERL_SUBPATH_STR%' bashstring ${TOPDIR}/perlsrc/subpath.pl  | \
-		${PYTHON} ${TOPDIR}/insertcode -p  '%DEBUGSH_CODE%' bashinsert "${TOPDIR}/libs/debugsh" | \
-		${PYTHON} ${TOPDIR}/insertcode -p  '%PYTHON_SHCP_STR%' bashstring -o cpfuncs ${TOPDIR}/pysrc/shcp.py,"GENSH","cpfuncs")
+	$(call call_exec,${PYTHON}  -m insertcode  -i cpfuncs.tmpl  -p '%PERL_MOUNTCHECK_STR%' bashstring ${TOPDIR}/perlsrc/mountcheck.pl | \
+		${PYTHON} -m insertcode -p  '%PERL_SUBPATH_STR%' bashstring ${TOPDIR}/perlsrc/subpath.pl  | \
+		${PYTHON} -m insertcode -p  '%DEBUGSH_CODE%' bashinsert "${TOPDIR}/libs/debugsh" | \
+		${PYTHON} -m insertcode -p  '%PYTHON_SHCP_STR%' bashstring -o cpfuncs ${TOPDIR}/pysrc/shcp.py,"GENSH","cpfuncs")
 
 cpin:cpin.tmpl check_dos2unix_pl
-	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode -i cpin.tmpl  -p '%PERL_DOS2UNIX_STR%'  bashstring ${TOPDIR}/perlsrc/dos2unix.pl | \
-		${PYTHON} ${TOPDIR}/insertcode -o $@ -p '%PERL_READLINK_STR_2%' bashstring ${TOPDIR}/perlsrc/readlink.pl,"GENSH","cpin")
+	$(call call_exec,${PYTHON} -m insertcode -i cpin.tmpl  -p '%PERL_DOS2UNIX_STR%'  bashstring ${TOPDIR}/perlsrc/dos2unix.pl | \
+		${PYTHON} -m insertcode -o $@ -p '%PERL_READLINK_STR_2%' bashstring ${TOPDIR}/perlsrc/readlink.pl,"GENSH","cpin")
 
 check_dos2unix_pl:${TOPDIR}/perlsrc/dos2unix.pl
 
@@ -34,7 +34,7 @@ check_subpath_pl:${TOPDIR}/perlsrc/subpath.pl
 check_shcp_py:${TOPDIR}/pysrc/shcp.py
 
 check_%_pl:${TOPDIR}/perlsrc/%.pl
-	$(call call_exec,(${PYTHON} ${TOPDIR}/insertcode -i ${TOPDIR}/echocode.tmpl -p '%REPLACE_PATTERN%' \
+	$(call call_exec,(${PYTHON} -m insertcode -i ${TOPDIR}/echocode.tmpl -p '%REPLACE_PATTERN%' \
 		bashstring $< | ${BASH} | ${DIFF} -B - $< ) || \
 		(${ECHO} "can not make $< right" >&2 ; exit 3),\
 		"CHECK","$(basename $<)")
@@ -46,7 +46,7 @@ ${TOPDIR}/pysrc/*.py:
 	$(call call_exec,${MAKE} --no-print-directory -C ${TOPDIR}/pysrc all,"MAKE","PY")
 
 check_%_py:${TOPDIR}/pysrc/%.py
-	$(call call_exec,($(PYTHON) ${TOPDIR}/insertcode -i ${TOPDIR}/echocode.tmpl -p '%REPLACE_PATTERN%' bashstring $< | \
+	$(call call_exec,($(PYTHON) -m insertcode -i ${TOPDIR}/echocode.tmpl -p '%REPLACE_PATTERN%' bashstring $< | \
 			${BASH} | ${DIFF} -B - $< ) || \
 			(${ECHO} "can not change $< ok" ; exit 3),"CHECK","$(basename $<)")
 

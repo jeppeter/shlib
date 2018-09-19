@@ -13,8 +13,8 @@ include ${TOPDIR}/basedef.mak
 all:xbuild
 
 xbuild:xbuild.tmpl check_libs
-	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode -i xbuild.tmpl  -p '%DEBUGSH_CODE%' bashinsert "${TOPDIR}/libs/debugsh" | \
-		${PYTHON} ${TOPDIR}/insertcode -o xbuild -p '%DEPENDSH_CODE%' bashinsert "${TOPDIR}/libs/dependsh",\
+	$(call call_exec,${PYTHON} -m insertcode -i xbuild.tmpl  -p '%DEBUGSH_CODE%' bashinsert "${TOPDIR}/libs/debugsh" | \
+		${PYTHON} -m insertcode -o xbuild -p '%DEPENDSH_CODE%' bashinsert "${TOPDIR}/libs/dependsh",\
 		"GENSH",$@)
 	$(call call_exec,${CHX} ${CURDIR}/xbuild,"CHX",$@)
 

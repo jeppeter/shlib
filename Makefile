@@ -11,7 +11,7 @@ endif
 
 include ${TOPDIR}/basedef.mak
 
-subdirs=sshsmbmount cpfuncs mkcode
+subdirs=sshsmbmount cpfuncs mkcode initcp encsh makelib
 ifeq (${OSNAME},darwin)
 subdirs+= macos
 endif

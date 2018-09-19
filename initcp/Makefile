@@ -13,8 +13,8 @@ include ${TOPDIR}/basedef.mak
 all:initcp
 
 initcp:initcp.tmpl check_libs
-	$(call call_exec,${PYTHON} ${TOPDIR}/insertcode -i initcp.tmpl  -p '%DEBUGSH_CODE%'  bashinsert "${TOPDIR}/libs/debugsh" | \
-		${PYTHON} ${TOPDIR}/insertcode -o initcp -p '%DEFINESH_CODE%' bashinsert "${TOPDIR}/libs/definesh",\
+	$(call call_exec,${PYTHON} -m insertcode -i initcp.tmpl  -p '%DEBUGSH_CODE%'  bashinsert "${TOPDIR}/libs/debugsh" | \
+		${PYTHON} -m insertcode -o initcp -p '%DEFINESH_CODE%' bashinsert "${TOPDIR}/libs/definesh",\
 		"GENSH",$@)
 	$(call call_exec,${CHX} ${CURDIR}/initcp,"CHX",$@)
 
