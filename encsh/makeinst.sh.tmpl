@@ -80,6 +80,11 @@ make_bios()
 
 	run_cmd "$_topdir/src/install/encutil mkbios -V $_topdir/src/package/vmlinuz-${_kernver} -r $_topdir/src/package/initrd.img-${_kernver}  $_instdir/encboot.img"
 	run_cmd "$_topdir/src/install/tstefi writeconf -o $_instdir/encboot.conf '${_conf}'"
+	if [ -n "$MAKOB_FILE" ]
+		then
+		_makob_base=`basename $MAKOB_FILE`
+		run_cmd "cp $MAKOB_FILE $_instdir/$_makob_base"
+	fi
 }
 
 make_efi()
@@ -94,6 +99,11 @@ make_efi()
 	run_cmd "$_topdir/src/install/encutil mkefi -V $_topdir/src/package/vmlinuz-${_kernver} -r $_topdir/src/package/initrd.img-${_kernver} --conffile \"$_instdir/bingte.conf\" \"$_instdir/bingte.img\" \"${_conf}\" "
 	run_cmd "cp $_topdir/src/efi/bingte.efi $_instdir/bingte.efi"
 	run_cmd "cp $_topdir/src/install/encutil $_instdir/encutil"
+	if [ -n "$MAKOB_FILE" ]
+		then
+		_makob_base=`basename $MAKOB_FILE`
+		run_cmd "cp $MAKOB_FILE $_instdir/$_makob_base"
+	fi
 }
 
 make_compile_all()
@@ -148,8 +158,9 @@ read -r -d '' OPTIONS<<EOFMM
 		"efidir" : "$_curdir/efidir",
 		"biosdir" : "$_curdir/biosdir",
 		"obfuscated|O" : false,
-		"reserve|R" : true,
+		"reserve|R" : false,
 		"noline" : 0,
+		"obfile|F" : false,
 		"all<subcommand>##prepare efi and bios all install package##" : {
 			"\$" : 0
 		},
@@ -168,34 +179,117 @@ read -r -d '' OPTIONS<<EOFMM
 	}
 EOFMM
 
+
 parse_command_line "$OPTIONS" "$@"
 
 local_tempdir=""
-function trap_exit() {
-	if [ -n "$local_tempdir" ]
+obfile_tempdir=""
+
+function _remove_dir()
+{
+	local _dir="$1"
+	local _descript="$2"
+	if [ -n "$_dir" ]
 		then
 		if [ $reserve -eq 0 ]
 			then
-			rm -rf "$local_tempdir"
+			rm -rf "$_dir"
 		else
-			Debug "TEMPDIR [$local_tempdir]"
+			Debug "$_descript [$_dir]"
 		fi
 	fi
 }
 
+function call_next_level_run()
+{
+	local _tempdir="$1"
+	local _specadd="$2"
+	local _cmd_to_run
+	local _verbosemode
+	local _i
+	local _num_subnargs
+	local _idx
+	local _reserve
+	_verbosemode=""
+	if [ $verbose -gt 0 ]
+		then
+		_i=0
+		_verbosemode="-"
+		while [ $_i -lt $verbose ]
+		do
+			_verbosemode=`printf "%sv" $_verbosemode`
+			_i=`expr $_i \+ 1`
+		done
+	fi
+	_reserve=""
+	if [ $reserve -ne 0 ]
+		then
+		_reserve="--reserve"
+	fi
+
+	_cmd_to_run="\"$_tempdir/$base_script\" --efidir \"$efidir\" --biosdir \"$biosdir\" $_verbosemode -C \"$config\"  -V $kernelversion $_reserve $_specadd \"$subcommand\""
+	_num_subnargs=${#subnargs[*]}
+	if [ $_num_subnargs -gt 0 ]
+		then
+		_idx=0
+		while [ $_idx -lt $_num_subnargs ]
+		do
+			_cmd_to_run="$_cmd_to_run ${subnargs[$_idx]}"
+			_idx=`$_idx \+ 1`
+		done
+	fi
+	run_cmd "$_cmd_to_run"
+}
+
+function trap_exit() {
+	_remove_dir "$local_tempdir" "LOCAL_TEMPDIR"
+	_remove_dir "$obfile_tempdir" "OBFILE_TEMPDIR"
+}
+
 trap trap_exit EXIT
+
+if [ ! -e "$_curdir/py-obcode" ]
+	then
+	run_cmd "make -C \"$_curdir\" -f \"$_curdir/init.mak\" all"
+fi
+
+
+if [ $obfile -ne 0 ]
+	then
+	# we should make obfile so do this
+	obfile_tempdir=`mktemp -d`
+	Debug "OBFILE_TEMPDIR [$obfile_tempdir]"
+	cp -r "$_curdir/." "$obfile_tempdir/"
+	# now we should 
+	unset  O
+	unset  MAKOB_FILE
+	run_cmd "rm -f $_curdir/makob.json"
+	export O=1
+	export MAKOB_FILE="$obfile_tempdir/makob.json"
+	# this would give the file
+	_c=""
+	if [ $obfuscated -gt 0 ]
+		then
+		_c="--obfuscated"
+	fi
+	call_next_level_run "$obfile_tempdir" "$_c"
+	exit 0
+fi
 
 Debug "obfuscated [$obfuscated]"
 
+
 if [ $obfuscated -ne 0 ]
 	then
+
 	# this is the obfuscated ,so we should give the code
-	if [ $subcommand = "clean" ]
+	if [ "$subcommand" = "clean" ]
 		then
 		# nothing to do
 		exit 0
 	fi
 	local_tempdir=`mktemp -d`
+	run_cmd "sync"
 	Debug "local_tempdir [$local_tempdir]"
 	_nolinemode=""
 	if [ $noline -gt 0 ]
@@ -214,28 +308,19 @@ if [ $obfuscated -ne 0 ]
 		done
 	fi
 	run_cmd "make -C \"$topdir\" \"$topdir/py-obcode/obcode.py\""
+
+	if [ -n "$O" ] && [ $O -gt 0 ] && [ -n "$MAKOB_FILE" ]
+		then
+		run_cmd "python \"$_curdir/py-obcode/obcode.py\" obtrans --obtrans-srcdir \"_curdir\" --obtrans-dstdir \"$local_tempdir\" $MAKOB_FILE"
+	fi
+
 	Debug "local_tempdir [$local_tempdir] topdir [$topdir]"
 	run_cmd "python \"$topdir/py-obcode/obcode.py\" cob $_nolinemode $_verbosemode \"$topdir\" \"$local_tempdir\""
-	Debug "obfuscated [$obfuscated]"	
-	cmd_to_run="\"$local_tempdir/$base_script\" --efidir \"$efidir\" --biosdir \"$biosdir\" $_verbosemode -C \"$config\"  -V $kernelversion \"$subcommand\""
-	num_subnargs=${#subnargs[*]}
-	if [ $num_subnargs -gt 0 ]
-		then
-		_idx=0
-		while [ $_idx -lt $num_subnargs ]
-		do
-			cmd_to_run="$cmd_to_run ${subnargs[$_idx]}"
-			_idx=`$_idx \+ 1`
-		done
-	fi
-	run_cmd "$cmd_to_run"
 
-	if [ $reserve -eq 0 ]
-		then
-		run_cmd "rm -rf \"$_tempdir\""
-	else
-		echo "TEMPDIR [$_tempdir]"
-	fi
+
+
+	Debug "obfuscated [$obfuscated]"	
+	call_next_level_run "$local_tempdir"
 	exit 0
 fi
 
