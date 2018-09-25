@@ -66,43 +66,57 @@ make_bios()
 {
 	_topdir=$1
 	_instdir=$2
-	_kernver=$3
-	_conf=$4
+	_privdir=$3
+	_kernver=$4
+	_conf=$5
 
 
 	run_cmd "rm -rf $_instdir"
 	run_cmd "mkdir -p $_instdir"
+	if [ ! -e "$_privdir" ]
+		then
+		run_cmd "mkdir -p \"$_privdir\""
+	fi
 	run_cmd "cp $_topdir/src/mbr/mbr.bin $_instdir/"
 	run_cmd "cp $_topdir/src/stage10/stage10.bin $_instdir/"
 	run_cmd "cp $_topdir/src/stage15/stage15.bin $_instdir/"
 	run_cmd "cp $_topdir/src/main/main.lz $_instdir/"
 	run_cmd "cp $_topdir/src/install/encutil $_instdir/"
+	run_cmd "cp $_topdir/src/install/tstefi $_privdir/"
 
 	run_cmd "$_topdir/src/install/encutil mkbios -V $_topdir/src/package/vmlinuz-${_kernver} -r $_topdir/src/package/initrd.img-${_kernver}  $_instdir/encboot.img"
 	run_cmd "$_topdir/src/install/tstefi writeconf -o $_instdir/encboot.conf '${_conf}'"
-	if [ -n "$MAKOB_FILE" ]
+	if [ -n "$MAKOB_FILE" ] && [ -f "$MAKOB_FILE" ]
 		then
 		_makob_base=`basename $MAKOB_FILE`
-		run_cmd "cp $MAKOB_FILE $_instdir/$_makob_base"
+		run_cmd "cp $MAKOB_FILE $_privdir/$_makob_base"
 	fi
+
+
 }
 
 make_efi()
 {
 	_topdir=$1
 	_instdir=$2
-	_kernver=$3
-	_conf=$4
+	_privdir=$3
+	_kernver=$4
+	_conf=$5
 
 	run_cmd "rm -rf $_instdir"
 	run_cmd "mkdir -p $_instdir"
+	if [ ! -e "$_privdir" ]
+		then
+		run_cmd "mkdir -p \"$_privdir\""
+	fi
 	run_cmd "$_topdir/src/install/encutil mkefi -V $_topdir/src/package/vmlinuz-${_kernver} -r $_topdir/src/package/initrd.img-${_kernver} --conffile \"$_instdir/bingte.conf\" \"$_instdir/bingte.img\" \"${_conf}\" "
 	run_cmd "cp $_topdir/src/efi/bingte.efi $_instdir/bingte.efi"
 	run_cmd "cp $_topdir/src/install/encutil $_instdir/encutil"
-	if [ -n "$MAKOB_FILE" ]
+	run_cmd "cp $_topdir/src/install/tstefi $_privdir/"
+	if [ -n "$MAKOB_FILE" ] && [ -f "$MAKOB_FILE" ]
 		then
 		_makob_base=`basename $MAKOB_FILE`
-		run_cmd "cp $MAKOB_FILE $_instdir/$_makob_base"
+		run_cmd "cp $MAKOB_FILE $_privdir/$_makob_base"
 	fi
 }
 
@@ -157,6 +171,7 @@ read -r -d '' OPTIONS<<EOFMM
 		"config|C##specified the configuration for compiling default (ro quiet) ##" : "ro quiet",
 		"efidir" : "$_curdir/efidir",
 		"biosdir" : "$_curdir/biosdir",
+		"privdir"  : "$_curdir/privdir",
 		"obfuscated|O" : false,
 		"reserve|R" : false,
 		"noline" : 0,
@@ -227,7 +242,7 @@ function call_next_level_run()
 		_reserve="--reserve"
 	fi
 
-	_cmd_to_run="\"$_tempdir/$base_script\" --efidir \"$efidir\" --biosdir \"$biosdir\" $_verbosemode -C \"$config\"  -V $kernelversion $_reserve $_specadd \"$subcommand\""
+	_cmd_to_run="\"$_tempdir/$base_script\" --privdir \"$privdir\" --efidir \"$efidir\" --biosdir \"$biosdir\" $_verbosemode -C \"$config\"  -V $kernelversion $_reserve $_specadd \"$subcommand\""
 	_num_subnargs=${#subnargs[*]}
 	if [ $_num_subnargs -gt 0 ]
 		then
@@ -328,16 +343,16 @@ fi
 if [ "$subcommand" = "all" ]
 	then
 	make_compile_all "$topdir" "$kernelversion"
-	make_bios "$topdir" "$biosdir" "$kernelversion" "$config"
-	make_efi  "$topdir" "$efidir" "$kernelversion" "$config"
+	make_bios "$topdir" "$biosdir" "$privdir" "$kernelversion" "$config" 
+	make_efi  "$topdir" "$efidir" "$privdir" "$kernelversion" "$config"
 elif [ "$subcommand" = "efi" ]
 	then
 	make_compile_efi "$topdir" "$kernelversion"
-	make_efi  "$topdir" "$efidir" "$kernelversion" "$config"
+	make_efi  "$topdir" "$efidir" "$privdir" "$kernelversion" "$config"
 elif [ "$subcommand" = "bios" ]
 	then
 	make_compile_bios "$topdir" "$kernelversion"
-	make_bios "$topdir" "$biosdir" "$kernelversion" "$config"
+	make_bios "$topdir" "$biosdir" "$privdir" "$kernelversion" "$config"
 elif [ "$subcommand" = "compile" ]
 	then
 	make_compile_all "$topdir" "$kernelversion"
@@ -346,6 +361,7 @@ elif [ "$subcommand" = "clean" ]
 	make_compile_clean "$topdir" "$kernelversion"
 	run_cmd "rm -rf \"$efidir\""
 	run_cmd "rm -rf \"$biosdir\""
+	run_cmd "rm -rf \"$privdir\""
 else
 	echo "not supported command [$subcommand]" >&2
 	exit 4
