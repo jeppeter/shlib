@@ -48,8 +48,8 @@ CheckPackageUbuntu()
 {
 	local _pkg=$1
 	local _res
-	dpkg -l $_pkg 2>/dev/null >/dev/null
-	if [ $? -eq 0 ]
+	local _l=`dpkg -l $_pkg | grep -e "$_pkg" | grep -e '^ii' 2>/dev/null` 
+	if [ -n "$_l" ]
 		then
 		echo "0"
 	else
@@ -108,6 +108,7 @@ CheckOrInstallMustSucc()
 {
 	local _res
 	local _pkg=$1
+	Debug "check [$_pkg]"
 	_res=$(CheckPackageUbuntu "$_pkg")
 	if [ $_res -ne 0 ]
 		then
@@ -118,6 +119,7 @@ CheckOrInstallMustSucc()
 InstallUpgradePIPPackage()
 {
 	local _pkg=$1
+	Debug "check [$_pkg]"
 	local _res=`pip show "$_pkg"`
 	if [ -z "$_res" ]
 		then
