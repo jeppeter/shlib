@@ -8,6 +8,10 @@ bindir="$HOME/bin"
 
 %DEBUGSH_CODE%
 
+%RUNSH_CODE%
+
+%PKGSH_CODE%
+
 _scriptfile=`readlink -f $0`
 if [ -z "$_scriptfile" ]
 	then
@@ -25,185 +29,7 @@ DEFAULT_DPKG_FILE[1]="$_scriptdir/src/package/cppkgs.txt"
 DEFAULT_PIP_FILE[0]="$_scriptdir/pip.txt"
 
 
-SUDO_PREFIX=
-if [ "$USER" != "root" ]
-	then
-	sudobin=`which sudo 2>/dev/null`
-	if [ -z "$sudobin" ]
-		then
-		echo "no sudo in the environment" >&2
-		exit 3
-	fi
-	SUDO_PREFIX="$sudobin -A"
-	${SUDO_PREFIX} ls -l >/dev/null
-	if [ $? -ne 0 ]
-		then
-		echo "please add next line into /etc/sudoers after line start with [%sudo ALL=(ALL:ALL) ALL]" >&2
-		echo "${USER} ALL=(ALL) NOPASSWD:ALL" >&2
-		exit 4
-	fi
-fi
-
-CheckPackageUbuntu()
-{
-	local _pkg=$1
-	local _res
-	local _l=`dpkg -l $_pkg | grep -e "$_pkg" | grep -e '^ii' 2>/dev/null` 
-	if [ -n "$_l" ]
-		then
-		echo "0"
-	else
-		echo "1"
-	fi
-	return
-}
-
-RunSudoNoOut()
-{
-	local _res=0
-	${SUDO_PREFIX} $@ >/dev/null
-	_res=$?
-	echo "$_res"
-	return
-}
-
-RunSudoOutput()
-{
-	${SUDO_PREFIX} $@
-	return
-}
-
-RunSudoMustSucc()
-{
-	local _args=$@
-	local _res=0
-	Debug "run [$*]"
-	_res=$(RunSudoNoOut $@)
-	Debug "_res [$_res]"
-	if [ $_res -ne 0 ]
-		then
-		echo "can not run [$@] [$_res]" >/dev/stderr
-		exit 4
-	fi
-}
-
-RunMustSucc()
-{
-	local _res
-	$@ >/dev/null 2>/dev/null
-	_res=$?
-	if [ $_res -ne 0 ]
-		then
-		ErrorExit 4 "can not run [$*]"
-	fi
-}
-
-InstallPackageUbuntu()
-{
-	local _pkg=$1
-	RunSudoMustSucc apt-get install -y "$_pkg"
-}
-
-CheckOrInstallMustSucc()
-{
-	local _res
-	local _pkg=$1
-	Debug "check [$_pkg]"
-	_res=$(CheckPackageUbuntu "$_pkg")
-	if [ $_res -ne 0 ]
-		then
-		InstallPackageUbuntu "$_pkg"
-	fi
-}
-
-InstallUpgradePIPPackage()
-{
-	local _pkg=$1
-	Debug "check [$_pkg]"
-	local _res=`pip show "$_pkg"`
-	if [ -z "$_res" ]
-		then
-		RunSudoMustSucc pip install $_pkg
-	fi
-}
-
-
-CheckOrCloneDir()
-{
-	local _url=$1
-	local _clonedir=$2
-	local _res
-	if [ -z "$_clonedir" ]
-		then
-		_clonedir=`basename $_url | sed 's/\.git$//'`
-	fi
-	if [ ! -d "{PWD}/${_clonedir}/.git" ]
-		then
-		if [ ! -d "${PWD}/${_clonedir}" ]
-			then
-			git clone "$_url"
-			_res=$?
-			if [ $_res -ne 0 ]
-				then
-				ErrorExit 4 "can not clone[$_url] [$_res]"
-			fi
-		fi
-	fi
-	return
-}
-
-CheckIfHomeDir()
-{
-	local _dir=$1
-	local _isok
-	local _adir=`readlink -f $_dir`
-	_isok=`echo "$_adir" | grep -e '^${HOME}'`
-	if [ "$_isok" = "$_adir" ]
-		then
-		echo "0"
-	else
-		echo "1"
-	fi
-	return
-}
-
-RunDstMustSucc()
-{
-	local -a _args
-	local _i=0
-	local _ishome=0
-	while [ $# -gt 0 ]
-	do
-		_args[$_i]=$1
-		shift
-		_i=`expr $_i + 1`
-	done
-	Debug "_args [${_args[*]}]"
-	_ishome=$(CheckIfHomeDir "$bindir")
-	if [ $_ishome -gt 0 ]
-		then
-		RunMustSucc ${_args[@]}
-	else
-		RunSudoMustSucc ${_args[@]}
-	fi
-}
-
-
-CopyOnDstDir()
-{
-	local _src=$1
-	Debug "src [$_src]"
-	if [  -d "$_src" ]
-		then
-		RunDstMustSucc cp -r "$_src" "$bindir"
-	elif [ -f "$_src" ]
-		then
-		RunDstMustSucc cp "$_src" "$bindir"
-	fi
-
-	return
-
-}
+TestSudo
 
 
 Usage()
@@ -234,6 +60,8 @@ Usage()
 
 declare -a pip_install_files
 declare -a dpkg_install_files
+
+CheckOS
 
 while [ $# -gt 0 ]
 do

@@ -21,6 +21,8 @@ init.sh:init.sh.tmpl  check_libs
 		${PYTHON} -m insertcode -p '%DEFINESH_CODE%' bashinsert "${TOPDIR}/libs/definesh" | \
 		${PYTHON} -m insertcode -p '%PERL_BASE_NAME%' bashstring "${TOPDIR}/perlsrc/basename.pl" | \
 		${PYTHON} -m insertcode -p '%PYTHON_MD5_STR%' bashstring ${TOPDIR}/pysrc/calcmd5.py | \
+		${PYTHON} -m insertcode -p '%RUNSH_CODE%' bashinsert "${TOPDIR}/libs/runsh" | \
+		${PYTHON} -m insertcode -p '%PKGSH_CODE%' bashinsert "${TOPDIR}/libs/pkgsh" | \
 		${PYTHON} -m insertcode -o $@ -p '%DEPENDSH_CODE%' bashinsert "${TOPDIR}/libs/dependsh","GENSH",$@)
 	$(call call_exec,${CHX} $@,"CHX",$@)
 
