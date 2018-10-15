@@ -1,0 +1,56 @@
+
+TestSudo()
+{
+	local _res
+	_res=0
+	sudo -A ls -l
+	_res=$? 
+	if [ $_res -ne 0 ]
+		then
+		cat <<EOFMM>> /dev/stderr
+you must use visudo to add line to enable no password call sudo
+$USER ALL = NOPASSWD: ALL
+EOFMM
+		exit 4
+	fi
+}
+
+RunSudoNoOut()
+{
+	local _res=0
+	sudo -A $@ >/dev/null
+	_res=$?
+	echo "$_res"
+	return
+}
+
+RunSudoOutput()
+{
+	sudo -A $@
+	return
+}
+
+RunSudoMustSucc()
+{
+	local _args=$@
+	local _res=0
+	Debug "run [$*]"
+	_res=$(RunSudoNoOut $@)
+	Debug "_res [$_res]"
+	if [ $_res -ne 0 ]
+		then
+		echo "can not run [$@] [$_res]" >/dev/stderr
+		exit 4
+	fi
+}
+
+RunMustSucc()
+{
+	local _res
+	$@ >/dev/null 2>/dev/null
+	_res=$?
+	if [ $_res -ne 0 ]
+		then
+		ErrorExit 4 "can not run [$*]"
+	fi
+}
