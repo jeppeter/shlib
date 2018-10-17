@@ -12,6 +12,31 @@ bindir="$HOME/bin"
 
 %PKGSH_CODE%
 
+run_scripts()
+{
+	local _d=$1
+	local _res
+
+
+	if [ ! -d "$_d" ]; then
+		return
+	fi
+
+	for _f in $(ls "$_d" | sort)
+	do
+		if [ -f "$_d/$_f" ] && [ -e "$_d/$_f" ]
+			then
+			bash "$_d/$_f"
+			_res=$?
+			if [ $_res -ne 0 ]
+				then
+				ErrorExit 4 "can not run [$_d/$_f] ok"
+			fi
+			Debug "run [$_d/$_f] ok"
+		fi
+	done
+}
+
 _scriptfile=`readlink -f $0`
 if [ -z "$_scriptfile" ]
 	then
@@ -47,14 +72,14 @@ Usage()
 		echo -e "$_fmt" >$_echoout
 	fi
 
-	echo -e "init [OPTIONS] [cmds...]" >$_echoout
+	echo -e "init [OPTIONS] [initdirs...]" >$_echoout
 	echo -e "\t--help|-h                          to display this help information" >$_echoout
 	echo -e "\t--verbose|-v                       to make verbose mode" >$_echoout
 	echo -e "\t--bindir|-d      bindir            to specify the bin dir to install for self use" >$_echoout
 	echo -e "\t--dpkg|-D        file              to add the dpkg install files default[${DEFAULT_DPKG_FILE[@]}]" >$_echoout
 	echo -e "\t--pip|-p         file              to add pip file default [${DEFAULT_PIP_FILE[@]}]" >$_echoout
 	echo -e "" >$_echoout
-	echo -e "cmds ... will run after all installed" >$_echoout
+	echo -e "initdirs  ... will run scripts in the initdirs" >$_echoout
 	exit $_ec
 }
 
@@ -162,9 +187,10 @@ fi
 
 if [ $# -gt 0 ]
 	then
-	$@
-	if [ $? -ne 0 ]
-		then
-		ErrorExit 5 "run [$@] error[$?]"
-	fi
+	for _i in $@
+	do
+		run_scripts "$_i"
+	done
+else
+	run_scripts "$_scriptdir/initsh"
 fi
