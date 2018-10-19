@@ -81,8 +81,9 @@ make_bios()
 	run_cmd "cp $_topdir/src/stage10/stage10.bin $_instdir/"
 	run_cmd "cp $_topdir/src/stage15/stage15.bin $_instdir/"
 	run_cmd "cp $_topdir/src/main/main.lz $_instdir/"
-	run_cmd "cp $_topdir/src/install/encutil $_instdir/"
+	run_cmd "cp $_topdir/src/install/encutil $_privdir/"
 	run_cmd "cp $_topdir/src/install/tstefi $_privdir/"
+	run_cmd "cp $_topdir/src/install/instutil $_instdir/"
 
 	run_cmd "$_topdir/src/install/encutil mkbios -V $_topdir/src/package/vmlinuz-${_kernver} -r $_topdir/src/package/initrd.img-${_kernver}  $_instdir/encboot.img"
 	run_cmd "$_topdir/src/install/tstefi writeconf -o $_instdir/encboot.conf '${_conf}'"
@@ -109,9 +110,10 @@ make_efi()
 		then
 		run_cmd "mkdir -p \"$_privdir\""
 	fi
-	run_cmd "$_topdir/src/install/encutil mkefi -V $_topdir/src/package/vmlinuz-${_kernver} -r $_topdir/src/package/initrd.img-${_kernver} --conffile \"$_instdir/bingte.conf\" \"$_instdir/bingte.img\" \"${_conf}\" "
-	run_cmd "cp $_topdir/src/efi/bingte.efi $_instdir/bingte.efi"
-	run_cmd "cp $_topdir/src/install/encutil $_instdir/encutil"
+	run_cmd "$_topdir/src/install/encutil mkefi -V $_topdir/src/package/vmlinuz-${_kernver} -r $_topdir/src/package/initrd.img-${_kernver} --conffile \"$_instdir/${prefix}.conf\" \"$_instdir/${prefix}.img\" \"${_conf}\" "
+	run_cmd "cp $_topdir/src/efi/bingte.efi $_instdir/${prefix}.efi"
+	run_cmd "cp $_topdir/src/install/encutil $_privdir/encutil"
+	run_cmd "cp $_topdir/src/install/instutil $_instdir/instutil"
 	run_cmd "cp $_topdir/src/install/tstefi $_privdir/"
 	if [ -n "$MAKOB_FILE" ] && [ -f "$MAKOB_FILE" ]
 		then
@@ -125,7 +127,7 @@ make_compile_all()
 	_topdir=$1
 	_kernver=$2
 
-	run_cmd "make -C '${_topdir}' KERNEL_VERSION=${_kernver} all"
+	run_cmd "make -C '${_topdir}' ENCBOOT_PREFIX=${prefix} KERNEL_VERSION=${_kernver} all"
 }
 
 make_compile_efi()
@@ -133,7 +135,7 @@ make_compile_efi()
 	_topdir=$1
 	_kernver=$2
 
-	run_cmd "make -C '${_topdir}' KERNEL_VERSION=${_kernver} efi"
+	run_cmd "make -C '${_topdir}' ENCBOOT_PREFIX=${prefix} KERNEL_VERSION=${_kernver} efi"
 }
 
 make_compile_bios()
@@ -141,7 +143,7 @@ make_compile_bios()
 	_topdir=$1
 	_kernver=$2
 
-	run_cmd "make -C '${_topdir}' KERNEL_VERSION=${_kernver} bios"
+	run_cmd "make -C '${_topdir}' ENCBOOT_PREFIX=${prefix} KERNEL_VERSION=${_kernver} bios"
 }
 
 make_compile_clean()
@@ -149,7 +151,7 @@ make_compile_clean()
 	_topdir=$1
 	_kernver=$2
 
-	run_cmd "make -C '${_topdir}' KERNEL_VERSION=${_kernver} clean"
+	run_cmd "make -C '${_topdir}' ENCBOOT_PREFIX=${prefix} KERNEL_VERSION=${_kernver} clean"
 }
 
 
@@ -162,6 +164,8 @@ fi
 
 _curdir=`dirname $script_file`
 base_script=`basename $script_file`
+
+. "$_curdir/compile.cfg"
 
 read -r -d '' OPTIONS<<EOFMM
 	{
@@ -176,6 +180,7 @@ read -r -d '' OPTIONS<<EOFMM
 		"reserve|R" : false,
 		"noline" : 0,
 		"obfile|F" : false,
+		"prefix|p" : "$ENCBOOT_PREFIX",
 		"all<subcommand>##prepare efi and bios all install package##" : {
 			"\$" : 0
 		},
@@ -242,7 +247,7 @@ function call_next_level_run()
 		_reserve="--reserve"
 	fi
 
-	_cmd_to_run="\"$_tempdir/$base_script\" --privdir \"$privdir\" --efidir \"$efidir\" --biosdir \"$biosdir\" $_verbosemode -C \"$config\"  -V $kernelversion $_reserve $_specadd \"$subcommand\""
+	_cmd_to_run="\"$_tempdir/$base_script\" --privdir \"$privdir\" --efidir \"$efidir\" --biosdir \"$biosdir\" $_verbosemode -C \"$config\" -p \"$prefix\"  -V $kernelversion $_reserve $_specadd \"$subcommand\""
 	_num_subnargs=${#subnargs[*]}
 	if [ $_num_subnargs -gt 0 ]
 		then
