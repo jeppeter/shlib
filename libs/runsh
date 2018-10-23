@@ -3,7 +3,7 @@ TestSudo()
 {
 	local _res
 	_res=0
-	sudo -A ls -l
+	sudo -A ls -l >/dev/null
 	_res=$? 
 	if [ $_res -ne 0 ]
 		then
@@ -18,7 +18,18 @@ EOFMM
 RunSudoNoOut()
 {
 	local _res=0
-	sudo -A $@ >/dev/null
+	local _cmd=""
+	while [ $# -gt 0 ]
+	do
+		if [ -z "$_cmd" ]
+			then
+			_cmd="\"$1\""
+		else
+			_cmd="${_cmd} \"$1\""
+		fi
+		shift
+	done
+	sudo -A /bin/bash -c "${_cmd}" >/dev/null
 	_res=$?
 	echo "$_res"
 	return
@@ -34,12 +45,11 @@ RunSudoMustSucc()
 {
 	local _args=$@
 	local _res=0
-	Debug "run [$*]"
 	_res=$(RunSudoNoOut $@)
-	Debug "_res [$_res]"
+	Debug "[$*] _res [$_res]"
 	if [ $_res -ne 0 ]
 		then
-		echo "can not run [$@] [$_res]" >/dev/stderr
+		echo "can not run [$*] [$_res]" >/dev/stderr
 		exit 4
 	fi
 }
@@ -47,10 +57,52 @@ RunSudoMustSucc()
 RunMustSucc()
 {
 	local _res
-	$@ >/dev/null 2>/dev/null
+	local _cmd=""
+	while [ $# -gt 0 ]
+	do
+		if [ -z "$_cmd" ]
+			then
+			_cmd="\"$1\""
+		else
+			_cmd="${_cmd} \"$1\""
+		fi
+		shift
+	done
+	/bin/bash -c "$_cmd" >/dev/null 2>/dev/null
 	_res=$?
 	if [ $_res -ne 0 ]
 		then
-		ErrorExit 4 "can not run [$*]"
+		ErrorExit 4 "can not run [${_cmd}]"
+	fi
+}
+
+run_cmd()
+{
+	_cmd=$1
+	if [ -z "$_cmd" ]
+	then
+		/bin/echo "no cmd specify" >&2
+		exit 2
+	fi
+
+	if [ $verbose -lt 3 ] ; then
+	/bin/echo -e -n "\e[1;37mrunning ($_cmd)\e[0m" >&2
+	fi
+	if [ $verbose -lt 3 ]; then
+		eval "$_cmd" >/dev/null
+	else
+		eval "$_cmd"
+	fi
+	_res=$?
+	
+	if [  $_res -ne 0 ]
+	then
+		if [ $verbose -lt 3 ] ; then
+			/bin/echo -e "\e[31m[FAILED]\e[0m" >&2
+		fi
+		exit 3
+	fi
+	if [ $verbose -lt 3 ] ; then
+		/bin/echo -e "\e[32m[SUCCESS]\e[0m" >&2
 	fi
 }

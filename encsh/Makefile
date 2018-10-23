@@ -1,6 +1,6 @@
 
 TOPDIR=../
-ALLFILES=makeinst.sh init.sh
+ALLFILES=makeinst.sh init.sh encboot.sh.tmpl
 
 include $(TOPDIR)/basedef.mak
 
@@ -13,6 +13,7 @@ makeinst.sh:makeinst.sh.tmpl  check_libs
 		${PYTHON} -m insertcode -p '%DEFINESH_CODE%' bashinsert "${TOPDIR}/libs/definesh" | \
 		${PYTHON} -m insertcode -p '%PERL_BASE_NAME%' bashstring "${TOPDIR}/perlsrc/basename.pl" | \
 		${PYTHON} -m insertcode -p '%PYTHON_MD5_STR%' bashstring ${TOPDIR}/pysrc/calcmd5.py | \
+		${PYTHON} -m insertcode -p '%RUNSH_CODE%' bashinsert "${TOPDIR}/libs/runsh" | \
 		${PYTHON} -m insertcode -o $@ -p '%DEPENDSH_CODE%' bashinsert "${TOPDIR}/libs/dependsh","GENSH",$@)
 	$(call call_exec,${CHX} $@,"CHX",$@)
 
@@ -26,6 +27,12 @@ init.sh:init.sh.tmpl  check_libs
 		${PYTHON} -m insertcode -o $@ -p '%DEPENDSH_CODE%' bashinsert "${TOPDIR}/libs/dependsh","GENSH",$@)
 	$(call call_exec,${CHX} $@,"CHX",$@)
 
+encboot.sh.tmpl:encboot.sh.tmpl.tmpl check_libs
+	$(call call_exec,${PYTHON} -m insertcode -i $<  -p '%DEBUGSH_CODE%' bashinsert "${TOPDIR}/libs/debugsh" | \
+		${PYTHON} -m insertcode -p '%DEFINESH_CODE%' bashinsert "${TOPDIR}/libs/definesh" | \
+		${PYTHON} -m insertcode -p '%RUNSH_CODE%' bashinsert "${TOPDIR}/libs/runsh" | \
+		${PYTHON} -m insertcode -o $@ -p '%DEPENDSH_CODE%' bashinsert "${TOPDIR}/libs/dependsh","GENSH",$@)
+	$(call call_exec,${CHX} $@,"CHX",$@)
 
 check_libs:check_calcmd5_py check_basename_pl
 

@@ -64,11 +64,13 @@ run_cmd()
 
 make_bios()
 {
-	_topdir=$1
-	_instdir=$2
-	_privdir=$3
-	_kernver=$4
-	_conf=$5
+	local _topdir=$1
+	local _instdir=$2
+	local _privdir=$3
+	local _kernver=$4
+	local _conf=$5
+	local _encdir=$6
+	local _ext4sh
 
 
 	run_cmd "rm -rf $_instdir"
@@ -92,17 +94,27 @@ make_bios()
 		_makob_base=`basename $MAKOB_FILE`
 		run_cmd "cp $MAKOB_FILE $_privdir/$_makob_base"
 	fi
+	_ext4sh=`which extargsparse4sh`
+	if [ -z "$_ext4sh" ]
+		then
+		ErrorExit 4 "no extargsparse4sh found"
+	fi
 
+	run_cmd "cp -f \"$_ext4sh\" \"$_topdir/src/package\""
+	# to make copyout
+	run_cmd "\"$_topdir/src/package/encboot.sh\" cp -T \"$_encdir\" \"$_topdir\""
 
 }
 
 make_efi()
 {
-	_topdir=$1
-	_instdir=$2
-	_privdir=$3
-	_kernver=$4
-	_conf=$5
+	local _topdir=$1
+	local _instdir=$2
+	local _privdir=$3
+	local _kernver=$4
+	local _conf=$5
+	local _encdir=$6
+	local _ext4sh
 
 	run_cmd "rm -rf $_instdir"
 	run_cmd "mkdir -p $_instdir"
@@ -120,6 +132,17 @@ make_efi()
 		_makob_base=`basename $MAKOB_FILE`
 		run_cmd "cp $MAKOB_FILE $_privdir/$_makob_base"
 	fi
+
+	_ext4sh=`which extargsparse4sh`
+	if [ -z "$_ext4sh" ]
+		then
+		ErrorExit 4 "no extargsparse4sh found"
+	fi
+
+	run_cmd "cp -f \"$_ext4sh\" \"$_topdir/src/package\""
+	# to make copyout
+	run_cmd "\"$_topdir/src/package/encboot.sh\" cp -T \"$_encdir\" \"$_topdir\""
+
 }
 
 make_compile_all()
@@ -128,6 +151,7 @@ make_compile_all()
 	_kernver=$2
 
 	run_cmd "make -C '${_topdir}' ENCBOOT_PREFIX=${prefix} KERNEL_VERSION=${_kernver} all"
+	run_cmd "rm -f \"$_topdir/src/package/extargsparse4sh\""
 }
 
 make_compile_efi()
@@ -181,6 +205,7 @@ read -r -d '' OPTIONS<<EOFMM
 		"noline" : 0,
 		"obfile|F" : false,
 		"prefix|p" : "$ENCBOOT_PREFIX",
+		"encdir|E" : "$_curdir/encdir",
 		"all<subcommand>##prepare efi and bios all install package##" : {
 			"\$" : 0
 		},
@@ -247,7 +272,7 @@ function call_next_level_run()
 		_reserve="--reserve"
 	fi
 
-	_cmd_to_run="\"$_tempdir/$base_script\" --privdir \"$privdir\" --efidir \"$efidir\" --biosdir \"$biosdir\" $_verbosemode -C \"$config\" -p \"$prefix\"  -V $kernelversion $_reserve $_specadd \"$subcommand\""
+	_cmd_to_run="\"$_tempdir/$base_script\" --encdir \"$encdir\" --privdir \"$privdir\" --efidir \"$efidir\" --biosdir \"$biosdir\" $_verbosemode -C \"$config\" -p \"$prefix\"  -V $kernelversion $_reserve $_specadd \"$subcommand\""
 	_num_subnargs=${#subnargs[*]}
 	if [ $_num_subnargs -gt 0 ]
 		then
@@ -348,16 +373,16 @@ fi
 if [ "$subcommand" = "all" ]
 	then
 	make_compile_all "$topdir" "$kernelversion"
-	make_bios "$topdir" "$biosdir" "$privdir" "$kernelversion" "$config" 
-	make_efi  "$topdir" "$efidir" "$privdir" "$kernelversion" "$config"
+	make_bios "$topdir" "$biosdir" "$privdir" "$kernelversion" "$config" "$encdir"
+	make_efi  "$topdir" "$efidir" "$privdir" "$kernelversion" "$config" "$encdir"
 elif [ "$subcommand" = "efi" ]
 	then
 	make_compile_efi "$topdir" "$kernelversion"
-	make_efi  "$topdir" "$efidir" "$privdir" "$kernelversion" "$config"
+	make_efi  "$topdir" "$efidir" "$privdir" "$kernelversion" "$config" "$encdir"
 elif [ "$subcommand" = "bios" ]
 	then
 	make_compile_bios "$topdir" "$kernelversion"
-	make_bios "$topdir" "$biosdir" "$privdir" "$kernelversion" "$config"
+	make_bios "$topdir" "$biosdir" "$privdir" "$kernelversion" "$config" "$encdir"
 elif [ "$subcommand" = "compile" ]
 	then
 	make_compile_all "$topdir" "$kernelversion"

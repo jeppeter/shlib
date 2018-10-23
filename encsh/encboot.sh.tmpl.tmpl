@@ -1,0 +1,182 @@
+#! /bin/bash
+
+verbose=0
+bindir="$HOME/bin"
+
+
+%DEFINESH_CODE%
+
+%DEBUGSH_CODE%
+
+%RUNSH_CODE%
+
+cp_file()
+{
+	local _src="$1"
+	local _dst="$2"
+	local _nosudo="$3"
+	local _cpid=0
+	local _cdir=`dirname "$_dst"`
+
+	if [ ! -f "$_dst" ]
+		then
+		_cpid=1
+	else
+		diff -q "$_src" "$_dst" >/dev/null
+		if [ $? -ne 0 ]
+			then
+			_cpid=1
+		fi
+	fi
+
+	if [ $_cpid -ne 0 ]
+		then
+		if [ ! -d "$_cdir" ]
+			then
+			if [ -z "$_nosudo" ]
+				then
+				RunSudoMustSucc mkdir -p "$_cdir"
+			else
+				RunMustSucc mkdir -p "$_cdir"
+			fi
+		fi
+
+		if [ -z "$_nosudo" ]
+			then
+			RunSudoMustSucc cp "$_src" "$_dst"
+			RunSudoMustSucc chmod +x "$_dst"
+		else
+			RunMustSucc cp "$_src" "$_dst"
+			RunMustSucc chmod +x "$_dst"
+		fi
+	fi
+}
+
+function init_command()
+{
+	local _topdir="$1"
+	local _version="$2"
+	local _initramsharedir="/usr/share/initramfs-tools"
+	local _hookfile="$_initramsharedir/hooks/encboot"
+	local _premountfile="$_initramsharedir/scripts/local-top/encboot"
+
+	if [ ! -f "$_topdir/encboot.hook" ]
+		then
+		ErrorExit 4 "no encboot.hook"
+	fi
+
+	if [ ! -f "$_topdir/encboot.local_top" ]
+		then
+		ErrorExit 4 "no encboot.local_top"
+	fi
+
+	if [ ! -f "$_topdir/uart_out" ]
+		then
+		ErrorExit 4 "not uart_out"
+	fi
+
+
+	cp_file "$_topdir/encboot.hook" "$_hookfile"
+	cp_file "$_topdir/encboot.local_top" "$_premountfile"
+}
+
+function package_command()
+{
+	local _topdir="$1"
+	local _version="$2"
+	local _config="$3"
+	local _initramsharedir="/usr/share/initramfs-tools"
+	local _hookfile="$_initramsharedir/hooks/encboot"
+	local _premountfile="$_initramsharedir/scripts/local-top/encboot"
+
+	if [ ! -f "$_hookfile" ] || [ ! -f "$_premountfile" ]
+		then
+		ErrorExit 4 "not init yet ,please run init command"
+	fi
+
+	if [ ! -x "$_topdir/encutil" ]
+		then
+		ErrorExit 4 "can not found encutil"
+	fi
+
+	export "%ENCBOOT_HANDLE_DIR%=$_topdir"
+	RunSudoMustSucc mkinitramfs  -o "$_topdir/initrd.img-${_version}" -k "${_version}" 
+	RunSudoMustSucc chown $USER:$USER "$_topdir/initrd.img-${_version}"
+	RunSudoMustSucc cp "/boot/vmlinuz-${_version}" "$_topdir/vmlinuz-${_version}"
+	RunSudoMustSucc chown $USER:$USER "$_topdir/vmlinuz-${_version}"
+
+	RunMustSucc "$_topdir/encutil" mkbios -V "$_topdir/vmlinuz-${_version}" -r "$_topdir/initrd.img-${_version}" "$_topdir/encboot.img"
+	RunMustSucc "$_topdir/encutil" mkefi -V "$_topdir/vmlinuz-${_version}" -r "$_topdir/initrd.img-${_version}" --conffile "$_topdir/BOOTX64.conf" "$_topdir/BOOTX64.img" "$_config"
+	return
+}
+
+function cp_command()
+{
+	local _srcdir="$1"
+	local _dstdir="$2"
+
+	cp_file "$_srcdir/src/package/encboot.hook" "$_dstdir/encboot.hook" "1"
+	cp_file "$_srcdir/src/package/encboot.local_top" "$_dstdir/encboot.local_top" "1"
+	cp_file "$_srcdir/src/package/uart_out" "$_dstdir/uart_out" "1"
+	cp_file "$_srcdir/src/package/dmtest" "$_dstdir/dmtest" "1"
+	cp_file "$_srcdir/src/package/modcp.py" "$_dstdir/modcp.py" "1"
+	cp_file "$_srcdir/src/package/modkos.txt" "$_dstdir/modkos.txt" "1"
+	cp_file "$_srcdir/src/package/modbase.txt" "$_dstdir/modbase.txt" "1"
+	cp_file "$_srcdir/src/package/cppkgs.txt" "$_dstdir/cppkgs.txt" "1"
+	cp_file "$_srcdir/src/package/dpkgcp.pl" "$_dstdir/dpkgcp.pl" "1"
+	cp_file "$_srcdir/src/package/envcp.pl" "$_dstdir/envcp.pl" "1"
+	cp_file "$_srcdir/src/package/extargsparse4sh" "$_dstdir/extargsparse4sh" "1"
+	cp_file "$_srcdir/src/install/encutil" "$_dstdir/encutil" "1"
+	cp_file "$_scriptfile" "$_dstdir/$_scriptbase" "1"
+
+	return
+}
+
+_scriptfile=`readlink -f $0`
+if [ -z "$_scriptfile" ]
+	then
+	_scriptfile=`which $0`
+fi
+_scriptdir=`dirname $_scriptfile`
+_scriptbase=`basename $_scriptfile`
+_curversion=`uname -r`
+
+source $_scriptdir/extargsparse4sh
+
+TestSudo
+
+read -r -d '' OPTIONS<<EOFMM
+	{
+		"verbose|v" : "+",
+		"kernelversion|V": "$_curversion",
+		"topdir|T" : "$_scriptdir" ,
+		"config|C" : "ro quiet",
+		"init<subcommand>##               to init the functions##" : {
+			"\$" : 0
+		},
+		"package<subcommand>##               to make the packages##" : {
+			"\$" : 0
+		},
+		"cp<subcommand>##fromtopdir     to cp fromtopdir to topdir##" : {
+			"\$" : 1
+		}
+	}
+EOFMM
+
+verbose=0
+
+parse_command_line "$OPTIONS" "$@"
+
+if [ "$subcommand" = "init" ]
+	then
+	init_command "$topdir" "$kernelversion"
+elif [ "$subcommand" = "package" ]; then
+	package_command "$topdir" "$kernelversion" "$config"
+elif [ "$subcommand" = "cp" ] ;then
+	_formdir=${subnargs[0]}
+	cp_command "$_formdir" "$topdir"
+else
+	ErrorExit 4 "not support command [$subcommand]"
+fi
+
+exit 0
