@@ -140,7 +140,7 @@ function package_command()
 	RunSudoMustSucc chown $USER:$USER "$_topdir/vmlinuz-${_version}"
 
 	RunMustSucc "$_topdir/encutil" mkbios -V "$_topdir/vmlinuz-${_version}" -r "$_topdir/initrd.img-${_version}" "$_topdir/encboot.img"
-	RunMustSucc "$_topdir/encutil" mkefi -V "$_topdir/vmlinuz-${_version}" -r "$_topdir/initrd.img-${_version}" --conffile "$_topdir/BOOTX64.conf" "$_topdir/BOOTX64.img" "$_config"
+	RunMustSucc "$_topdir/encutil" mkefi -V "$_topdir/vmlinuz-${_version}" -r "$_topdir/initrd.img-${_version}" --conffile "$_topdir/${prefix}.conf" "$_topdir/${prefix}.img" "$_config"
 	return
 }
 
@@ -188,6 +188,7 @@ read -r -d '' OPTIONS<<EOFMM
 		"topdir|T" : "$_scriptdir" ,
 		"config|C" : "ro quiet",
 		"reserve|R" : false,
+		"prefix|p" : "%ENCBOOT_PREFIX%",
 		"init<subcommand>##               to init the functions##" : {
 			"\$" : 0
 		},

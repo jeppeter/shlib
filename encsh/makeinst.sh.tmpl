@@ -413,6 +413,7 @@ elif [ "$subcommand" = "clean" ]
 	run_cmd "rm -rf \"$efidir\""
 	run_cmd "rm -rf \"$biosdir\""
 	run_cmd "rm -rf \"$privdir\""
+	run_cmd "rm -rf \"$encdir\""
 else
 	echo "not supported command [$subcommand]" >&2
 	exit 4
