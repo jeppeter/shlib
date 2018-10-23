@@ -10,7 +10,8 @@ bindir="$HOME/bin"
 
 %RUNSH_CODE%
 
-cp_file()
+
+function cp_file()
 {
 	local _src="$1"
 	local _dst="$2"
@@ -51,6 +52,33 @@ cp_file()
 		fi
 	fi
 }
+
+function cp_pip_file()
+{
+	local _pkg=$1
+	local _todir=$2
+	local _outres=`python -m pip show "$_pkg"`
+	local _ver=`echo "$_outres" | grep -e '^Version:' | awk  -F: '{print $2}' | tr -d [:space:]`
+	local _loc=`echo "$_outres" | grep -e '^Location:' | awk -F: '{print $2}' | sed -r 's/^\s+//' | sed -r 's/\s+$//'`
+	local _f="${_loc}/${_pkg}-${_ver}.egg-info/installed-files.txt"
+	local _d="${_loc}/${_pkg}-${_ver}.egg-info/"
+	local _l
+	local _ff
+	local _tf
+	local _cf
+
+
+	for _l in $(cat "$_f" | grep -e "\\.\\.\\/${_pkg}")
+	do
+		_cf=`echo "${_l}" | sed -r 's#\.\.\/##'`
+		_ff="${_d}/${_l}"
+		_tf="${_todir}/${_cf}"
+		cp_file "${_ff}" "${_tf}" "1"
+	done
+
+	return
+}
+
 
 function init_command()
 {
@@ -100,7 +128,13 @@ function package_command()
 	fi
 
 	export "%ENCBOOT_HANDLE_DIR%=$_topdir"
-	RunSudoMustSucc mkinitramfs  -o "$_topdir/initrd.img-${_version}" -k "${_version}" 
+	export "PYTHONLIB=$_scriptdir"
+	if [ $reserve -gt 0 ]
+		then
+		RunSudoMustSuccEnv mkinitramfs  -o "$_topdir/initrd.img-${_version}" -k "${_version}" 
+	else
+		RunSudoMustSuccEnv mkinitramfs  -o "$_topdir/initrd.img-${_version}" "${_version}" 
+	fi
 	RunSudoMustSucc chown $USER:$USER "$_topdir/initrd.img-${_version}"
 	RunSudoMustSucc cp "/boot/vmlinuz-${_version}" "$_topdir/vmlinuz-${_version}"
 	RunSudoMustSucc chown $USER:$USER "$_topdir/vmlinuz-${_version}"
@@ -128,6 +162,8 @@ function cp_command()
 	cp_file "$_srcdir/src/package/extargsparse4sh" "$_dstdir/extargsparse4sh" "1"
 	cp_file "$_srcdir/src/install/encutil" "$_dstdir/encutil" "1"
 	cp_file "$_scriptfile" "$_dstdir/$_scriptbase" "1"
+	cp_pip_file "extargsparse" "$_dstdir"
+	cp_pip_file "cmdpack" "$_dstdir"
 
 	return
 }
@@ -151,6 +187,7 @@ read -r -d '' OPTIONS<<EOFMM
 		"kernelversion|V": "$_curversion",
 		"topdir|T" : "$_scriptdir" ,
 		"config|C" : "ro quiet",
+		"reserve|R" : false,
 		"init<subcommand>##               to init the functions##" : {
 			"\$" : 0
 		},

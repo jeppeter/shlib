@@ -150,14 +150,27 @@ make_compile_all()
 	_topdir=$1
 	_kernver=$2
 
+	if [ $reserve -gt 0 ]
+		then
+		export ENCBOOT_RESERVE=1
+	else
+		unset ENCBOOT_RESERVE
+	fi
+
 	run_cmd "make -C '${_topdir}' ENCBOOT_PREFIX=${prefix} KERNEL_VERSION=${_kernver} all"
-	run_cmd "rm -f \"$_topdir/src/package/extargsparse4sh\""
 }
 
 make_compile_efi()
 {
 	_topdir=$1
 	_kernver=$2
+
+	if [ $reserve -gt 0 ]
+		then
+		export ENCBOOT_RESERVE=1
+	else
+		unset ENCBOOT_RESERVE
+	fi
 
 	run_cmd "make -C '${_topdir}' ENCBOOT_PREFIX=${prefix} KERNEL_VERSION=${_kernver} efi"
 }
@@ -166,6 +179,13 @@ make_compile_bios()
 {
 	_topdir=$1
 	_kernver=$2
+
+	if [ $reserve -gt 0 ]
+		then
+		export ENCBOOT_RESERVE=1
+	else
+		unset ENCBOOT_RESERVE
+	fi
 
 	run_cmd "make -C '${_topdir}' ENCBOOT_PREFIX=${prefix} KERNEL_VERSION=${_kernver} bios"
 }
@@ -176,6 +196,7 @@ make_compile_clean()
 	_kernver=$2
 
 	run_cmd "make -C '${_topdir}' ENCBOOT_PREFIX=${prefix} KERNEL_VERSION=${_kernver} clean"
+	run_cmd "rm -f \"$_topdir/src/package/extargsparse4sh\""
 }
 
 

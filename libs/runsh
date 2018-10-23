@@ -35,6 +35,27 @@ RunSudoNoOut()
 	return
 }
 
+RunSudoNoOutEnv()
+{
+	local _res=0
+	local _cmd=""
+	while [ $# -gt 0 ]
+	do
+		if [ -z "$_cmd" ]
+			then
+			_cmd="\"$1\""
+		else
+			_cmd="${_cmd} \"$1\""
+		fi
+		shift
+	done
+	sudo -A -E /bin/bash -c "${_cmd}" >/dev/null
+	_res=$?
+	echo "$_res"
+	return
+}
+
+
 RunSudoOutput()
 {
 	sudo -A $@
@@ -53,6 +74,20 @@ RunSudoMustSucc()
 		exit 4
 	fi
 }
+
+RunSudoMustSuccEnv()
+{
+	local _args=$@
+	local _res=0
+	_res=$(RunSudoNoOutEnv $@)
+	Debug "[$*] _res [$_res]"
+	if [ $_res -ne 0 ]
+		then
+		echo "can not run [$*] [$_res]" >/dev/stderr
+		exit 4
+	fi
+}
+
 
 RunMustSucc()
 {
