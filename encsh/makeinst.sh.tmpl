@@ -157,6 +157,20 @@ make_compile_all()
 		unset ENCBOOT_RESERVE
 	fi
 
+	if [ $patched -gt 0 ]
+		then
+		export OB_PATCH=1
+	else
+		unset OB_PATCH
+	fi
+
+	if [ $verbose -ge 3 ]
+		then
+		export V=1
+	else
+		unset V
+	fi
+
 	run_cmd "make -C '${_topdir}' ENCBOOT_PREFIX=${prefix} KERNEL_VERSION=${_kernver} all"
 }
 
@@ -171,6 +185,21 @@ make_compile_efi()
 	else
 		unset ENCBOOT_RESERVE
 	fi
+
+	if [ $patched -gt 0 ]
+		then
+		export OB_PATCH=1
+	else
+		unset OB_PATCH
+	fi
+
+	if [ $verbose -ge 3 ]
+		then
+		export V=1
+	else
+		unset V
+	fi
+
 
 	run_cmd "make -C '${_topdir}' ENCBOOT_PREFIX=${prefix} KERNEL_VERSION=${_kernver} efi"
 }
@@ -187,6 +216,21 @@ make_compile_bios()
 		unset ENCBOOT_RESERVE
 	fi
 
+	if [ $patched -gt 0 ]
+		then
+		export OB_PATCH=1
+	else
+		unset OB_PATCH
+	fi
+
+	if [ $verbose -ge 3 ]
+		then
+		export V=1
+	else
+		unset V
+	fi
+
+
 	run_cmd "make -C '${_topdir}' ENCBOOT_PREFIX=${prefix} KERNEL_VERSION=${_kernver} bios"
 }
 
@@ -194,6 +238,13 @@ make_compile_clean()
 {
 	_topdir=$1
 	_kernver=$2
+
+	if [ $verbose -ge 3 ]
+		then
+		export V=1
+	else
+		unset V
+	fi
 
 	run_cmd "make -C '${_topdir}' ENCBOOT_PREFIX=${prefix} KERNEL_VERSION=${_kernver} clean"
 	run_cmd "rm -f \"$_topdir/src/package/extargsparse4sh\""
@@ -227,6 +278,7 @@ read -r -d '' OPTIONS<<EOFMM
 		"obfile|F" : false,
 		"prefix|p" : "$ENCBOOT_PREFIX",
 		"encdir|E" : "$_curdir/encdir",
+		"patched|P" : false,
 		"all<subcommand>##prepare efi and bios all install package##" : {
 			"\$" : 0
 		},
@@ -293,7 +345,13 @@ function call_next_level_run()
 		_reserve="--reserve"
 	fi
 
-	_cmd_to_run="\"$_tempdir/$base_script\" --encdir \"$encdir\" --privdir \"$privdir\" --efidir \"$efidir\" --biosdir \"$biosdir\" $_verbosemode -C \"$config\" -p \"$prefix\"  -V $kernelversion $_reserve $_specadd \"$subcommand\""
+	_patched=""
+	if [ $patched -ne 0 ]
+		then
+		_patched="--patched"
+	fi
+
+	_cmd_to_run="\"$_tempdir/$base_script\" --encdir \"$encdir\" --privdir \"$privdir\" --efidir \"$efidir\" --biosdir \"$biosdir\" $_verbosemode -C \"$config\" -p \"$prefix\"  -V $kernelversion $_patched $_reserve $_specadd \"$subcommand\""
 	_num_subnargs=${#subnargs[*]}
 	if [ $_num_subnargs -gt 0 ]
 		then
