@@ -155,10 +155,7 @@ done
 
 for _c in ${pip_install_files[@]}
 do
-	for _l in $(cat $_c)
-	do
-		InstallUpgradePIPPackage "$_l"
-	done
+	RunSudoMustSucc python -m pip install --quiet -r "$_c"
 done
 
 
