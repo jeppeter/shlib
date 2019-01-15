@@ -134,7 +134,7 @@ CopyFrom()
 
         if [ -d "$_frombase/$_todir" ]
         then
-                for _i in $(${FIND} "$_basedir/$_todir" -type f | ${XARGS}  ${FILE}  | ${GREP} -e 'ASCII text' | ${AWK} -F: '{print $1}')
+                for _i in $(${FIND} "$_frombase/$_todir" -type f | ${XARGS}  ${FILE}  | ${GREP} -e 'ASCII text' | ${AWK} -F: '{print $1}' | ${SED} "s,^$_frombase,$_basedir,")
                 do
                     Debug "dos2unix [$_i]"
                     ${PERL} -e "$PERL_DOS2UNIX_STR" "$_i"
