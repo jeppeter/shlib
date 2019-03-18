@@ -8,8 +8,12 @@ CheckOS()
 		then
 		_os=`cat /etc/os-release | grep -e '^NAME=' | awk -F= '{print $2}'`
 		_ubuntu=`echo "$_os" | grep -i ubuntu`
+		_linaro=`echo "$_os" | grep -i linaro`
 		_centos=`echo "$_os" | grep -i centos`
-		if [ -n "$_ubuntu" ]
+		if [ -n "$_ubuntu" ] 
+			then
+			ENVOS=ubuntu
+		elif [ -n "$_linaro" ]
 			then
 			ENVOS=ubuntu
 		elif [ -n "$_centos" ]
