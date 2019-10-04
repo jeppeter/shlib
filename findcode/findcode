@@ -81,14 +81,13 @@ do
 	_res=`grep -n ${_num} $FILE | grep -i ${_name}`;
 	if [ -n "$_res" ] ;then
 		Debug "[$_f][$_res]";
-		echo "$_f";
 		continue;
 	fi
 
 	_res=`find $DIRECTORY | grep ${_num} | grep -i  ${_name}`;
 	if [ -n "$_res" ];then
 		Debug "[$_f]dir [$_res]";
-		echo "$_f";
 		continue;
 	fi
+	echo "$_f";
 done
