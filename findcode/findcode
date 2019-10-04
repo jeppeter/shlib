@@ -1,0 +1,94 @@
+#! /bin/bash
+
+source extargsparse4sh
+
+function __Debug()
+{
+	local _fmt=$1
+	shift
+	local _backstack=0
+	if [ $# -gt 0 ]
+		then
+		_backstack=$1
+	fi
+	
+	_fmtstr=""
+	if [ $VERBOSE -gt 2 ]
+		then
+		_fmtstr="${BASH_SOURCE[$_backstack]}:${BASH_LINENO[$_backstack]} "
+	fi
+
+	_fmtstr="$_fmtstr$_fmt"
+	echo -e "$_fmtstr" >&2		
+}
+
+function Debug()
+{
+	local _fmt=$1
+	shift
+	local _backstack=0
+	if [ $# -gt 0 ]
+		then
+		_backstack=$1
+	fi
+	_backstack=`expr $_backstack \+ 1`
+	
+	if [ $VERBOSE -ge 3 ]	
+		then
+		__Debug "$_fmt" "$_backstack"
+	fi
+	return	
+}
+
+function Error()
+{
+	local _fmt=$1
+	shift
+	local _backstack=0
+	if [ $# -gt 0 ]
+		then
+		_backstack=$1
+	fi
+	_backstack=`expr $_backstack \+ 1`
+	
+	if [ $VERBOSE -ge 0 ]
+		then
+		__Debug "$_fmt" "$_backstack"
+	fi
+	return	
+}
+
+read -r -d '' OPTIONS <<EOF
+{
+	"verbose|v<VERBOSE>" : "+",
+	"dir|D<DIRECTORY>"  : "/cygdrive/h",
+	"file|f<FILE>"  : "btlist.txt",
+	"\$<ARGS>"  : "+"
+
+}
+EOF
+
+parse_command_line "$OPTIONS" $@
+
+
+Debug "dir[$DIRECTORY]  file[$FILE]"
+
+for _f in $ARGS
+do
+	_name=`echo "$_f" | awk -F'-' '{print $1}' | tr [:upper:] [:lower:]`;
+	_num=`echo "$_f" | awk -F'-' '{print $2}'`;
+	Debug "[$_f]name[$_name]num[$_num]";
+	_res=`grep -n ${_num} $FILE | grep -i ${_name}`;
+	if [ -n "$_res" ] ;then
+		Debug "[$_f][$_res]";
+		echo "$_f";
+		continue;
+	fi
+
+	_res=`find $DIRECTORY | grep ${_num} | grep -i  ${_name}`;
+	if [ -n "$_res" ];then
+		Debug "[$_f]dir [$_res]";
+		echo "$_f";
+		continue;
+	fi
+done
