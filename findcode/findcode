@@ -62,7 +62,7 @@ read -r -d '' OPTIONS <<EOF
 {
 	"verbose|v<VERBOSE>" : "+",
 	"dir|D<DIRECTORY>"  : "/cygdrive/h",
-	"file|f<FILE>"  : "btlist.txt",
+	"file|f<FILE>"  : "btlista.txt",
 	"\$<ARGS>"  : "+"
 
 }
