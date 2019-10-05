@@ -75,19 +75,25 @@ Debug "dir[$DIRECTORY]  file[$FILE]"
 
 for _f in $ARGS
 do
+	_output=1;
 	_name=`echo "$_f" | awk -F'-' '{print $1}' | tr [:upper:] [:lower:]`;
 	_num=`echo "$_f" | awk -F'-' '{print $2}'`;
 	Debug "[$_f]name[$_name]num[$_num]";
 	_res=`grep -n ${_num} $FILE | grep -i ${_name}`;
 	if [ -n "$_res" ] ;then
 		Debug "[$_f][$_res]";
-		continue;
+		_output=0;
 	fi
 
 	_res=`find $DIRECTORY | grep ${_num} | grep -i  ${_name}`;
 	if [ -n "$_res" ];then
 		Debug "[$_f]dir [$_res]";
-		continue;
+		_output=0;
 	fi
-	echo "$_f";
+
+
+	if [ $_output -eq 1 ]
+	then
+		echo "$_f";
+	fi
 done
