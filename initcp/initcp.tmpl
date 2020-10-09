@@ -116,7 +116,20 @@ if [ "$ENVOS" = "centos" ]
 	CPANInstall Data::Dumper
 fi
 
-CheckOrInstallMustSucc python-pip
+CheckInstallPip()
+{
+	_res=$(RunSudoNoOut apt-get install -y "python-pip")
+	if [ $_res -ne 0 ]
+	then
+		_res=$(RunSudoNoOut apt-get install -y "python-pip-whl")
+		if [ $_res -ne 0 ]
+		then
+			ErrorExit 4 "can not install pip"
+		fi
+	fi
+}
+
+CheckInstallPip
 CheckOrInstallMustSucc git
 CheckOrInstallMustSucc gawk
 InstallUpgradePIPPackage extargsparse
