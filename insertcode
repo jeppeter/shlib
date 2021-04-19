@@ -86,11 +86,15 @@ def __get_insert_string_file(infile):
         i = 0
         for l in fin:
             i += 1
-            if i == 1 and l.startswith('#!'):
+            if i == 1 and ( sys.version[0]=='3'  and (l.startswith(b'#!') ) or (sys.version[0]=='2' and l.startswith('#!')) ):
                 continue
-            s += l
+            if sys.version[0] == '3':
+                s += l.decode(encoding='UTF-8')
+            else:
+                s += l
     logging.info('[%s] (%s)'%(infile,s))
     return s
+
 
 def get_insert_string(args):
     s = ''
