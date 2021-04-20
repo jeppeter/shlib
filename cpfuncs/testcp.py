@@ -30,11 +30,17 @@ class CheckFiles(object):
 		logging.info('leftfile [%s] rightfile [%s]'%(leftfile,rightfile))
 		with open(leftfile,'rb') as f:
 			for l in f:
-				llines.append(l)
+				if sys.version[0] == '3':
+					llines.append(l.decode(encoding='UTF-8'))
+				else:
+					llines.append(l)
 		rlines = []
 		with open(rightfile,'rb') as f:
 			for l in f:
-				rlines.append(l)
+				if sys.version[0] == '3':
+					rlines.append(l.decode(encoding='UTF-8'))
+				else:
+					rlines.append(l)
 
 		if len(llines) != len(rlines):
 			logging.warn('[%s] (%d) != [%s] (%d)'%(leftfile,len(llines),rightfile,len(rlines)))
@@ -69,7 +75,10 @@ class CheckFiles(object):
 						if ll[diffcnt] != rl[diffcnt]:
 							break
 						diffcnt = diffcnt + 1
-					s = '[%d]([%s]<>[%s]) at offset[%d] (0x%02x) <> (0x%02x)\n'%(i,leftfile,rightfile,diffcnt,ord(ll[diffcnt]),ord(rl[diffcnt]))
+					if sys.version[0] == '3':
+						s = '[%d]([%s]<>[%s]) at offset[%d] (0x%02x) <> (0x%02x)\n'%(i,leftfile,rightfile,diffcnt,ll[diffcnt],rl[diffcnt])
+					else:
+						s = '[%d]([%s]<>[%s]) at offset[%d] (0x%02x) <> (0x%02x)\n'%(i,leftfile,rightfile,diffcnt,ord(ll[diffcnt]),ord(rl[diffcnt]))
 					s += 'from >>>>>>>>>>>>>>>>\n'
 					s += '%s'%(ll)
 					s += 'to <<<<<<<<<<<<<<<<<<<\n'
@@ -499,7 +508,10 @@ class debug_testcp_case(unittest.TestCase):
 		if len(cfs.left_diffs) > 0:
 			for i in range(len(cfs.left_diffs)):
 				if cfs.left_diffs[i] not in crfromfiles:
-					logging.warn('[%d][%s] not crfromfiles'%(i,cfs.left_diffs[i]))
+					if sys.version[0] == '3':
+						logging.warning('[%d][%s] not crfromfiles'%(i,cfs.left_diffs[i]))
+					else:
+						logging.warn('[%d][%s] not crfromfiles'%(i,cfs.left_diffs[i]))
 				#self.assertTrue( cfs.left_diffs[i] in crfromfiles )
 				cmpfs = CheckFiles(True)
 				retval = cmpfs.check_file_same(cfs.left_diffs[i],cfs.right_diffs[i])
