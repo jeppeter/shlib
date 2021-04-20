@@ -12,6 +12,7 @@ RM:=$(shell which rm)
 BASH:=$(shell which bash)
 DIFF:=$(shell which diff)
 CHX:=$(shell which chmod) +x
+CHR:=$(shell which chmod) +r
 
 ifeq (${V},)
 Q=@

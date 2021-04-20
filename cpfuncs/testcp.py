@@ -13,6 +13,7 @@ import subprocess
 import shutil
 import re
 import filecmp
+import platform
 
 
 namechars='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -296,6 +297,10 @@ class debug_testcp_case(unittest.TestCase):
 		return
 
 	def __remove_dir(self,dirn,issuper=False):
+		sysval = platform.system()
+		sysval = sysval.lower()
+		if sysval.startswith('cygwin') or sysval.startswith('windows'):
+			issuper = False
 		if issuper:
 			cmd = ['sudo','rm','-rf',dirn]
 		else:
@@ -425,7 +430,10 @@ class debug_testcp_case(unittest.TestCase):
 					istext= True
 				cons = self.get_random_chars(3000,istext)
 				with open(curfile,'w+b') as f:
-					f.write(cons)
+					if sys.version[0] == '3':
+						f.write(cons.encode(encoding='UTF-8'))
+					else:
+						f.write(cons)
 				if istext:
 					crfromfiles.append(curfile)
 					logging.debug('[%s] ascii text'%(curfile))
@@ -512,6 +520,7 @@ class debug_testcp_case(unittest.TestCase):
 	def __cpout_sub(self):
 		todir = os.environ['CP_TO_DIR']
 		fromdir = os.environ['CP_SMB_DIR']
+		issuper = True
 		fromdir = make_tempdir(fromdir)
 		frombasename = os.path.basename(fromdir)
 		fromdirgit = os.path.join(fromdir,'.git')

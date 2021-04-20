@@ -12,6 +12,7 @@ include ${TOPDIR}/basedef.mak
 
 all:cpfuncs cpin
 	$(call call_exec,${CHX} cpin cpout,"CHX","cpin cpout")
+	$(call call_exec,${CHR} cpin cpout cpfuncs,"CHR","cpin cpout cpfuncs")
 	$(call call_exec,${PYTHON} testcp.py -f >/dev/null,"TEST","cpin cpout")
 
 
