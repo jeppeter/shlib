@@ -19,7 +19,7 @@ function clone_public_repo()
 	local _repo=$1;
 	local _br=$2;
 	local _dir=$3;
-	local _ro2=`echo "$_repo" | sed 's/github.com/bitbucket.org/'`;
+	local _ro2=`echo "$_repo" | sed "s/:${githubtoken}@/:${repopass}@/"  | sed 's/github.com/bitbucket.org/'`;
 
 	if [ ! -d "$_dir" ]
 	then
@@ -39,3 +39,4 @@ function clone_repo()
 		gitclonesucc "$_repo";
 	fi
 }
+
