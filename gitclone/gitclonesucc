@@ -1,0 +1,29 @@
+#! /bin/bash
+repo=$1
+proxyset=0
+trycnt=0
+
+trap proxy_recover EXIT
+
+proxy_recover()
+{
+	if [ $proxyset -gt 0 ]
+	then
+		git config --global --unset http.proxy
+	fi
+}
+
+while [ 1 -eq 1 ]
+do
+	git clone "$repo"
+	if [ $? -eq 0 ]
+	then
+		break
+	fi
+	trycnt=`expr $trycnt + 1`
+	if [ $trycnt -ge 5 ] -a [ $proxyset -eq 0 ]
+	then
+		git config --global http.proxy http://127.0.0.1:7890/
+		proxyset=1
+	fi
+done
