@@ -3,12 +3,18 @@ repo=$1
 proxyset=0
 trycnt=0
 
+if [ -z "$PROXY_TRY_CNT" ]
+then
+	PROXY_TRY_CNT=10
+fi
+
 trap proxy_recover EXIT
 
 proxy_recover()
 {
 	if [ $proxyset -gt 0 ]
 	then
+		echo "unset proxyset=0"
 		git config --global --unset http.proxy
 	fi
 }
@@ -21,9 +27,10 @@ do
 		break
 	fi
 	trycnt=`expr $trycnt + 1`
-	if [ $trycnt -ge 5 ] -a [ $proxyset -eq 0 ]
+	if [ $trycnt -ge $PROXY_TRY_CNT  -a  $proxyset -eq 0 ]
 	then
 		git config --global http.proxy http://127.0.0.1:7890/
 		proxyset=1
+		echo "set proxyset=1"
 	fi
 done
