@@ -3,7 +3,7 @@ function clone_private_repo()
 	local _repo=$1;
 	local _br=$2;
 	local _dir=$3;
-	local _ro2=`echo "$_repo" | sed 's/gitee.com/bitbucket.org/'`;
+	local _ro2=`echo "$_repo" | sed 's/gitee.com/bitbucket.org/' | sed "s/:${repopass}@/:${bitbuckettoken}@/"`;
 	local _ro3=`echo "$_repo" | sed 's/gitee.com/gitlab.com/'`;
 
 	if [ ! -d "$_dir" ]
@@ -19,7 +19,7 @@ function clone_public_repo()
 	local _repo=$1;
 	local _br=$2;
 	local _dir=$3;
-	local _ro2=`echo "$_repo" | sed "s/:${githubtoken}@/:${repopass}@/"  | sed 's/github.com/bitbucket.org/'`;
+	local _ro2=`echo "$_repo" | sed "s/:${githubtoken}@/:${bitbuckettoken}@/"  | sed 's/github.com/bitbucket.org/'`;
 
 	if [ ! -d "$_dir" ]
 	then
