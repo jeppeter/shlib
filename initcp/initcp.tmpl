@@ -12,6 +12,8 @@ mntdir=/mnt/smbdir
 bindir=$HOME/bin
 remotedir=share
 ENVOS=""
+PIP_SOURCE=""
+PYTHON="python"
 
 %DEFINESH_CODE%
 
@@ -37,13 +39,15 @@ Usage()
 	fi
 
 	echo -e "initcp [OPTIONS]" >$_echoout
-	echo -e "\t--help|-h                          to display this help information" >$_echoout
-	echo -e "\t--verbose|-v                       to make verbose mode" >$_echoout
-	echo -e "\t--password|-p [password]           to specify the password on mountint default[]" >$_echoout
-	echo -e "\t--user|-u  [username]              to specify the username default[${USER}]" >$_echoout
-	echo -e "\t--mntdir|-d [dir]                  to specify the mount direcotry default[/mnt/smbdir]" >$_echoout
-	echo -e "\t--bindir|-D [dir]                  to specify the bin dir default[$HOME/bin]" >$_echoout
-	echo -e "\t--remotedir|-r [dir]               to specify remote dir default[share]" >$_echoout
+	echo -e "\t--help|-h                            to display this help information" >$_echoout
+	echo -e "\t--verbose|-v                         to make verbose mode" >$_echoout
+	echo -e "\t--password|-p    [password]          to specify the password on mountint default[]" >$_echoout
+	echo -e "\t--user|-u        [username]          to specify the username default[${USER}]" >$_echoout
+	echo -e "\t--mntdir|-d      [dir]               to specify the mount direcotry default[/mnt/smbdir]" >$_echoout
+	echo -e "\t--bindir|-D      [dir]               to specify the bin dir default[$HOME/bin]" >$_echoout
+	echo -e "\t--remotedir|-r   [dir]               to specify remote dir default[share]" >$_echoout
+	echo -e "\t--pipsrc|-P      [pipsrc]            to specify the pip new source default []" > $_echoout
+	echo -e "\t--python         [python]            to specify the python  default [python]" > $_echoout
 	exit $_ec
 }
 
@@ -96,7 +100,22 @@ do
 		fi
 		remotedir=$2
 		shift
-
+	elif [ "$_curarg" = "--pipsrc" ] || [ "$_curarg" = "-P" ]
+		then
+			if [ $# -lt 2 ]
+				then
+					Usage 3 "[$_curarg] need an arg"
+			fi
+			PIP_SOURCE=$2
+			shift
+	elif [ "$_curarg" = "--python" ]
+		then
+			if [ $# -lt 2 ]
+				then
+					Usage 3 "[$_curarg] need an arg"
+			fi
+			PYTHON=$2
+			shift
 	else
 		Usage 3 "unknown args[$_curarg]"
 	fi
@@ -118,10 +137,10 @@ fi
 
 CheckInstallPip()
 {
-	_res=$(RunSudoNoOut apt-get install -y "python-pip")
+	_res=$(RunSudoNoOut apt-get install -y "python3-pip")
 	if [ $_res -ne 0 ]
 	then
-		_res=$(RunSudoNoOut apt-get install -y "python-pip-whl")
+		_res=$(RunSudoNoOut apt-get install -y "python3-pip-whl")
 		if [ $_res -ne 0 ]
 		then
 			ErrorExit 4 "can not install pip"
@@ -129,7 +148,7 @@ CheckInstallPip()
 	fi
 }
 
-CheckInstallPip
+#CheckInstallPip
 CheckOrInstallMustSucc git
 CheckOrInstallMustSucc gawk
 InstallUpgradePIPPackage extargsparse

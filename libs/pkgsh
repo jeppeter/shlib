@@ -122,7 +122,12 @@ CheckOrInstallMustSucc()
 InstallUpgradePIPPackage()
 {
 	local _pkg=$1
-	RunSudoMustSucc pip install $_pkg	
+	if [ -z "$PIP_SOURCE" ]
+	then
+	RunSudoMustSucc $PYTHON -m pip install $_pkg	
+	else
+	RunSudoMustSucc $PYTHON -m pip install -i $PIP_SOURCE $_pkg	
+	fi
 }
 
 CheckOrCloneDir()
