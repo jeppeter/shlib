@@ -10,7 +10,13 @@ def calc_md5(infile=None):
 	fin = sys.stdin
 	if infile is not None:
 		fin = open(infile,'rb')
-	for l in fin:
+	while True:	
+		if fin != sys.stdin:
+			l = fin.read(1024)
+		else:
+			l = fin.buffer.read()
+		if len(l) == 0:
+			break
 		md5.update(l)
 	if fin != sys.stdin:
 		fin.close()
