@@ -4,6 +4,7 @@ import extargsparse
 import hashlib
 import logging
 import sys
+import os
 
 def calc_md5(infile=None):
 	md5 = hashlib.md5()
@@ -14,7 +15,8 @@ def calc_md5(infile=None):
 		if fin != sys.stdin:
 			l = fin.read(1024)
 		else:
-			l = fin.buffer.read()
+			#l = fin.buffer.read()
+			l = os.read(0,1024)
 		if len(l) == 0:
 			break
 		md5.update(l)

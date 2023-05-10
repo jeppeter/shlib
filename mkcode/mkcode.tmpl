@@ -49,7 +49,7 @@ function make_header()
 	local _outf="$2"
 	local _basename=`${PERL} -e "$PERL_BASE_NAME" "$_f"`
 	local _postfix=`dd if=/dev/urandom bs=100 count=1 2>/dev/null | python -c "$PYTHON_MD5_STR" | awk '{print $1}' | tr [:lower:] [:upper:]`
-	local _h=`echo -n "${_basename}" | tr . _ | tr [:lower:] [:upper:] `
+	local _h=`echo -n "${_basename}" | tr . _ | tr [:lower:] [:upper:] | sed 's/-/_/g' `
 	local _defcode="__${_h}_${_postfix}__"
 	if [ -z "$_outf" ]
 		then
@@ -86,7 +86,7 @@ function make_make_header()
 	local _outf="$2"
 	local _basename=`${PERL} -e "$PERL_BASE_NAME" "$_f"`
 	local _postfix=`dd if=/dev/urandom bs=100 count=1 2>/dev/null | md5sum | awk '{print $1}' | tr [:lower:] [:upper:]`
-	local _h=`echo -n "${_basename}" | tr . _ | tr [:lower:] [:upper:] `
+	local _h=`echo -n "${_basename}" | tr . _ | tr [:lower:] [:upper:] | sed 's/-/_/g'`
 	local _defcode="__${_h}_${_postfix}__"
 	if [ -z "$_outf" ]
 		then
