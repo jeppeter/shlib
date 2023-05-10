@@ -16,7 +16,7 @@ def calc_md5(infile=None):
 			l = fin.read(1024)
 		else:
 			#l = fin.buffer.read()
-			l = os.read(0,1024)
+			l = os.read(fin.fileno(),1024)
 		if len(l) == 0:
 			break
 		md5.update(l)
